@@ -429,6 +429,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from scipy.stats import pearsonr
 import statsmodels.api as sm
+from IPython.display import display
 ```
 
 ### Prepare the data for LogisticRegression
@@ -473,10 +474,8 @@ logr_df['TargetFullName'] = [x[1] for x in logr_df['index']]
 logr_df = logr_df.drop('index', axis=1)
 logr_df = logr_df[['SeqId', 'TargetFullName', 'Coef.', 'Std.Err.', 'z', 'P>|z|', '[0.025', '0.975]']].set_index('SeqId')
 logr_df_sorted = logr_df.sort_values('P>|z|')
-logr_df_sorted.head(20)
+display(logr_df_sorted.head(20))
 ```
-
-
 
 
 *Output*
@@ -725,7 +724,6 @@ logr_df_sorted.head(20)
 </div>
 
 
-
 ### Fit model
 
 
@@ -828,45 +826,9 @@ logr_perf_df
 
 
 *Output*
-<div>
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>Accuracy</th>
-      <th>NPV</th>
-      <th>PPV</th>
-      <th>Sensitivity</th>
-      <th>Specificity</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>Value</th>
-      <td>1.0</td>
-      <td>1.0</td>
-      <td>1.0</td>
-      <td>1.0</td>
-      <td>1.0</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
+``` python
+#> '<table border="1" class="dataframe">\n  <thead>\n    <tr style="text-align: right;">\n      <th></th>\n      <th>Accuracy</th>\n      <th>NPV</th>\n      <th>PPV</th>\n      <th>Sensitivity</th>\n      <th>Specificity</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>Value</th>\n      <td>1.0</td>\n      <td>1.0</td>\n      <td>1.0</td>\n      <td>1.0</td>\n      <td>1.0</td>\n    </tr>\n  </tbody>\n</table>'
+```
 
 
 
