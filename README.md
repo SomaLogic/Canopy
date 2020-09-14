@@ -474,7 +474,7 @@ logr_df['TargetFullName'] = [x[1] for x in logr_df['index']]
 logr_df = logr_df.drop('index', axis=1)
 logr_df = logr_df[['SeqId', 'TargetFullName', 'Coef.', 'Std.Err.', 'z', 'P>|z|', '[0.025', '0.975]']].set_index('SeqId')
 logr_df_sorted = logr_df.sort_values('P>|z|')
-HTML(logr_df_sorted.head(20).to_html())
+HTML(logr_df_sorted.head(20).to_html()) # Need to use HTML here to display nicely for this README
 ```
 
 
@@ -807,16 +807,37 @@ logr_perf_df = pd.DataFrame.from_records({
     'PPV': tp / (tp + fp),
     'NPV': tn / (tn + fn)
 }, index=['Value'])
-logr_perf_df
+HTML(logr_perf_df.to_html())
 ```
 
 
 
 
 *Output*
-``` python
-#> '<table border="1" class="dataframe">\n  <thead>\n    <tr style="text-align: right;">\n      <th></th>\n      <th>Accuracy</th>\n      <th>NPV</th>\n      <th>PPV</th>\n      <th>Sensitivity</th>\n      <th>Specificity</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>Value</th>\n      <td>1.0</td>\n      <td>1.0</td>\n      <td>1.0</td>\n      <td>1.0</td>\n      <td>1.0</td>\n    </tr>\n  </tbody>\n</table>'
-```
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Accuracy</th>
+      <th>NPV</th>
+      <th>PPV</th>
+      <th>Sensitivity</th>
+      <th>Specificity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Value</th>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 
 
@@ -881,7 +902,7 @@ linr_res_df['TargetFullName'] = [x[1] for x in linr_res_df['index']]
 linr_res_df = linr_res_df.drop('index', axis=1)
 linr_res_df = linr_res_df[['SeqId', 'TargetFullName', 'Coef.', 'Std.Err.', 't', 'P>|t|', '[0.025', '0.975]']].set_index('SeqId')
 linr_sorted_res_df = linr_res_df.sort_values('P>|t|')
-linr_sorted_res_df.head(20)
+HTML(linr_sorted_res_df.head(20).to_html())
 ```
 
 
@@ -889,20 +910,6 @@ linr_sorted_res_df.head(20)
 
 *Output*
 <div>
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -969,7 +976,7 @@ linr_sorted_res_df.head(20)
     </tr>
     <tr>
       <th>8480-29</th>
-      <td>EGF-containing fibulin-like extracellular matr...</td>
+      <td>EGF-containing fibulin-like extracellular matrix protein 1</td>
       <td>6.195214</td>
       <td>0.906161</td>
       <td>6.836766</td>
@@ -1039,7 +1046,7 @@ linr_sorted_res_df.head(20)
     </tr>
     <tr>
       <th>4541-49</th>
-      <td>Cell adhesion molecule-related/down-regulated ...</td>
+      <td>Cell adhesion molecule-related/down-regulated by oncogenes</td>
       <td>-5.718647</td>
       <td>0.912113</td>
       <td>-6.269669</td>
@@ -1129,7 +1136,6 @@ linr_sorted_res_df.head(20)
     </tr>
   </tbody>
 </table>
-</div>
 </div>
 
 
@@ -1272,7 +1278,7 @@ linr_metrics_df = pd.DataFrame({
 linr_metrics_df['rsq'] = 1 - (linr_metrics_df['rss'] / linr_metrics_df['tss']) # R-squared
 linr_metrics_df['rsqadj'] = max(0, 1 - (1 - linr_metrics_df['rsq'][0]) * (n - 1) / (n - p - 1)), # Adjusted R-squared
 
-linr_metrics_df
+HTML(linr_metrics_df.to_html())
 ```
 
 
@@ -1280,20 +1286,6 @@ linr_metrics_df
 
 *Output*
 <div>
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -1322,7 +1314,6 @@ linr_metrics_df
     </tr>
   </tbody>
 </table>
-</div>
 </div>
 
 
