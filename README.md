@@ -479,6 +479,8 @@ logr_df_sorted.head(20)
 
 
 
+*Output*
+<div>
 <div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -720,6 +722,7 @@ logr_df_sorted.head(20)
   </tbody>
 </table>
 </div>
+</div>
 
 
 
@@ -737,6 +740,8 @@ logr_res.summary()
 
 
 
+*Output*
+<div>
 <table class="simpletable">
 <caption>Generalized Linear Model Regression Results</caption>
 <tr>
@@ -790,6 +795,7 @@ logr_res.summary()
   <th>('9282-12', 'Cysteine-rich secretory protein 2')</th> <td>    1.5980</td> <td>    0.804</td> <td>    1.987</td> <td> 0.047</td> <td>    0.022</td> <td>    3.174</td>
 </tr>
 </table>
+</div>
 
 
 
@@ -815,16 +821,52 @@ logr_perf_df = pd.DataFrame.from_records({
     'PPV': tp / (tp + fp),
     'NPV': tn / (tn + fn)
 }, index=['Value'])
-logr_perf_df.to_markdown()
+logr_perf_df
 ```
 
 
 
 
 *Output*
-``` python
-#> '|       |   Accuracy |   NPV |   PPV |   Sensitivity |   Specificity |\n|:------|-----------:|------:|------:|--------------:|--------------:|\n| Value |          1 |     1 |     1 |             1 |             1 |'
-```
+<div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Accuracy</th>
+      <th>NPV</th>
+      <th>PPV</th>
+      <th>Sensitivity</th>
+      <th>Specificity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Value</th>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
 
 
 
@@ -895,6 +937,8 @@ linr_sorted_res_df.head(20)
 
 
 
+*Output*
+<div>
 <div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -1136,6 +1180,7 @@ linr_sorted_res_df.head(20)
   </tbody>
 </table>
 </div>
+</div>
 
 
 
@@ -1152,6 +1197,8 @@ mod.summary()
 
 
 
+*Output*
+<div>
 <table class="simpletable">
 <caption>OLS Regression Results</caption>
 <tr>
@@ -1228,6 +1275,7 @@ mod.summary()
   <th>Kurtosis:</th>      <td> 3.228</td> <th>  Cond. No.          </th> <td>    4.16</td>
 </tr>
 </table><br/><br/>Warnings:<br/>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
 
 
 
@@ -1280,6 +1328,8 @@ linr_metrics_df
 
 
 
+*Output*
+<div>
 <div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -1322,6 +1372,7 @@ linr_metrics_df
     </tr>
   </tbody>
 </table>
+</div>
 </div>
 
 
