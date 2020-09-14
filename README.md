@@ -429,7 +429,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from scipy.stats import pearsonr
 import statsmodels.api as sm
-from IPython.display import display
+from IPython.display import HTML
 ```
 
 ### Prepare the data for LogisticRegression
@@ -474,26 +474,14 @@ logr_df['TargetFullName'] = [x[1] for x in logr_df['index']]
 logr_df = logr_df.drop('index', axis=1)
 logr_df = logr_df[['SeqId', 'TargetFullName', 'Coef.', 'Std.Err.', 'z', 'P>|z|', '[0.025', '0.975]']].set_index('SeqId')
 logr_df_sorted = logr_df.sort_values('P>|z|')
-display(logr_df_sorted.head(20))
+HTML(logr_df_sorted.head(20).to_html())
 ```
+
+
 
 
 *Output*
 <div>
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -570,7 +558,7 @@ display(logr_df_sorted.head(20))
     </tr>
     <tr>
       <th>16892-23</th>
-      <td>Ectonucleotide pyrophosphatase/phosphodiestera...</td>
+      <td>Ectonucleotide pyrophosphatase/phosphodiesterase family member 2</td>
       <td>-2.042265</td>
       <td>0.356588</td>
       <td>-5.727234</td>
@@ -721,7 +709,7 @@ display(logr_df_sorted.head(20))
   </tbody>
 </table>
 </div>
-</div>
+
 
 
 ### Fit model
