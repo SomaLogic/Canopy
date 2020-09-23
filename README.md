@@ -111,12 +111,1202 @@ type(adat)
 
 
 
+
+```python
+adat.columns
+```
+
+
+
+
+*Output*
+``` python
+#> MultiIndex([( '10000-28', '3', 'SL019233', ...),
+#>             (  '10001-7', '3', 'SL002564', ...),
+#>             ( '10003-15', '3', 'SL019245', ...),
+#>             ( '10006-25', '3', 'SL019228', ...),
+#>             ( '10008-43', '3', 'SL019234', ...),
+#>             ( '10011-65', '3', 'SL019246', ...),
+#>             (  '10012-5', '3', 'SL014669', ...),
+#>             ( '10013-34', '3', 'SL025418', ...),
+#>             ( '10014-31', '3', 'SL007803', ...),
+#>             ('10015-119', '3', 'SL014924', ...),
+#>             ...
+#>             (  '9981-18', '3', 'SL018293', ...),
+#>             (  '9983-97', '3', 'SL019202', ...),
+#>             (  '9984-12', '3', 'SL019205', ...),
+#>             (  '9986-14', '3', 'SL005356', ...),
+#>             (  '9989-12', '3', 'SL019194', ...),
+#>             (  '9993-11', '3', 'SL019212', ...),
+#>             ( '9994-217', '3', 'SL019217', ...),
+#>             (   '9995-6', '3', 'SL013164', ...),
+#>             (  '9997-12', '3', 'SL019215', ...),
+#>             (   '9999-1', '3', 'SL019231', ...)],
+#>            names=['SeqId', 'SeqIdVersion', 'SomaId', 'TargetFullName', 'Target', 'UniProt', 'EntrezGeneID', 'EntrezGeneSymbol', 'Organism', 'Units', 'Type', 'Dilution', 'PlateScale_Reference', 'CalReference', 'Cal_Example_Adat_Set001', 'ColCheck', 'CalQcRatio_Example_Adat_Set001_170255', 'QcReference_170255', 'Cal_Example_Adat_Set002', 'CalQcRatio_Example_Adat_Set002_170255'], length=5284)
+```
+
+
+
+
+```python
+#Display the first five rows and columns of the adat
+first_five_columns = [x[0] for x in adat.columns[:5]]
+HTML(adat.head(5)[first_five_columns].to_html()) # Need to use HTML & to_html() here to display nicely for this README
+```
+
+
+
+
+*Output*
+<table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>SeqId</th>
+      <th>10000-28</th>
+      <th>10001-7</th>
+      <th>10003-15</th>
+      <th>10006-25</th>
+      <th>10008-43</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>SeqIdVersion</th>
+      <th>3</th>
+      <th>3</th>
+      <th>3</th>
+      <th>3</th>
+      <th>3</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>SomaId</th>
+      <th>SL019233</th>
+      <th>SL002564</th>
+      <th>SL019245</th>
+      <th>SL019228</th>
+      <th>SL019234</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>TargetFullName</th>
+      <th>Beta-crystallin B2</th>
+      <th>RAF proto-oncogene serine/threonine-protein kinase</th>
+      <th>Zinc finger protein 41</th>
+      <th>ETS domain-containing protein Elk-1</th>
+      <th>Guanylyl cyclase-activating protein 1</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Target</th>
+      <th>CRBB2</th>
+      <th>c-Raf</th>
+      <th>ZNF41</th>
+      <th>ELK1</th>
+      <th>GUC1A</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>UniProt</th>
+      <th>P43320</th>
+      <th>P04049</th>
+      <th>P51814</th>
+      <th>P19419</th>
+      <th>P43080</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>EntrezGeneID</th>
+      <th>1415</th>
+      <th>5894</th>
+      <th>7592</th>
+      <th>2002</th>
+      <th>2978</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>EntrezGeneSymbol</th>
+      <th>CRYBB2</th>
+      <th>RAF1</th>
+      <th>ZNF41</th>
+      <th>ELK1</th>
+      <th>GUCA1A</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Organism</th>
+      <th>Human</th>
+      <th>Human</th>
+      <th>Human</th>
+      <th>Human</th>
+      <th>Human</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Units</th>
+      <th>RFU</th>
+      <th>RFU</th>
+      <th>RFU</th>
+      <th>RFU</th>
+      <th>RFU</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Type</th>
+      <th>Protein</th>
+      <th>Protein</th>
+      <th>Protein</th>
+      <th>Protein</th>
+      <th>Protein</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Dilution</th>
+      <th>20</th>
+      <th>20</th>
+      <th>0.5</th>
+      <th>20</th>
+      <th>20</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>PlateScale_Reference</th>
+      <th>687.4</th>
+      <th>227.8</th>
+      <th>126.9</th>
+      <th>634.2</th>
+      <th>585.0</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>CalReference</th>
+      <th>687.4</th>
+      <th>227.8</th>
+      <th>126.9</th>
+      <th>634.2</th>
+      <th>585.0</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Cal_Example_Adat_Set001</th>
+      <th>1.01252025</th>
+      <th>1.01605709</th>
+      <th>0.95056180</th>
+      <th>0.99607350</th>
+      <th>0.94051447</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>ColCheck</th>
+      <th>PASS</th>
+      <th>PASS</th>
+      <th>PASS</th>
+      <th>PASS</th>
+      <th>PASS</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>CalQcRatio_Example_Adat_Set001_170255</th>
+      <th>1.008</th>
+      <th>0.970</th>
+      <th>1.046</th>
+      <th>1.042</th>
+      <th>1.036</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>QcReference_170255</th>
+      <th>505.4</th>
+      <th>223.9</th>
+      <th>119.6</th>
+      <th>667.2</th>
+      <th>587.5</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>Cal_Example_Adat_Set002</th>
+      <th>1.01476233</th>
+      <th>1.03686846</th>
+      <th>1.15258856</th>
+      <th>0.93581231</th>
+      <th>0.96201283</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>CalQcRatio_Example_Adat_Set002_170255</th>
+      <th>1.067</th>
+      <th>1.007</th>
+      <th>0.981</th>
+      <th>1.026</th>
+      <th>0.998</th>
+    </tr>
+    <tr>
+      <th>PlateId</th>
+      <th>PlateRunDate</th>
+      <th>ScannerID</th>
+      <th>PlatePosition</th>
+      <th>SlideId</th>
+      <th>Subarray</th>
+      <th>SampleId</th>
+      <th>SampleType</th>
+      <th>PercentDilution</th>
+      <th>SampleMatrix</th>
+      <th>Barcode</th>
+      <th>Barcode2d</th>
+      <th>SampleName</th>
+      <th>SampleNotes</th>
+      <th>AliquotingNotes</th>
+      <th>SampleDescription</th>
+      <th>AssayNotes</th>
+      <th>TimePoint</th>
+      <th>ExtIdentifier</th>
+      <th>SsfExtId</th>
+      <th>SampleGroup</th>
+      <th>SiteId</th>
+      <th>TubeUniqueID</th>
+      <th>CLI</th>
+      <th>HybControlNormScale</th>
+      <th>RowCheck</th>
+      <th>NormScale_20</th>
+      <th>NormScale_0_005</th>
+      <th>NormScale_0_5</th>
+      <th>ANMLFractionUsed_20</th>
+      <th>ANMLFractionUsed_0_005</th>
+      <th>ANMLFractionUsed_0_5</th>
+      <th>Age</th>
+      <th>Sex</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="5" valign="top">Example Adat Set001</th>
+      <th rowspan="5" valign="top">2020-06-18</th>
+      <th rowspan="5" valign="top">SG15214400</th>
+      <th>H9</th>
+      <th>258495800012</th>
+      <th>3</th>
+      <th>1</th>
+      <th>Sample</th>
+      <th>20</th>
+      <th>Plasma-PPT</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>0.98185998</th>
+      <th>PASS</th>
+      <th>1.03693580</th>
+      <th>0.85701624</th>
+      <th>0.77717491</th>
+      <th>0.914</th>
+      <th>0.869</th>
+      <th>0.903</th>
+      <th>76</th>
+      <th>F</th>
+      <td>476.5</td>
+      <td>310.1</td>
+      <td>100.3</td>
+      <td>602.8</td>
+      <td>561.8</td>
+    </tr>
+    <tr>
+      <th>H8</th>
+      <th>258495800004</th>
+      <th>7</th>
+      <th>2</th>
+      <th>Sample</th>
+      <th>20</th>
+      <th>Plasma-PPT</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>0.96671829</th>
+      <th>PASS</th>
+      <th>0.96022505</th>
+      <th>0.84858420</th>
+      <th>0.85201953</th>
+      <th>0.937</th>
+      <th>0.956</th>
+      <th>0.973</th>
+      <th>55</th>
+      <th>F</th>
+      <td>474.4</td>
+      <td>293.5</td>
+      <td>101.8</td>
+      <td>561.9</td>
+      <td>541.9</td>
+    </tr>
+    <tr>
+      <th>H7</th>
+      <th>258495800010</th>
+      <th>8</th>
+      <th>3</th>
+      <th>Sample</th>
+      <th>20</th>
+      <th>Plasma-PPT</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>1.00193072</th>
+      <th>PASS</th>
+      <th>0.98411617</th>
+      <th>1.03270156</th>
+      <th>0.91519153</th>
+      <th>0.907</th>
+      <th>0.919</th>
+      <th>0.915</th>
+      <th>47</th>
+      <th>M</th>
+      <td>415.6</td>
+      <td>299.6</td>
+      <td>3030.1</td>
+      <td>563.9</td>
+      <td>423.9</td>
+    </tr>
+    <tr>
+      <th>H6</th>
+      <th>258495800003</th>
+      <th>4</th>
+      <th>4</th>
+      <th>Sample</th>
+      <th>20</th>
+      <th>Plasma-PPT</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>0.94017961</th>
+      <th>PASS</th>
+      <th>1.07839878</th>
+      <th>0.94626841</th>
+      <th>0.91246731</th>
+      <th>0.934</th>
+      <th>0.919</th>
+      <th>0.912</th>
+      <th>37</th>
+      <th>M</th>
+      <td>442.6</td>
+      <td>247.9</td>
+      <td>112.9</td>
+      <td>563.7</td>
+      <td>469.8</td>
+    </tr>
+    <tr>
+      <th>H5</th>
+      <th>258495800009</th>
+      <th>4</th>
+      <th>5</th>
+      <th>Sample</th>
+      <th>20</th>
+      <th>Plasma-PPT</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>0.94621098</th>
+      <th>PASS</th>
+      <th>0.84679446</th>
+      <th>0.92904553</th>
+      <th>0.77413056</th>
+      <th>0.707</th>
+      <th>0.894</th>
+      <th>0.708</th>
+      <th>71</th>
+      <th>F</th>
+      <td>465.7</td>
+      <td>710.7</td>
+      <td>95.9</td>
+      <td>791.0</td>
+      <td>443.5</td>
+    </tr>
+  </tbody>
+</table>
+
+
+
 You may also access the dict header metadata via:
 
 
 ```python
-header_meta = adat.header_metadata
+adat.header_metadata
 ```
+
+
+
+
+*Output*
+``` python
+#> {'AdatId': '',
+#>  '!Version': '1.2',
+#>  '!AssayType': 'PharmaServices',
+#>  '!AssayVersion': 'V4',
+#>  '!AssayRobot': 'Fluent 1 L-307',
+#>  '!Legal': 'Experiment details and data have been processed to protect Personally Identifiable Information (PII) and comply with existing privacy laws.',
+#>  '!CreatedBy': 'PharmaServices',
+#>  '!CreatedDate': '2020-07-24',
+#>  '!EnteredBy': 'Technician1',
+#>  '!ExpDate': '2020-06-18, 2020-07-20',
+#>  '!GeneratedBy': 'Px (Build:  : ), Canopy_0.1.1',
+#>  'Notes': "2 columns ('Age' and 'Sex') have been added to this ADAT. Age has been randomly increased or decreased by 1-2 years to protect patient information",
+#>  '!ProcessSteps': 'Raw RFU, Hyb Normalization, medNormInt (SampleId), plateScale, Calibration, anmlQC, qcCheck, anmlSMP',
+#>  '!ProteinEffectiveDate': '2019-08-06',
+#>  'RunNotes': '',
+#>  'StudyMatrix': 'EDTA Plasma',
+#>  'PlateType': '',
+#>  'LabLocation': 'SLUS',
+#>  'StudyOrganism': '',
+#>  '!Title': 'Example Adat Set001, Example Adat Set002',
+#>  'AssaySite': 'SW',
+#>  'CalibratorId': '170261',
+#>  'ReportConfig': {'analysisSteps': [{'stepType': 'hybNorm',
+#>     'referenceSource': 'intraplate',
+#>     'includeSampleTypes': ['QC', 'Calibrator', 'Buffer']},
+#>    {'stepName': 'medNormInt',
+#>     'stepType': 'medNorm',
+#>     'includeSampleTypes': ['Calibrator', 'Buffer'],
+#>     'referenceSource': 'intraplate',
+#>     'referenceFields': ['SampleId']},
+#>    {'stepType': 'plateScale',
+#>     'referenceSource': 'Reference_v4_Plasma_Calibrator_170261'},
+#>    {'stepType': 'calibrate',
+#>     'referenceSource': 'Reference_v4_Plasma_Calibrator_170261'},
+#>    {'stepName': 'anmlQC',
+#>     'stepType': 'ANML',
+#>     'effectSizeCutoff': 2.0,
+#>     'minFractionUsed': 0.3,
+#>     'includeSampleTypes': ['QC'],
+#>     'referenceSource': 'Reference_v4_Plasma_ANML'},
+#>    {'stepType': 'qcCheck',
+#>     'QCReferenceSource': 'Reference_v4_Plasma_QC_ANML_170255',
+#>     'tailsCriteriaLower': 0.8,
+#>     'tailsCriteriaUpper': 1.2,
+#>     'tailThreshold': 15.0,
+#>     'QCAdditionalReferenceSources': ['Reference_v4_Plasma_QC_ANML_170259',
+#>      'Reference_v4_Plasma_QC_ANML_170260'],
+#>     'prenormalized': True},
+#>    {'stepName': 'anmlSMP',
+#>     'stepType': 'ANML',
+#>     'effectSizeCutoff': 2.0,
+#>     'minFractionUsed': 0.3,
+#>     'includeSampleTypes': ['Sample'],
+#>     'referenceSource': 'Reference_v4_Plasma_ANML'}],
+#>   'qualityReports': ['SQS Report'],
+#>   'filter': {'proteinEffectiveDate': '2019-08-06'}},
+#>  'HybNormReference': 'intraplate',
+#>  'MedNormReference': 'intraplate',
+#>  'NormalizationAlgorithm': 'ANML',
+#>  'PlateScale_ReferenceSource': 'Reference_v4_Plasma_Calibrator_170261',
+#>  'PlateScale_Scalar_Example_Adat_Set001': '1.08091554',
+#>  'PlateScale_PassFlag_Example_Adat_Set001': 'PASS',
+#>  'CalibrationReference': 'Reference_v4_Plasma_Calibrator_170261',
+#>  'CalPlateTailPercent_Example_Adat_Set001': '0.1',
+#>  'PlateTailPercent_Example_Adat_Set001': '1.2',
+#>  'PlateTailTest_Example_Adat_Set001': 'PASS',
+#>  'PlateScale_Scalar_Example_Adat_Set002': '1.09915270',
+#>  'PlateScale_PassFlag_Example_Adat_Set002': 'PASS',
+#>  'CalPlateTailPercent_Example_Adat_Set002': '2.6',
+#>  'PlateTailPercent_Example_Adat_Set002': '4.2',
+#>  'PlateTailTest_Example_Adat_Set002': 'PASS'}
+```
+
+
 
 Canopy's Adat object inherits the pandas printing methods which displays nicely in Jupyter Notebooks when using `IPython.display.display()`.
 
@@ -140,6 +1330,162 @@ type(aptamer_df)
 
 
 
+
+```python
+HTML(aptamer_df.head(5).to_html())
+```
+
+
+
+
+*Output*
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>SeqId</th>
+      <th>SeqIdVersion</th>
+      <th>SomaId</th>
+      <th>TargetFullName</th>
+      <th>Target</th>
+      <th>UniProt</th>
+      <th>EntrezGeneID</th>
+      <th>EntrezGeneSymbol</th>
+      <th>Organism</th>
+      <th>Units</th>
+      <th>Type</th>
+      <th>Dilution</th>
+      <th>PlateScale_Reference</th>
+      <th>CalReference</th>
+      <th>Cal_Example_Adat_Set001</th>
+      <th>ColCheck</th>
+      <th>CalQcRatio_Example_Adat_Set001_170255</th>
+      <th>QcReference_170255</th>
+      <th>Cal_Example_Adat_Set002</th>
+      <th>CalQcRatio_Example_Adat_Set002_170255</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10000-28</td>
+      <td>3</td>
+      <td>SL019233</td>
+      <td>Beta-crystallin B2</td>
+      <td>CRBB2</td>
+      <td>P43320</td>
+      <td>1415</td>
+      <td>CRYBB2</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>687.4</td>
+      <td>687.4</td>
+      <td>1.01252025</td>
+      <td>PASS</td>
+      <td>1.008</td>
+      <td>505.4</td>
+      <td>1.01476233</td>
+      <td>1.067</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>10001-7</td>
+      <td>3</td>
+      <td>SL002564</td>
+      <td>RAF proto-oncogene serine/threonine-protein kinase</td>
+      <td>c-Raf</td>
+      <td>P04049</td>
+      <td>5894</td>
+      <td>RAF1</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>227.8</td>
+      <td>227.8</td>
+      <td>1.01605709</td>
+      <td>PASS</td>
+      <td>0.970</td>
+      <td>223.9</td>
+      <td>1.03686846</td>
+      <td>1.007</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>10003-15</td>
+      <td>3</td>
+      <td>SL019245</td>
+      <td>Zinc finger protein 41</td>
+      <td>ZNF41</td>
+      <td>P51814</td>
+      <td>7592</td>
+      <td>ZNF41</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>0.5</td>
+      <td>126.9</td>
+      <td>126.9</td>
+      <td>0.95056180</td>
+      <td>PASS</td>
+      <td>1.046</td>
+      <td>119.6</td>
+      <td>1.15258856</td>
+      <td>0.981</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>10006-25</td>
+      <td>3</td>
+      <td>SL019228</td>
+      <td>ETS domain-containing protein Elk-1</td>
+      <td>ELK1</td>
+      <td>P19419</td>
+      <td>2002</td>
+      <td>ELK1</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>634.2</td>
+      <td>634.2</td>
+      <td>0.99607350</td>
+      <td>PASS</td>
+      <td>1.042</td>
+      <td>667.2</td>
+      <td>0.93581231</td>
+      <td>1.026</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>10008-43</td>
+      <td>3</td>
+      <td>SL019234</td>
+      <td>Guanylyl cyclase-activating protein 1</td>
+      <td>GUC1A</td>
+      <td>P43080</td>
+      <td>2978</td>
+      <td>GUCA1A</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>585.0</td>
+      <td>585.0</td>
+      <td>0.94051447</td>
+      <td>PASS</td>
+      <td>1.036</td>
+      <td>587.5</td>
+      <td>0.96201283</td>
+      <td>0.998</td>
+    </tr>
+  </tbody>
+</table>
+
+
+
 ### Accessing feature data
 
 The `.to_frame()` method creates a lookup table that links the feature names in the `adat` object to the annotation data in `columns`:
@@ -157,6 +1503,162 @@ type(col_df)
 ``` python
 #> pandas.core.frame.DataFrame
 ```
+
+
+
+
+```python
+HTML(col_df.head(5).to_html())
+```
+
+
+
+
+*Output*
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>SeqId</th>
+      <th>SeqIdVersion</th>
+      <th>SomaId</th>
+      <th>TargetFullName</th>
+      <th>Target</th>
+      <th>UniProt</th>
+      <th>EntrezGeneID</th>
+      <th>EntrezGeneSymbol</th>
+      <th>Organism</th>
+      <th>Units</th>
+      <th>Type</th>
+      <th>Dilution</th>
+      <th>PlateScale_Reference</th>
+      <th>CalReference</th>
+      <th>Cal_Example_Adat_Set001</th>
+      <th>ColCheck</th>
+      <th>CalQcRatio_Example_Adat_Set001_170255</th>
+      <th>QcReference_170255</th>
+      <th>Cal_Example_Adat_Set002</th>
+      <th>CalQcRatio_Example_Adat_Set002_170255</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10000-28</td>
+      <td>3</td>
+      <td>SL019233</td>
+      <td>Beta-crystallin B2</td>
+      <td>CRBB2</td>
+      <td>P43320</td>
+      <td>1415</td>
+      <td>CRYBB2</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>687.4</td>
+      <td>687.4</td>
+      <td>1.01252025</td>
+      <td>PASS</td>
+      <td>1.008</td>
+      <td>505.4</td>
+      <td>1.01476233</td>
+      <td>1.067</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>10001-7</td>
+      <td>3</td>
+      <td>SL002564</td>
+      <td>RAF proto-oncogene serine/threonine-protein kinase</td>
+      <td>c-Raf</td>
+      <td>P04049</td>
+      <td>5894</td>
+      <td>RAF1</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>227.8</td>
+      <td>227.8</td>
+      <td>1.01605709</td>
+      <td>PASS</td>
+      <td>0.970</td>
+      <td>223.9</td>
+      <td>1.03686846</td>
+      <td>1.007</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>10003-15</td>
+      <td>3</td>
+      <td>SL019245</td>
+      <td>Zinc finger protein 41</td>
+      <td>ZNF41</td>
+      <td>P51814</td>
+      <td>7592</td>
+      <td>ZNF41</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>0.5</td>
+      <td>126.9</td>
+      <td>126.9</td>
+      <td>0.95056180</td>
+      <td>PASS</td>
+      <td>1.046</td>
+      <td>119.6</td>
+      <td>1.15258856</td>
+      <td>0.981</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>10006-25</td>
+      <td>3</td>
+      <td>SL019228</td>
+      <td>ETS domain-containing protein Elk-1</td>
+      <td>ELK1</td>
+      <td>P19419</td>
+      <td>2002</td>
+      <td>ELK1</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>634.2</td>
+      <td>634.2</td>
+      <td>0.99607350</td>
+      <td>PASS</td>
+      <td>1.042</td>
+      <td>667.2</td>
+      <td>0.93581231</td>
+      <td>1.026</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>10008-43</td>
+      <td>3</td>
+      <td>SL019234</td>
+      <td>Guanylyl cyclase-activating protein 1</td>
+      <td>GUC1A</td>
+      <td>P43080</td>
+      <td>2978</td>
+      <td>GUCA1A</td>
+      <td>Human</td>
+      <td>RFU</td>
+      <td>Protein</td>
+      <td>20</td>
+      <td>585.0</td>
+      <td>585.0</td>
+      <td>0.94051447</td>
+      <td>PASS</td>
+      <td>1.036</td>
+      <td>587.5</td>
+      <td>0.96201283</td>
+      <td>0.998</td>
+    </tr>
+  </tbody>
+</table>
 
 
 
@@ -219,6 +1721,246 @@ type(sample_df)
 
 
 
+
+```python
+HTML(sample_df.head(5).to_html())
+```
+
+
+
+
+*Output*
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>PlateId</th>
+      <th>PlateRunDate</th>
+      <th>ScannerID</th>
+      <th>PlatePosition</th>
+      <th>SlideId</th>
+      <th>Subarray</th>
+      <th>SampleId</th>
+      <th>SampleType</th>
+      <th>PercentDilution</th>
+      <th>SampleMatrix</th>
+      <th>Barcode</th>
+      <th>Barcode2d</th>
+      <th>SampleName</th>
+      <th>SampleNotes</th>
+      <th>AliquotingNotes</th>
+      <th>SampleDescription</th>
+      <th>AssayNotes</th>
+      <th>TimePoint</th>
+      <th>ExtIdentifier</th>
+      <th>SsfExtId</th>
+      <th>SampleGroup</th>
+      <th>SiteId</th>
+      <th>TubeUniqueID</th>
+      <th>CLI</th>
+      <th>HybControlNormScale</th>
+      <th>RowCheck</th>
+      <th>NormScale_20</th>
+      <th>NormScale_0_005</th>
+      <th>NormScale_0_5</th>
+      <th>ANMLFractionUsed_20</th>
+      <th>ANMLFractionUsed_0_005</th>
+      <th>ANMLFractionUsed_0_5</th>
+      <th>Age</th>
+      <th>Sex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Example Adat Set001</td>
+      <td>2020-06-18</td>
+      <td>SG15214400</td>
+      <td>H9</td>
+      <td>258495800012</td>
+      <td>3</td>
+      <td>1</td>
+      <td>Sample</td>
+      <td>20</td>
+      <td>Plasma-PPT</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.98185998</td>
+      <td>PASS</td>
+      <td>1.03693580</td>
+      <td>0.85701624</td>
+      <td>0.77717491</td>
+      <td>0.914</td>
+      <td>0.869</td>
+      <td>0.903</td>
+      <td>76</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Example Adat Set001</td>
+      <td>2020-06-18</td>
+      <td>SG15214400</td>
+      <td>H8</td>
+      <td>258495800004</td>
+      <td>7</td>
+      <td>2</td>
+      <td>Sample</td>
+      <td>20</td>
+      <td>Plasma-PPT</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.96671829</td>
+      <td>PASS</td>
+      <td>0.96022505</td>
+      <td>0.84858420</td>
+      <td>0.85201953</td>
+      <td>0.937</td>
+      <td>0.956</td>
+      <td>0.973</td>
+      <td>55</td>
+      <td>F</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Example Adat Set001</td>
+      <td>2020-06-18</td>
+      <td>SG15214400</td>
+      <td>H7</td>
+      <td>258495800010</td>
+      <td>8</td>
+      <td>3</td>
+      <td>Sample</td>
+      <td>20</td>
+      <td>Plasma-PPT</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>1.00193072</td>
+      <td>PASS</td>
+      <td>0.98411617</td>
+      <td>1.03270156</td>
+      <td>0.91519153</td>
+      <td>0.907</td>
+      <td>0.919</td>
+      <td>0.915</td>
+      <td>47</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Example Adat Set001</td>
+      <td>2020-06-18</td>
+      <td>SG15214400</td>
+      <td>H6</td>
+      <td>258495800003</td>
+      <td>4</td>
+      <td>4</td>
+      <td>Sample</td>
+      <td>20</td>
+      <td>Plasma-PPT</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.94017961</td>
+      <td>PASS</td>
+      <td>1.07839878</td>
+      <td>0.94626841</td>
+      <td>0.91246731</td>
+      <td>0.934</td>
+      <td>0.919</td>
+      <td>0.912</td>
+      <td>37</td>
+      <td>M</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Example Adat Set001</td>
+      <td>2020-06-18</td>
+      <td>SG15214400</td>
+      <td>H5</td>
+      <td>258495800009</td>
+      <td>4</td>
+      <td>5</td>
+      <td>Sample</td>
+      <td>20</td>
+      <td>Plasma-PPT</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>0.94621098</td>
+      <td>PASS</td>
+      <td>0.84679446</td>
+      <td>0.92904553</td>
+      <td>0.77413056</td>
+      <td>0.707</td>
+      <td>0.894</td>
+      <td>0.708</td>
+      <td>71</td>
+      <td>F</td>
+    </tr>
+  </tbody>
+</table>
+
+
+
 ### Math
 You may perform mathematical transformations on the feature data via apply or calling those functions and passing the entire dataframe.
 
@@ -257,6 +1999,16 @@ adat.to_file('/tmp/out_file.adat')
 ```
 
 # Typical Analyses
+Although it is beyond the scope of the `Canopy` package, below are 3
+sample analyses that typical users/clients would perform on SomaLogic data.
+They are not intended to be a definitive guide in statistical
+analysis and existing packages do exist in the `Python` universe that perform parts
+or extensions of these techniques. Many variations of the workflows below
+exist, however the framework highlights how one could perform standard
+preliminary analyses on SomaLogic data for: 
+ - Two-group differential expression (t-test)
+ - Binary classification (logistic regression)
+ - Linear regression
 
 ## Compare Groups (M/F) via t-test
 
@@ -417,7 +2169,7 @@ plt.show()
 ```
 
 
-![svg](README_files/README_46_0.svg)
+![svg](README_files/README_51_0.svg)
 
 
 ## Logistic Regression (Predict Sex)
@@ -848,7 +2600,7 @@ plt.show()
 ```
 
 
-![svg](README_files/README_59_0.svg)
+![svg](README_files/README_64_0.svg)
 
 
 ## Linear Regression (Predict Age)
@@ -1325,7 +3077,7 @@ plt.show()
 ```
 
 
-![svg](README_files/README_73_0.svg)
+![svg](README_files/README_78_0.svg)
 
 
 ### Closing Remarks
@@ -1345,13 +3097,3 @@ plt.show()
       - [https://tldrlegal.com/license/mit-license/](https://tldrlegal.com/license/mit-license)
 
 -----
-
-
-```python
-
-```
-
-
-```python
-
-```
