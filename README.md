@@ -150,8 +150,7 @@ adat.columns
 
 ```python
 #Display the first five rows and columns of the adat
-first_five_columns = [x[0] for x in adat.columns[:5]]
-HTML(adat.head(5)[first_five_columns].to_html()) # Need to use HTML & to_html() here to display nicely for this README
+HTML(adat.iloc[:5,:5].to_html()) # Need to use HTML & to_html() here to display nicely for this README
 # Output is left-right scrollable in both this readme and Jupyter notebooks
 ```
 
