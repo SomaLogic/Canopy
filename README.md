@@ -481,7 +481,6 @@ HTML(logr_df_sorted.head(20).to_html()) # Need to use HTML here to display nicel
 
 
 *Output*
-<div>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -708,7 +707,6 @@ HTML(logr_df_sorted.head(20).to_html()) # Need to use HTML here to display nicel
     </tr>
   </tbody>
 </table>
-</div>
 
 
 
@@ -727,7 +725,6 @@ logr_res.summary()
 
 
 *Output*
-<div>
 <table class="simpletable">
 <caption>Generalized Linear Model Regression Results</caption>
 <tr>
@@ -781,7 +778,6 @@ logr_res.summary()
   <th>('9282-12', 'Cysteine-rich secretory protein 2')</th> <td>    1.5980</td> <td>    0.804</td> <td>    1.987</td> <td> 0.047</td> <td>    0.022</td> <td>    3.174</td>
 </tr>
 </table>
-</div>
 
 
 
@@ -814,7 +810,6 @@ HTML(logr_perf_df.to_html())
 
 
 *Output*
-<div>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -837,7 +832,6 @@ HTML(logr_perf_df.to_html())
     </tr>
   </tbody>
 </table>
-</div>
 
 
 
@@ -909,7 +903,6 @@ HTML(linr_sorted_res_df.head(20).to_html())
 
 
 *Output*
-<div>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -1136,7 +1129,6 @@ HTML(linr_sorted_res_df.head(20).to_html())
     </tr>
   </tbody>
 </table>
-</div>
 
 
 
@@ -1154,7 +1146,6 @@ mod.summary()
 
 
 *Output*
-<div>
 <table class="simpletable">
 <caption>OLS Regression Results</caption>
 <tr>
@@ -1231,7 +1222,6 @@ mod.summary()
   <th>Kurtosis:</th>      <td> 3.228</td> <th>  Cond. No.          </th> <td>    4.16</td>
 </tr>
 </table><br/><br/>Warnings:<br/>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
-</div>
 
 
 
@@ -1285,7 +1275,6 @@ HTML(linr_metrics_df.to_html())
 
 
 *Output*
-<div>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -1314,7 +1303,6 @@ HTML(linr_metrics_df.to_html())
     </tr>
   </tbody>
 </table>
-</div>
 
 
 
