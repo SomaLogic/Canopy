@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+import argparse
+from canopy import Adat
+from canopy import concatenate_adats
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Adat Concatenation Utility')
+
+    parser.add_argument(
+        '-a',
+        '--adats',
+        help="List of adats' filenames to be concatenated",
+        metavar='filenames',
+        required=True,
+        nargs='*'
+    )
+
+    parser.add_argument(
+        '-f',
+        '--filename',
+        help='Filename of final concatenated adat',
+        metavar='filename',
+        required=True,
+        nargs=1
+    )
+
+    args = parser.parse_args()
+    in_filenames = args.adats
+    out_filename = args.filename[0]
+
+    if len(in_filenames) < 2:
+        parser.error('More than one input adat filename must be supplied')
+
+    adats = []
+    for filename in in_filenames:
+        adats.append(Adat.from_file(filename))
+
+    concat_adat = concatenate_adats(adats)
+    concat_adat.to_file(out_filename)
