@@ -149,6 +149,7 @@ adat.columns
 
 
 ```python
+from IPython.display import HTML
 #Display the first five rows and columns of the adat
 HTML(adat.iloc[:5,:5].to_html()) # Need to use HTML & to_html() here to display nicely for this README
 # Output is left-right scrollable in both this readme and Jupyter notebooks
@@ -1233,7 +1234,7 @@ adat.header_metadata
 
 *Output*
 ``` python
-#> {'AdatId': '',
+#> {'!AdatId': 'GID-1234-56-789-abcdef',
 #>  '!Version': '1.2',
 #>  '!AssayType': 'PharmaServices',
 #>  '!AssayVersion': 'V4',
@@ -1244,18 +1245,17 @@ adat.header_metadata
 #>  '!EnteredBy': 'Technician1',
 #>  '!ExpDate': '2020-06-18, 2020-07-20',
 #>  '!GeneratedBy': 'Px (Build:  : ), Canopy_0.1.1',
-#>  'Notes': "2 columns ('Age' and 'Sex') have been added to this ADAT. Age has been randomly increased or decreased by 1-2 years to protect patient information",
+#>  '!RunNotes': "2 columns ('Age' and 'Sex') have been added to this ADAT. Age has been randomly increased or decreased by 1-2 years to protect patient information",
 #>  '!ProcessSteps': 'Raw RFU, Hyb Normalization, medNormInt (SampleId), plateScale, Calibration, anmlQC, qcCheck, anmlSMP',
 #>  '!ProteinEffectiveDate': '2019-08-06',
-#>  'RunNotes': '',
-#>  'StudyMatrix': 'EDTA Plasma',
-#>  'PlateType': '',
-#>  'LabLocation': 'SLUS',
-#>  'StudyOrganism': '',
+#>  '!StudyMatrix': 'EDTA Plasma',
+#>  '!PlateType': '',
+#>  '!LabLocation': 'SLUS',
+#>  '!StudyOrganism': '',
 #>  '!Title': 'Example Adat Set001, Example Adat Set002',
-#>  'AssaySite': 'SW',
-#>  'CalibratorId': '170261',
-#>  'ReportConfig': {'analysisSteps': [{'stepType': 'hybNorm',
+#>  '!AssaySite': 'SW',
+#>  '!CalibratorId': '170261',
+#>  '!ReportConfig': {'analysisSteps': [{'stepType': 'hybNorm',
 #>     'referenceSource': 'intraplate',
 #>     'includeSampleTypes': ['QC', 'Calibrator', 'Buffer']},
 #>    {'stepName': 'medNormInt',
@@ -2093,10 +2093,10 @@ print(clean_data.index.to_frame()['Group'].value_counts())
 *Output*
 ``` python
 #> F    85
-#> M    84
+#> M    85
 #> Name: Sex, dtype: int64
+#> 1    85
 #> 0    85
-#> 1    84
 #> Name: Group, dtype: int64
 #> 
 ```
@@ -2260,202 +2260,202 @@ HTML(logr_df_sorted.head(20).to_html()) # Need to use HTML here to display nicel
     <tr>
       <th>6580-29</th>
       <td>Pregnancy zone protein</td>
-      <td>-3.358125</td>
-      <td>0.537520</td>
-      <td>-6.247448</td>
-      <td>4.172128e-10</td>
-      <td>-4.411644</td>
-      <td>-2.304606</td>
+      <td>-3.079818</td>
+      <td>0.489558</td>
+      <td>-6.291020</td>
+      <td>3.153866e-10</td>
+      <td>-4.039334</td>
+      <td>-2.120302</td>
     </tr>
     <tr>
       <th>5763-67</th>
       <td>Beta-defensin 104</td>
-      <td>2.863822</td>
-      <td>0.462327</td>
-      <td>6.194362</td>
-      <td>5.852166e-10</td>
-      <td>1.957677</td>
-      <td>3.769966</td>
+      <td>2.974778</td>
+      <td>0.478400</td>
+      <td>6.218181</td>
+      <td>5.029509e-10</td>
+      <td>2.037131</td>
+      <td>3.912425</td>
     </tr>
     <tr>
       <th>3032-11</th>
       <td>Follicle stimulating hormone</td>
-      <td>-1.626249</td>
-      <td>0.264846</td>
-      <td>-6.140347</td>
-      <td>8.234151e-10</td>
-      <td>-2.145338</td>
-      <td>-1.107159</td>
+      <td>-1.505718</td>
+      <td>0.250398</td>
+      <td>-6.013292</td>
+      <td>1.817935e-09</td>
+      <td>-1.996490</td>
+      <td>-1.014946</td>
     </tr>
     <tr>
       <th>7926-13</th>
       <td>Kunitz-type protease inhibitor 3</td>
-      <td>2.533244</td>
-      <td>0.427489</td>
-      <td>5.925868</td>
-      <td>3.106519e-09</td>
-      <td>1.695381</td>
-      <td>3.371107</td>
-    </tr>
-    <tr>
-      <th>9282-12</th>
-      <td>Cysteine-rich secretory protein 2</td>
-      <td>1.995345</td>
-      <td>0.345258</td>
-      <td>5.779283</td>
-      <td>7.501965e-09</td>
-      <td>1.318651</td>
-      <td>2.672038</td>
+      <td>2.887475</td>
+      <td>0.482526</td>
+      <td>5.984087</td>
+      <td>2.176067e-09</td>
+      <td>1.941742</td>
+      <td>3.833208</td>
     </tr>
     <tr>
       <th>16892-23</th>
       <td>Ectonucleotide pyrophosphatase/phosphodiesterase family member 2</td>
-      <td>-2.042265</td>
-      <td>0.356588</td>
-      <td>-5.727234</td>
-      <td>1.020812e-08</td>
-      <td>-2.741165</td>
-      <td>-1.343365</td>
+      <td>-2.335113</td>
+      <td>0.396641</td>
+      <td>-5.887216</td>
+      <td>3.927542e-09</td>
+      <td>-3.112516</td>
+      <td>-1.557710</td>
     </tr>
     <tr>
-      <th>4914-10</th>
-      <td>Human Chorionic Gonadotropin</td>
-      <td>-1.374284</td>
-      <td>0.240818</td>
-      <td>-5.706726</td>
-      <td>1.151699e-08</td>
-      <td>-1.846279</td>
-      <td>-0.902289</td>
+      <th>9282-12</th>
+      <td>Cysteine-rich secretory protein 2</td>
+      <td>1.768026</td>
+      <td>0.309050</td>
+      <td>5.720837</td>
+      <td>1.060006e-08</td>
+      <td>1.162299</td>
+      <td>2.373754</td>
     </tr>
     <tr>
       <th>2953-31</th>
       <td>Luteinizing hormone</td>
-      <td>-1.396186</td>
-      <td>0.250702</td>
-      <td>-5.569096</td>
-      <td>2.560645e-08</td>
-      <td>-1.887553</td>
-      <td>-0.904818</td>
+      <td>-1.319728</td>
+      <td>0.240323</td>
+      <td>-5.491466</td>
+      <td>3.986115e-08</td>
+      <td>-1.790753</td>
+      <td>-0.848702</td>
     </tr>
     <tr>
-      <th>2474-54</th>
-      <td>Serum amyloid P-component</td>
-      <td>1.736295</td>
-      <td>0.324984</td>
-      <td>5.342701</td>
-      <td>9.157157e-08</td>
-      <td>1.099337</td>
-      <td>2.373253</td>
-    </tr>
-    <tr>
-      <th>8428-102</th>
-      <td>Neurotrimin</td>
-      <td>-1.252695</td>
-      <td>0.239697</td>
-      <td>-5.226152</td>
-      <td>1.730742e-07</td>
-      <td>-1.722493</td>
-      <td>-0.782896</td>
-    </tr>
-    <tr>
-      <th>2696-87</th>
-      <td>Persephin</td>
-      <td>2.020417</td>
-      <td>0.387468</td>
-      <td>5.214408</td>
-      <td>1.844053e-07</td>
-      <td>1.260994</td>
-      <td>2.779841</td>
-    </tr>
-    <tr>
-      <th>5116-62</th>
-      <td>Roundabout homolog 2</td>
-      <td>-1.273841</td>
-      <td>0.268220</td>
-      <td>-4.749239</td>
-      <td>2.041831e-06</td>
-      <td>-1.799543</td>
-      <td>-0.748140</td>
-    </tr>
-    <tr>
-      <th>3066-12</th>
-      <td>Galectin-3</td>
-      <td>-0.988967</td>
-      <td>0.209618</td>
-      <td>-4.717944</td>
-      <td>2.382404e-06</td>
-      <td>-1.399811</td>
-      <td>-0.578123</td>
-    </tr>
-    <tr>
-      <th>9002-36</th>
-      <td>Serpin A11</td>
-      <td>-1.038507</td>
-      <td>0.220170</td>
-      <td>-4.716841</td>
-      <td>2.395351e-06</td>
-      <td>-1.470032</td>
-      <td>-0.606982</td>
-    </tr>
-    <tr>
-      <th>5451-1</th>
-      <td>CD166 antigen</td>
-      <td>-1.003051</td>
-      <td>0.220619</td>
-      <td>-4.546530</td>
-      <td>5.453754e-06</td>
-      <td>-1.435456</td>
-      <td>-0.570646</td>
-    </tr>
-    <tr>
-      <th>7139-14</th>
-      <td>SLIT and NTRK-like protein 4</td>
-      <td>0.983042</td>
-      <td>0.217822</td>
-      <td>4.513051</td>
-      <td>6.390155e-06</td>
-      <td>0.556119</td>
-      <td>1.409965</td>
-    </tr>
-    <tr>
-      <th>5934-1</th>
-      <td>Ferritin</td>
-      <td>0.994552</td>
-      <td>0.224264</td>
-      <td>4.434731</td>
-      <td>9.218748e-06</td>
-      <td>0.555002</td>
-      <td>1.434102</td>
-    </tr>
-    <tr>
-      <th>15324-58</th>
-      <td>Ferritin light chain</td>
-      <td>0.994265</td>
-      <td>0.224272</td>
-      <td>4.433295</td>
-      <td>9.280383e-06</td>
-      <td>0.554700</td>
-      <td>1.433831</td>
-    </tr>
-    <tr>
-      <th>8484-24</th>
-      <td>Leptin</td>
-      <td>-0.945567</td>
-      <td>0.214262</td>
-      <td>-4.413131</td>
-      <td>1.018865e-05</td>
-      <td>-1.365513</td>
-      <td>-0.525621</td>
+      <th>4914-10</th>
+      <td>Human Chorionic Gonadotropin</td>
+      <td>-1.244551</td>
+      <td>0.229781</td>
+      <td>-5.416240</td>
+      <td>6.086534e-08</td>
+      <td>-1.694914</td>
+      <td>-0.794188</td>
     </tr>
     <tr>
       <th>8468-19</th>
       <td>Prostate-specific antigen</td>
-      <td>7.350184</td>
-      <td>1.671012</td>
-      <td>4.398641</td>
-      <td>1.089308e-05</td>
-      <td>4.075060</td>
-      <td>10.625308</td>
+      <td>5.841131</td>
+      <td>1.113030</td>
+      <td>5.247953</td>
+      <td>1.537986e-07</td>
+      <td>3.659632</td>
+      <td>8.022630</td>
+    </tr>
+    <tr>
+      <th>2474-54</th>
+      <td>Serum amyloid P-component</td>
+      <td>1.434929</td>
+      <td>0.279218</td>
+      <td>5.139108</td>
+      <td>2.760458e-07</td>
+      <td>0.887673</td>
+      <td>1.982185</td>
+    </tr>
+    <tr>
+      <th>8428-102</th>
+      <td>Neurotrimin</td>
+      <td>-1.264317</td>
+      <td>0.246142</td>
+      <td>-5.136543</td>
+      <td>2.798380e-07</td>
+      <td>-1.746745</td>
+      <td>-0.781888</td>
+    </tr>
+    <tr>
+      <th>9002-36</th>
+      <td>Serpin A11</td>
+      <td>-1.087385</td>
+      <td>0.219035</td>
+      <td>-4.964434</td>
+      <td>6.890169e-07</td>
+      <td>-1.516685</td>
+      <td>-0.658084</td>
+    </tr>
+    <tr>
+      <th>3066-12</th>
+      <td>Galectin-3</td>
+      <td>-1.005615</td>
+      <td>0.206735</td>
+      <td>-4.864276</td>
+      <td>1.148764e-06</td>
+      <td>-1.410808</td>
+      <td>-0.600423</td>
+    </tr>
+    <tr>
+      <th>5116-62</th>
+      <td>Roundabout homolog 2</td>
+      <td>-1.291594</td>
+      <td>0.270447</td>
+      <td>-4.775767</td>
+      <td>1.790237e-06</td>
+      <td>-1.821661</td>
+      <td>-0.761527</td>
+    </tr>
+    <tr>
+      <th>7139-14</th>
+      <td>SLIT and NTRK-like protein 4</td>
+      <td>1.018520</td>
+      <td>0.218625</td>
+      <td>4.658761</td>
+      <td>3.181183e-06</td>
+      <td>0.590023</td>
+      <td>1.447016</td>
+    </tr>
+    <tr>
+      <th>8484-24</th>
+      <td>Leptin</td>
+      <td>-0.991585</td>
+      <td>0.219260</td>
+      <td>-4.522415</td>
+      <td>6.113800e-06</td>
+      <td>-1.421326</td>
+      <td>-0.561843</td>
+    </tr>
+    <tr>
+      <th>5934-1</th>
+      <td>Ferritin</td>
+      <td>1.012300</td>
+      <td>0.227525</td>
+      <td>4.449188</td>
+      <td>8.619536e-06</td>
+      <td>0.566360</td>
+      <td>1.458240</td>
+    </tr>
+    <tr>
+      <th>15324-58</th>
+      <td>Ferritin light chain</td>
+      <td>1.002813</td>
+      <td>0.226429</td>
+      <td>4.428822</td>
+      <td>9.474919e-06</td>
+      <td>0.559021</td>
+      <td>1.446606</td>
+    </tr>
+    <tr>
+      <th>4234-8</th>
+      <td>Interleukin-1 receptor-like 1</td>
+      <td>1.134058</td>
+      <td>0.258632</td>
+      <td>4.384831</td>
+      <td>1.160761e-05</td>
+      <td>0.627149</td>
+      <td>1.640968</td>
+    </tr>
+    <tr>
+      <th>2696-87</th>
+      <td>Persephin</td>
+      <td>1.412833</td>
+      <td>0.323348</td>
+      <td>4.369389</td>
+      <td>1.245947e-05</td>
+      <td>0.779083</td>
+      <td>2.046584</td>
     </tr>
   </tbody>
 </table>
@@ -2480,10 +2480,10 @@ logr_res.summary()
 <table class="simpletable">
 <caption>Generalized Linear Model Regression Results</caption>
 <tr>
-  <th>Dep. Variable:</th>           <td>y</td>        <th>  No. Observations:  </th>  <td>   144</td> 
+  <th>Dep. Variable:</th>           <td>y</td>        <th>  No. Observations:  </th>  <td>   145</td> 
 </tr>
 <tr>
-  <th>Model:</th>                  <td>GLM</td>       <th>  Df Residuals:      </th>  <td>   138</td> 
+  <th>Model:</th>                  <td>GLM</td>       <th>  Df Residuals:      </th>  <td>   139</td> 
 </tr>
 <tr>
   <th>Model Family:</th>        <td>Binomial</td>     <th>  Df Model:          </th>  <td>     5</td> 
@@ -2492,16 +2492,16 @@ logr_res.summary()
   <th>Link Function:</th>         <td>logit</td>      <th>  Scale:             </th> <td>  1.0000</td>
 </tr>
 <tr>
-  <th>Method:</th>                <td>IRLS</td>       <th>  Log-Likelihood:    </th> <td> -10.883</td>
+  <th>Method:</th>                <td>IRLS</td>       <th>  Log-Likelihood:    </th> <td> -8.4167</td>
 </tr>
 <tr>
-  <th>Date:</th>            <td>Mon, 14 Sep 2020</td> <th>  Deviance:          </th> <td>  21.767</td>
+  <th>Date:</th>            <td>Fri, 25 Sep 2020</td> <th>  Deviance:          </th> <td>  16.833</td>
 </tr>
 <tr>
-  <th>Time:</th>                <td>16:49:54</td>     <th>  Pearson chi2:      </th>  <td>  23.7</td> 
+  <th>Time:</th>                <td>15:33:26</td>     <th>  Pearson chi2:      </th>  <td>  17.8</td> 
 </tr>
 <tr>
-  <th>No. Iterations:</th>          <td>9</td>        <th>                     </th>     <td> </td>   
+  <th>No. Iterations:</th>         <td>10</td>        <th>                     </th>     <td> </td>   
 </tr>
 <tr>
   <th>Covariance Type:</th>     <td>nonrobust</td>    <th>                     </th>     <td> </td>   
@@ -2509,25 +2509,25 @@ logr_res.summary()
 </table>
 <table class="simpletable">
 <tr>
-                          <td></td>                            <th>coef</th>     <th>std err</th>      <th>z</th>      <th>P>|z|</th>  <th>[0.025</th>    <th>0.975]</th>  
+                                          <td></td>                                            <th>coef</th>     <th>std err</th>      <th>z</th>      <th>P>|z|</th>  <th>[0.025</th>    <th>0.975]</th>  
 </tr>
 <tr>
-  <th>const</th>                                            <td>    1.2803</td> <td>    0.825</td> <td>    1.552</td> <td> 0.121</td> <td>   -0.336</td> <td>    2.897</td>
+  <th>const</th>                                                                            <td>    1.6106</td> <td>    1.178</td> <td>    1.367</td> <td> 0.172</td> <td>   -0.699</td> <td>    3.920</td>
 </tr>
 <tr>
-  <th>('6580-29', 'Pregnancy zone protein')</th>            <td>   -4.9599</td> <td>    1.696</td> <td>   -2.925</td> <td> 0.003</td> <td>   -8.284</td> <td>   -1.636</td>
+  <th>('6580-29', 'Pregnancy zone protein')</th>                                            <td>   -7.0008</td> <td>    3.112</td> <td>   -2.250</td> <td> 0.024</td> <td>  -13.099</td> <td>   -0.902</td>
 </tr>
 <tr>
-  <th>('5763-67', 'Beta-defensin 104')</th>                 <td>    1.6672</td> <td>    0.681</td> <td>    2.447</td> <td> 0.014</td> <td>    0.332</td> <td>    3.003</td>
+  <th>('5763-67', 'Beta-defensin 104')</th>                                                 <td>    2.7821</td> <td>    1.255</td> <td>    2.217</td> <td> 0.027</td> <td>    0.322</td> <td>    5.242</td>
 </tr>
 <tr>
-  <th>('3032-11', 'Follicle stimulating hormone')</th>      <td>   -2.2390</td> <td>    1.132</td> <td>   -1.977</td> <td> 0.048</td> <td>   -4.458</td> <td>   -0.020</td>
+  <th>('3032-11', 'Follicle stimulating hormone')</th>                                      <td>   -1.1722</td> <td>    0.818</td> <td>   -1.432</td> <td> 0.152</td> <td>   -2.776</td> <td>    0.432</td>
 </tr>
 <tr>
-  <th>('7926-13', 'Kunitz-type protease inhibitor 3')</th>  <td>    1.6874</td> <td>    0.921</td> <td>    1.832</td> <td> 0.067</td> <td>   -0.118</td> <td>    3.493</td>
+  <th>('7926-13', 'Kunitz-type protease inhibitor 3')</th>                                  <td>    2.2901</td> <td>    1.053</td> <td>    2.174</td> <td> 0.030</td> <td>    0.226</td> <td>    4.354</td>
 </tr>
 <tr>
-  <th>('9282-12', 'Cysteine-rich secretory protein 2')</th> <td>    1.5980</td> <td>    0.804</td> <td>    1.987</td> <td> 0.047</td> <td>    0.022</td> <td>    3.174</td>
+  <th>('16892-23', 'Ectonucleotide pyrophosphatase/phosphodiesterase family member 2')</th> <td>   -3.6045</td> <td>    1.498</td> <td>   -2.407</td> <td> 0.016</td> <td>   -6.540</td> <td>   -0.669</td>
 </tr>
 </table>
 
@@ -2682,202 +2682,202 @@ HTML(linr_sorted_res_df.head(20).to_html())
     <tr>
       <th>3045-72</th>
       <td>Pleiotrophin</td>
-      <td>6.732423</td>
-      <td>0.871214</td>
-      <td>7.727634</td>
-      <td>1.812643e-12</td>
-      <td>5.010198</td>
-      <td>8.454649</td>
+      <td>6.713339</td>
+      <td>0.865578</td>
+      <td>7.755906</td>
+      <td>1.506400e-12</td>
+      <td>5.002359</td>
+      <td>8.424320</td>
     </tr>
     <tr>
       <th>4374-45</th>
       <td>Growth/differentiation factor 15</td>
-      <td>6.785323</td>
-      <td>0.908699</td>
-      <td>7.467076</td>
-      <td>7.579666e-12</td>
-      <td>4.988997</td>
-      <td>8.581649</td>
+      <td>6.766537</td>
+      <td>0.902926</td>
+      <td>7.494011</td>
+      <td>6.377086e-12</td>
+      <td>4.981730</td>
+      <td>8.551343</td>
     </tr>
     <tr>
       <th>3024-18</th>
       <td>Alpha-2-antiplasmin</td>
-      <td>-6.301072</td>
-      <td>0.900901</td>
-      <td>-6.994193</td>
-      <td>9.651308e-11</td>
-      <td>-8.081983</td>
-      <td>-4.520162</td>
+      <td>-6.258739</td>
+      <td>0.895850</td>
+      <td>-6.986373</td>
+      <td>9.854830e-11</td>
+      <td>-8.029558</td>
+      <td>-4.487920</td>
     </tr>
     <tr>
       <th>6392-7</th>
       <td>WNT1-inducible-signaling pathway protein 2</td>
-      <td>6.229139</td>
-      <td>0.900966</td>
-      <td>6.913842</td>
-      <td>1.476254e-10</td>
-      <td>4.448099</td>
-      <td>8.010179</td>
+      <td>6.206203</td>
+      <td>0.895426</td>
+      <td>6.931007</td>
+      <td>1.321588e-10</td>
+      <td>4.436222</td>
+      <td>7.976185</td>
     </tr>
     <tr>
       <th>8480-29</th>
       <td>EGF-containing fibulin-like extracellular matrix protein 1</td>
-      <td>6.195214</td>
-      <td>0.906161</td>
-      <td>6.836766</td>
-      <td>2.214593e-10</td>
-      <td>4.403904</td>
-      <td>7.986524</td>
+      <td>6.179473</td>
+      <td>0.900370</td>
+      <td>6.863260</td>
+      <td>1.889770e-10</td>
+      <td>4.399719</td>
+      <td>7.959227</td>
     </tr>
     <tr>
       <th>15640-54</th>
       <td>Transgelin</td>
-      <td>6.178240</td>
-      <td>0.910801</td>
-      <td>6.783303</td>
-      <td>2.930374e-10</td>
-      <td>4.377758</td>
-      <td>7.978721</td>
+      <td>6.159769</td>
+      <td>0.905043</td>
+      <td>6.806048</td>
+      <td>2.552783e-10</td>
+      <td>4.370777</td>
+      <td>7.948761</td>
     </tr>
     <tr>
       <th>15533-97</th>
       <td>Macrophage scavenger receptor types I and II</td>
-      <td>6.017326</td>
-      <td>0.913196</td>
-      <td>6.589306</td>
-      <td>8.024776e-10</td>
-      <td>4.212111</td>
-      <td>7.822541</td>
-    </tr>
-    <tr>
-      <th>16818-200</th>
-      <td>CUB domain-containing protein 1</td>
-      <td>5.954078</td>
-      <td>0.908302</td>
-      <td>6.555172</td>
-      <td>9.566985e-10</td>
-      <td>4.158536</td>
-      <td>7.749620</td>
+      <td>5.986741</td>
+      <td>0.907615</td>
+      <td>6.596127</td>
+      <td>7.616175e-10</td>
+      <td>4.192666</td>
+      <td>7.780815</td>
     </tr>
     <tr>
       <th>15386-7</th>
       <td>Fatty acid-binding protein, adipocyte</td>
-      <td>6.147742</td>
-      <td>0.937962</td>
-      <td>6.554363</td>
-      <td>9.606852e-10</td>
-      <td>4.293569</td>
-      <td>8.001916</td>
+      <td>6.130562</td>
+      <td>0.931954</td>
+      <td>6.578182</td>
+      <td>8.355679e-10</td>
+      <td>4.288376</td>
+      <td>7.972748</td>
+    </tr>
+    <tr>
+      <th>16818-200</th>
+      <td>CUB domain-containing protein 1</td>
+      <td>5.919909</td>
+      <td>0.902842</td>
+      <td>6.556970</td>
+      <td>9.321408e-10</td>
+      <td>4.135268</td>
+      <td>7.704550</td>
     </tr>
     <tr>
       <th>4496-60</th>
       <td>Macrophage metalloelastase</td>
-      <td>6.166874</td>
-      <td>0.946260</td>
-      <td>6.517104</td>
-      <td>1.163272e-09</td>
-      <td>4.296297</td>
-      <td>8.037450</td>
+      <td>6.149946</td>
+      <td>0.940133</td>
+      <td>6.541570</td>
+      <td>1.009072e-09</td>
+      <td>4.291592</td>
+      <td>8.008299</td>
     </tr>
     <tr>
       <th>3362-61</th>
       <td>Chordin-like protein 1</td>
-      <td>5.780924</td>
-      <td>0.919581</td>
-      <td>6.286478</td>
-      <td>3.755897e-09</td>
-      <td>3.963086</td>
-      <td>7.598761</td>
+      <td>5.765444</td>
+      <td>0.913703</td>
+      <td>6.309975</td>
+      <td>3.287540e-09</td>
+      <td>3.959334</td>
+      <td>7.571554</td>
     </tr>
     <tr>
       <th>4541-49</th>
       <td>Cell adhesion molecule-related/down-regulated by oncogenes</td>
-      <td>-5.718647</td>
-      <td>0.912113</td>
-      <td>-6.269669</td>
-      <td>4.087372e-09</td>
-      <td>-7.521723</td>
-      <td>-3.915572</td>
+      <td>-5.703166</td>
+      <td>0.906248</td>
+      <td>-6.293164</td>
+      <td>3.578780e-09</td>
+      <td>-7.494540</td>
+      <td>-3.911793</td>
     </tr>
     <tr>
       <th>3600-2</th>
       <td>Chitotriosidase-1</td>
-      <td>5.856444</td>
-      <td>0.957006</td>
-      <td>6.119547</td>
-      <td>8.653479e-09</td>
-      <td>3.964624</td>
-      <td>7.748265</td>
+      <td>5.831590</td>
+      <td>0.951184</td>
+      <td>6.130871</td>
+      <td>8.071212e-09</td>
+      <td>3.951391</td>
+      <td>7.711789</td>
     </tr>
     <tr>
       <th>2609-59</th>
       <td>Cystatin-C</td>
-      <td>5.597775</td>
-      <td>0.939942</td>
-      <td>5.955449</td>
-      <td>1.942636e-08</td>
-      <td>3.739688</td>
-      <td>7.455863</td>
-    </tr>
-    <tr>
-      <th>14133-93</th>
-      <td>Interleukin-1 receptor type 2</td>
-      <td>-5.528151</td>
-      <td>0.931736</td>
-      <td>-5.933175</td>
-      <td>2.166003e-08</td>
-      <td>-7.370017</td>
-      <td>-3.686286</td>
+      <td>5.577894</td>
+      <td>0.934072</td>
+      <td>5.971588</td>
+      <td>1.773159e-08</td>
+      <td>3.731521</td>
+      <td>7.424267</td>
     </tr>
     <tr>
       <th>3234-23</th>
       <td>Coiled-coil domain-containing protein 80</td>
-      <td>5.662008</td>
-      <td>0.954940</td>
-      <td>5.929177</td>
-      <td>2.208681e-08</td>
-      <td>3.774272</td>
-      <td>7.549744</td>
+      <td>5.647487</td>
+      <td>0.948795</td>
+      <td>5.952270</td>
+      <td>1.949244e-08</td>
+      <td>3.772010</td>
+      <td>7.522963</td>
     </tr>
     <tr>
-      <th>2677-1</th>
-      <td>Epidermal growth factor receptor</td>
-      <td>-5.382225</td>
-      <td>0.924818</td>
-      <td>-5.819765</td>
-      <td>3.756576e-08</td>
-      <td>-7.210415</td>
-      <td>-3.554034</td>
-    </tr>
-    <tr>
-      <th>9793-145</th>
-      <td>Immunoglobulin superfamily DCC subclass member 4</td>
-      <td>-5.320160</td>
-      <td>0.916639</td>
-      <td>-5.803985</td>
-      <td>4.053771e-08</td>
-      <td>-7.132183</td>
-      <td>-3.508138</td>
+      <th>14133-93</th>
+      <td>Interleukin-1 receptor type 2</td>
+      <td>-5.489368</td>
+      <td>0.926319</td>
+      <td>-5.926004</td>
+      <td>2.216438e-08</td>
+      <td>-7.320415</td>
+      <td>-3.658321</td>
     </tr>
     <tr>
       <th>19601-15</th>
       <td>Ankyrin repeat and SOCS box protein 9</td>
-      <td>5.425709</td>
-      <td>0.936318</td>
-      <td>5.794729</td>
-      <td>4.238697e-08</td>
-      <td>3.574786</td>
-      <td>7.276633</td>
+      <td>5.412074</td>
+      <td>0.930313</td>
+      <td>5.817474</td>
+      <td>3.755863e-08</td>
+      <td>3.573131</td>
+      <td>7.251018</td>
+    </tr>
+    <tr>
+      <th>9793-145</th>
+      <td>Immunoglobulin superfamily DCC subclass member 4</td>
+      <td>-5.292703</td>
+      <td>0.911239</td>
+      <td>-5.808247</td>
+      <td>3.927116e-08</td>
+      <td>-7.093942</td>
+      <td>-3.491463</td>
+    </tr>
+    <tr>
+      <th>2677-1</th>
+      <td>Epidermal growth factor receptor</td>
+      <td>-5.341396</td>
+      <td>0.919656</td>
+      <td>-5.808039</td>
+      <td>3.931061e-08</td>
+      <td>-7.159272</td>
+      <td>-3.523520</td>
     </tr>
     <tr>
       <th>4968-50</th>
       <td>Macrophage-capping protein</td>
-      <td>5.359391</td>
-      <td>0.932439</td>
-      <td>5.747713</td>
-      <td>5.313343e-08</td>
-      <td>3.516135</td>
-      <td>7.202646</td>
+      <td>5.345710</td>
+      <td>0.926458</td>
+      <td>5.770050</td>
+      <td>4.721157e-08</td>
+      <td>3.514387</td>
+      <td>7.177033</td>
     </tr>
   </tbody>
 </table>
@@ -2901,25 +2901,25 @@ mod.summary()
 <table class="simpletable">
 <caption>OLS Regression Results</caption>
 <tr>
-  <th>Dep. Variable:</th>            <td>y</td>        <th>  R-squared:         </th> <td>   0.522</td>
+  <th>Dep. Variable:</th>            <td>y</td>        <th>  R-squared:         </th> <td>   0.501</td>
 </tr>
 <tr>
-  <th>Model:</th>                   <td>OLS</td>       <th>  Adj. R-squared:    </th> <td>   0.494</td>
+  <th>Model:</th>                   <td>OLS</td>       <th>  Adj. R-squared:    </th> <td>   0.471</td>
 </tr>
 <tr>
-  <th>Method:</th>             <td>Least Squares</td>  <th>  F-statistic:       </th> <td>   18.43</td>
+  <th>Method:</th>             <td>Least Squares</td>  <th>  F-statistic:       </th> <td>   17.05</td>
 </tr>
 <tr>
-  <th>Date:</th>             <td>Mon, 14 Sep 2020</td> <th>  Prob (F-statistic):</th> <td>1.88e-18</td>
+  <th>Date:</th>             <td>Fri, 25 Sep 2020</td> <th>  Prob (F-statistic):</th> <td>2.29e-17</td>
 </tr>
 <tr>
-  <th>Time:</th>                 <td>16:50:36</td>     <th>  Log-Likelihood:    </th> <td> -516.03</td>
+  <th>Time:</th>                 <td>15:34:06</td>     <th>  Log-Likelihood:    </th> <td> -522.29</td>
 </tr>
 <tr>
-  <th>No. Observations:</th>      <td>   144</td>      <th>  AIC:               </th> <td>   1050.</td>
+  <th>No. Observations:</th>      <td>   145</td>      <th>  AIC:               </th> <td>   1063.</td>
 </tr>
 <tr>
-  <th>Df Residuals:</th>          <td>   135</td>      <th>  BIC:               </th> <td>   1077.</td>
+  <th>Df Residuals:</th>          <td>   136</td>      <th>  BIC:               </th> <td>   1089.</td>
 </tr>
 <tr>
   <th>Df Model:</th>              <td>     8</td>      <th>                     </th>     <td> </td>   
@@ -2933,45 +2933,45 @@ mod.summary()
                                       <td></td>                                         <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th>  <th>[0.025</th>    <th>0.975]</th>  
 </tr>
 <tr>
-  <th>const</th>                                                                     <td>   55.4940</td> <td>    0.753</td> <td>   73.723</td> <td> 0.000</td> <td>   54.005</td> <td>   56.983</td>
+  <th>const</th>                                                                     <td>   55.5436</td> <td>    0.765</td> <td>   72.602</td> <td> 0.000</td> <td>   54.031</td> <td>   57.057</td>
 </tr>
 <tr>
-  <th>('3045-72', 'Pleiotrophin')</th>                                               <td>    1.8217</td> <td>    1.156</td> <td>    1.576</td> <td> 0.117</td> <td>   -0.464</td> <td>    4.108</td>
+  <th>('3045-72', 'Pleiotrophin')</th>                                               <td>    1.6913</td> <td>    1.197</td> <td>    1.413</td> <td> 0.160</td> <td>   -0.676</td> <td>    4.059</td>
 </tr>
 <tr>
-  <th>('4374-45', 'Growth/differentiation factor 15')</th>                           <td>    0.3976</td> <td>    1.261</td> <td>    0.315</td> <td> 0.753</td> <td>   -2.096</td> <td>    2.892</td>
+  <th>('4374-45', 'Growth/differentiation factor 15')</th>                           <td>    1.2404</td> <td>    1.258</td> <td>    0.986</td> <td> 0.326</td> <td>   -1.247</td> <td>    3.728</td>
 </tr>
 <tr>
-  <th>('3024-18', 'Alpha-2-antiplasmin')</th>                                        <td>   -2.5607</td> <td>    0.897</td> <td>   -2.855</td> <td> 0.005</td> <td>   -4.335</td> <td>   -0.787</td>
+  <th>('3024-18', 'Alpha-2-antiplasmin')</th>                                        <td>   -2.5113</td> <td>    0.910</td> <td>   -2.758</td> <td> 0.007</td> <td>   -4.312</td> <td>   -0.711</td>
 </tr>
 <tr>
-  <th>('6392-7', 'WNT1-inducible-signaling pathway protein 2')</th>                  <td>    2.1706</td> <td>    0.924</td> <td>    2.349</td> <td> 0.020</td> <td>    0.343</td> <td>    3.998</td>
+  <th>('6392-7', 'WNT1-inducible-signaling pathway protein 2')</th>                  <td>    1.5143</td> <td>    0.997</td> <td>    1.519</td> <td> 0.131</td> <td>   -0.457</td> <td>    3.486</td>
 </tr>
 <tr>
-  <th>('8480-29', 'EGF-containing fibulin-like extracellular matrix protein 1')</th> <td>    1.8377</td> <td>    0.950</td> <td>    1.934</td> <td> 0.055</td> <td>   -0.042</td> <td>    3.717</td>
+  <th>('8480-29', 'EGF-containing fibulin-like extracellular matrix protein 1')</th> <td>    2.1363</td> <td>    0.972</td> <td>    2.197</td> <td> 0.030</td> <td>    0.214</td> <td>    4.059</td>
 </tr>
 <tr>
-  <th>('15640-54', 'Transgelin')</th>                                                <td>    1.4354</td> <td>    0.995</td> <td>    1.443</td> <td> 0.151</td> <td>   -0.533</td> <td>    3.403</td>
+  <th>('15640-54', 'Transgelin')</th>                                                <td>    1.2006</td> <td>    1.010</td> <td>    1.189</td> <td> 0.237</td> <td>   -0.796</td> <td>    3.198</td>
 </tr>
 <tr>
-  <th>('15533-97', 'Macrophage scavenger receptor types I and II')</th>              <td>   -0.3616</td> <td>    1.251</td> <td>   -0.289</td> <td> 0.773</td> <td>   -2.835</td> <td>    2.112</td>
+  <th>('15533-97', 'Macrophage scavenger receptor types I and II')</th>              <td>    0.8792</td> <td>    1.223</td> <td>    0.719</td> <td> 0.474</td> <td>   -1.540</td> <td>    3.298</td>
 </tr>
 <tr>
-  <th>('16818-200', 'CUB domain-containing protein 1')</th>                          <td>    3.0067</td> <td>    1.135</td> <td>    2.649</td> <td> 0.009</td> <td>    0.762</td> <td>    5.251</td>
+  <th>('15386-7', 'Fatty acid-binding protein, adipocyte')</th>                      <td>    1.1453</td> <td>    1.180</td> <td>    0.971</td> <td> 0.333</td> <td>   -1.188</td> <td>    3.479</td>
 </tr>
 </table>
 <table class="simpletable">
 <tr>
-  <th>Omnibus:</th>       <td> 3.316</td> <th>  Durbin-Watson:     </th> <td>   2.039</td>
+  <th>Omnibus:</th>       <td> 2.712</td> <th>  Durbin-Watson:     </th> <td>   2.042</td>
 </tr>
 <tr>
-  <th>Prob(Omnibus):</th> <td> 0.191</td> <th>  Jarque-Bera (JB):  </th> <td>   2.838</td>
+  <th>Prob(Omnibus):</th> <td> 0.258</td> <th>  Jarque-Bera (JB):  </th> <td>   2.501</td>
 </tr>
 <tr>
-  <th>Skew:</th>          <td>-0.324</td> <th>  Prob(JB):          </th> <td>   0.242</td>
+  <th>Skew:</th>          <td>-0.322</td> <th>  Prob(JB):          </th> <td>   0.286</td>
 </tr>
 <tr>
-  <th>Kurtosis:</th>      <td> 3.228</td> <th>  Cond. No.          </th> <td>    4.16</td>
+  <th>Kurtosis:</th>      <td> 3.008</td> <th>  Cond. No.          </th> <td>    4.53</td>
 </tr>
 </table><br/><br/>Warnings:<br/>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
 
@@ -3044,14 +3044,14 @@ HTML(linr_metrics_df.to_html())
   <tbody>
     <tr>
       <th>Value</th>
-      <td>1096.870123</td>
+      <td>989.768231</td>
       <td>2771.84</td>
-      <td>0.642825</td>
-      <td>5.561607</td>
-      <td>6.623806</td>
-      <td>0.723022</td>
-      <td>0.604281</td>
-      <td>0.406421</td>
+      <td>0.674484</td>
+      <td>5.214434</td>
+      <td>6.292116</td>
+      <td>0.752326</td>
+      <td>0.64292</td>
+      <td>0.46438</td>
     </tr>
   </tbody>
 </table>
