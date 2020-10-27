@@ -40,7 +40,3 @@ def jround(x: float, n_digits: int = 1) -> float:
     else:
         pow10 = pow(10, dig)
         return(sgn * np.rint(x / pow10) * pow10)
-
-
-def mad(data, axis=None):
-    return np.median(np.abs(data - np.median(data, axis)), axis)
