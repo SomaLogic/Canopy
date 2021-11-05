@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-from canopy import Adat
+import canopy
 from canopy import smart_adat_concatenation
 
 
@@ -43,16 +43,16 @@ if __name__ == '__main__':
 
     adats = []
     for filename in in_filenames:
-        adats.append(Adat.from_file(filename))
+        adats.append(canopy.read_adat(filename))
 
     if args.somamersource:
         somamer_source_filename = args.somamersource[0]
         if somamer_source_filename in in_filenames:
             somamer_source_adat = adats[in_filenames.index(somamer_source_filename)]
         else:
-            somamer_source_adat = Adat.from_file(somamer_source_filename)
+            somamer_source_adat = canopy.read_adat(somamer_source_filename)
     else:
         somamer_source_adat = None
 
     concat_adat = smart_adat_concatenation(adats, somamer_source_adat)
-    concat_adat.to_file(out_filename)
+    concat_adat.to_adat(out_filename)

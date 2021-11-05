@@ -11,12 +11,8 @@ class AdatReadingTest(TestCase):
 
     filename = './tests/data/control_data.adat'
 
-    def test_adat_from_file_read(self):
-        adat = Adat.from_file(self.filename)
-        self.assertIsInstance(adat, Adat)
-
-    def test_canopy_read_file(self):
-        adat = canopy.read_file(self.filename)
+    def test_canopy_read_adat(self):
+        adat = canopy.read_adat(self.filename)
         self.assertIsInstance(adat, Adat)
 
 
@@ -27,7 +23,7 @@ class AdatAttrTest(TestCase):
     filename = './tests/data/control_data.adat'
 
     def setUp(self):
-        self.adat = Adat.from_file(self.filename)
+        self.adat = canopy.read_adat(self.filename)
 
     def test_adat_size(self):
         self.assertEqual(self.adat.shape, (11, 5284))
@@ -80,9 +76,9 @@ class WrittenAdatAttrTest(AdatAttrTest):
     filename = './tests/data/control_data_written.adat'
 
     def setUp(self):
-        first_adat = Adat.from_file('./tests/data/control_data.adat')
-        first_adat.to_file(self.filename)
-        self.adat = Adat.from_file(self.filename)
+        first_adat = canopy.read_adat('./tests/data/control_data.adat')
+        first_adat.to_adat(self.filename)
+        self.adat = canopy.read_adat(self.filename)
 
     def tearDown(self):
         if os.path.exists(self.filename):
@@ -96,7 +92,7 @@ class ConvertV3SeqIdsReadTestCase(TestCase):
         row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
         header_metadata = {'AdatId': '1a2b3c', '!AssayRobot': 'Tecan1, Tecan2', 'RunNotes': 'run note 1'}
         adat = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
-        adat.to_file('tests/data/v3_test.adat')
+        adat.to_adat('tests/data/v3_test.adat')
 
     def tearDown(self):
         filename = 'tests/data/v3_test.adat'
@@ -105,7 +101,7 @@ class ConvertV3SeqIdsReadTestCase(TestCase):
 
     def test_v3_seq_id_file_read_warning(self):
         with pytest.warns(UserWarning) as record:
-            Adat.from_file('tests/data/v3_test.adat')
+            canopy.read_adat('tests/data/v3_test.adat')
 
         # check that only one warning was raised
         self.assertEqual(len(record), 1)
@@ -117,7 +113,7 @@ class ConvertV3SeqIdsReadTestCase(TestCase):
 
     @pytest.mark.filterwarnings('ignore:V3 style seqIds')
     def test_v3_seq_id_file_read_conversion(self):
-        adat = Adat.from_file('tests/data/v3_test.adat')
+        adat = canopy.read_adat('tests/data/v3_test.adat')
 
         # check that the adat has the correct column metadata names and data
         self.assertEqual(['SeqId', 'SeqIdVersion', 'ColCheck'], list(adat.columns.names))
