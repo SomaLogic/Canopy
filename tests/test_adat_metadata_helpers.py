@@ -1,4 +1,5 @@
 from unittest import TestCase
+import canopy
 from canopy import Adat
 from canopy.errors import AdatMetaError
 
@@ -8,7 +9,7 @@ import pandas as pd
 
 class ExcludeMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_exclude_removes_row_metadata(self):
         self.assertIn('PlateId', self.adat.index.names)
@@ -34,7 +35,7 @@ class ExcludeMetaTest(TestCase):
 
 class ExcludeOnMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_exclude_on_runs(self):
         self.adat.exclude_on_meta(axis=0, name='PlatePosition', values=['H8'])
@@ -63,7 +64,7 @@ class ExcludeOnMetaTest(TestCase):
 
 class PickMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_pick_meta_row(self):
         self.assertIn('PlateId', self.adat.index.names)
@@ -104,7 +105,7 @@ class PickMetaTest(TestCase):
 
 class PickOnMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_pick_on_row(self):
         self.assertIn('H8', self.adat.index.get_level_values('PlatePosition'))
@@ -113,6 +114,11 @@ class PickOnMetaTest(TestCase):
         self.assertIn('H8', adat.index.get_level_values('PlatePosition'))
         self.assertNotIn('G7', adat.index.get_level_values('PlatePosition'))
         self.assertEqual(len(adat.index.get_level_values('PlatePosition')), 1)
+
+    def test_pick_on_row_raises(self):
+        self.assertNotIn('H50', self.adat.index.get_level_values('PlatePosition'))
+        with self.assertRaises(KeyError):
+            self.adat.pick_on_meta(axis=0, name='PlatePosition', values=['H50'])
 
     def test_pick_on_column(self):
         self.assertIn('10000-28', self.adat.columns.get_level_values('SeqId'))
@@ -144,7 +150,7 @@ class PickOnMetaTest(TestCase):
 
 class InsertIntoMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_insert_into_row_meta(self):
         new_barcodes = list([str(i) for i in range(self.adat.shape[0])])
@@ -163,7 +169,7 @@ class InsertIntoMetaTest(TestCase):
 
 class ReplaceMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_replace_row_meta(self):
         new_barcodes = list([str(i) for i in range(self.adat.shape[0])])
@@ -203,7 +209,7 @@ class ReplaceKeyedMetaTest(TestCase):
 
 class InsertKeyedMetaTest(TestCase):
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_insert_row_meta(self):
         new_barcodes = {old_barcode: i for i, old_barcode in enumerate(self.adat.index.get_level_values('Barcode'))}

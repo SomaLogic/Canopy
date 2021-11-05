@@ -22,6 +22,11 @@ class AdatMetaHelpers:
         keep = []
         metadata = get_pd_axis(self, axis)
 
+        # Check to ensure all values are in the metadata
+        metadata_values = set(metadata.get_level_values(name))
+        if not metadata_values.issuperset(values):
+            raise KeyError(f'Some or all provided values not found in metadata column, {name}.')
+
         # Iterate over the selected multiindex and fill the keep array
         for value in metadata.get_level_values(name):
             if value in values:
@@ -299,7 +304,7 @@ class AdatMetaHelpers:
         key_meta = metadata.get_level_values(key_meta_name)
 
         if inserted_meta_name in metadata.names:
-            raise AdatKeyError('Name already exists in index, use `adat.update_keyed_meta` instead.')
+            raise AdatKeyError('Name already exists in index, use `adat.replace_keyed_meta` instead.')
 
         for key in key_meta:
             if key in values_dict:
@@ -413,3 +418,51 @@ class AdatMetaHelpers:
             new_meta_adat = new_meta_adat.replace_meta(axis=1, name=column_name, values=adat.columns.get_level_values(column_name))
 
         return new_meta_adat
+
+    def reorder_on_metadata(self, axis: int, name: str, source_adat: Adat) -> Adat:
+        """Given an Adat with matching metadata in a different order, returns this adat reorganized to match that order.
+
+        An adat method that updates adats with mis-aligned metadata by unifying the order of the columns or rows by the metadata.
+
+        Parameters
+        ----------
+        axis : int
+            The metadata/multiindex to operate on:
+            0 - row metadata,
+            1 - column metadata
+
+        name : str
+            The name of the index to be added.
+
+        source_adat : Adat
+            An Adat object with the metadata order you want
+
+        Returns
+        -------
+        modified_adat : Adat
+            This Adat whose rows or columns has been reordered to match the provided adat's.
+
+        Examples
+        --------
+        >>> new_adat = adat.reorder_on_metadata(axis=1, name='SeqId', other_adat)
+        """
+        reorder_index = []
+        adat = self.copy()
+        if axis == 0:
+            metadata_order = list(source_adat.index.get_level_values(name))
+            for metadata in adat.index.get_level_values(name):
+                try:
+                    reorder_index.append(metadata_order.index(metadata))
+                except ValueError:
+                    raise AdatMetaError(f'Source metadata, {metadata}, not found in adat index, {name}')
+            adat = adat.iloc[reorder_index]
+        elif axis == 1:
+            metadata_order = list(source_adat.columns.get_level_values(name))
+            for metadata in adat.columns.get_level_values(name):
+                try:
+                    reorder_index.append(metadata_order.index(metadata))
+                except ValueError:
+                    raise AdatMetaError(f'Source metadata, {metadata}, not found in adat column, {name}')
+            adat = adat.iloc[:, reorder_index]
+
+        return adat

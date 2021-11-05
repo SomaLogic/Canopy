@@ -59,3 +59,12 @@ html_theme = 'alabaster'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+confluence_publish = True
+# (or for confluence server)
+confluence_parent_page = 'Adat Handling'
+with open(os.path.expanduser('~') + '/.confcredentials') as f:
+    confluence_server_user = f.readline().strip()
+    confluence_server_pass = f.readline().strip()
+    confluence_server_url = f.readline().strip()
+    confluence_space_name = 'INGEN'

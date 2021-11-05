@@ -6,7 +6,7 @@ with open('README.md', 'r') as f:
 setup(
     name='canopy',
     python_requires='>3.8.0',
-    version='0.2.1',
+    version='0.3',
     packages=find_packages(),
     url='http://confluence.sladmin.com/display/INGEN/Canopy',
     license='',
@@ -21,7 +21,8 @@ setup(
         'bin/canopy_smart_concat_adats',
     ],
     install_requires=[
-        'pandas>=1.1.0',
-        'numpy>=1.18.1',
+        'pandas>=1.1.2',
+        'numpy>=1.19.2',
+        'openpyxl>=3.0',
     ],
 )

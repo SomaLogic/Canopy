@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import List, Dict
+from typing import List, Dict, Union, TextIO
 import pandas as pd
-from .base import AdatMetaHelpers
+import logging
+from .base import AdatMetaHelpers, AdatMathHelpers
 from . import io
 
 try:
@@ -10,7 +11,7 @@ except ModuleNotFoundError:
     AdatNormalization = object
 
 
-class Adat(AdatMetaHelpers, pd.DataFrame, AdatNormalization):
+class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
     """A Pandas `DataFrame` object with additional functionality to help with handling the adat file format.
 
     The adat file is stored as dataframe where the column and row metadata are stored as Pandas multiindices.
@@ -34,25 +35,6 @@ class Adat(AdatMetaHelpers, pd.DataFrame, AdatNormalization):
     @property
     def _constructor(self) -> Adat:
         return Adat
-
-    @classmethod
-    def from_file(cls, filepath: str) -> Adat:
-        """Returns an Adat from the filepath/name.
-
-        Parameters
-        ----------
-        filepath: str
-            Either the absolute or relative path to the file to be opened.
-
-        Returns
-        -------
-        adat : Adat
-
-        Examples
-        --------
-        >>> adat = Adat.from_file('path/to/file.adat')
-        """
-        return io.file.read_file(filepath)
 
     @classmethod
     def from_features(cls, rfu_matrix: List[List[float]], row_metadata: Dict[str, List[str]],
@@ -89,13 +71,21 @@ class Adat(AdatMetaHelpers, pd.DataFrame, AdatNormalization):
         columns = pd.MultiIndex.from_arrays(list(column_metadata.values()), names=list(column_metadata.keys()))
         return Adat(data=rfu_matrix, index=index, columns=columns, header_metadata=header_metadata)
 
-    def to_file(self, path: str, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False) -> None:
+    def to_file(self, *args, **kwargs):
+        """DEPRECATED: SEE Adat.to_adat
+
+        WILL BE REMOVED IN A FUTURE RELEASE
+        """
+        logging.warning('THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `Adat.to_adat` instead.')
+        self.to_adat(*args, **kwargs)
+
+    def to_adat(self, path_or_buf: Union[str, TextIO], round_rfu: bool = True, convert_to_v3_seq_ids: bool = False) -> None:
         """Writes the adat to an adat formatted file with the given filename.
 
         Parameters
         ----------
-        path : str
-            Path that the file will be written to
+        path_or_buf : str
+            Path or buffer that the file will be written to
 
         round_rfu : bool
             Rounds the file rfu matrix if set to True (default),
@@ -111,6 +101,11 @@ class Adat(AdatMetaHelpers, pd.DataFrame, AdatNormalization):
 
         Examples
         --------
-        >>> Adat.to_file('path/to/file.adat')
+        >>> Adat.to_adat('path/to/file.adat')
         """
-        io.file.write_file(self, path, round_rfu)
+
+        if type(path_or_buf) == str:
+            with open(path_or_buf, 'w') as f:
+                io.adat.file.write_adat(self, f, round_rfu, convert_to_v3_seq_ids)
+        else:
+            io.adat.file.write_adat(self, path_or_buf, round_rfu, convert_to_v3_seq_ids)

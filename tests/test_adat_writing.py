@@ -1,8 +1,8 @@
 from unittest import TestCase, mock
 from canopy import Adat
+import canopy
 import os
 import hashlib
-import pytest
 
 
 def require_side_effect(*args, **kwargs):
@@ -18,19 +18,19 @@ class AdatWritingTest(TestCase):
     filename = './tests/data/control_data_written.adat'
 
     def setUp(self):
-        self.adat = Adat.from_file('./tests/data/control_data.adat')
+        self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def tearDown(self):
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
     def test_adat_write(self):
-        self.adat.to_file(self.filename)
+        self.adat.to_adat(self.filename)
         self.assertTrue(os.path.exists(self.filename))
 
     @mock.patch('pkg_resources.require', require_side_effect)
     def test_adat_md5(self):
-        self.adat.to_file(self.filename)
+        self.adat.to_adat(self.filename)
         hash_md5 = hashlib.md5()
         with open(self.filename, 'rb') as f:
             hash_md5.update(f.read())
@@ -59,8 +59,8 @@ class ConvertV3SeqIdsWriteTestCase(TestCase):
 
     @mock.patch('pkg_resources.require', require_side_effect_0_2)
     def test_adat_writing(self):
-        self.adat.to_file(self.filename, convert_to_v3_seq_ids=True)
+        self.adat.to_adat(self.filename, convert_to_v3_seq_ids=True)
         hash_md5 = hashlib.md5()
         with open(self.filename, 'rb') as f:
             hash_md5.update(f.read())
-        self.assertEqual(hash_md5.hexdigest(), '18d4833efda928fb7055106f36d55c9c')
+        self.assertEqual(hash_md5.hexdigest(), 'd47957bafb2ef8b8b70bf0efd9705c11')

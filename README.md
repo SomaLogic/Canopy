@@ -1,3 +1,5 @@
+{* SHOULD BE PLACED IN $HOME/.virtualenvs/canopy/share/jupyter/nbconvert/templates/pythoncodeblocks.tpl *}
+
 # The Python `Canopy` Package from Somalogic, Inc.
 
 ![cover](https://img.shields.io/badge/coverage-97-success.svg?style=flat&logo=codecov)
