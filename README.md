@@ -10,7 +10,7 @@ MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://choosealicense.
 
 ## Overview
 
-This document accompanies the Python package `canopy`, which loads the SomaLogic, Inc. proprietary data file called an `*.adat`. The package provides auxiliary functions for extracting relevant information from the ADAT object once in the Python environment. Basic familiarity with the Python environment is assumed, as is the ability to install contributed packages from the Python Package Installer (pip)
+This document accompanies the Python package `canopy`, which loads the SomaLogic Operating Company, Inc. proprietary data file called an `*.adat`. The package provides auxiliary functions for extracting relevant information from the ADAT object once in the Python environment. Basic familiarity with the Python environment is assumed, as is the ability to install contributed packages from the Python Package Installer (pip)
 
 -----
 

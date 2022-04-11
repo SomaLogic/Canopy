@@ -6,7 +6,7 @@ with open('README.md', 'r') as f:
 setup(
     name='canopy',
     python_requires='>3.8.0',
-    version='0.3',
+    version='0.4',
     packages=find_packages(),
     url='http://confluence.sladmin.com/display/INGEN/Canopy',
     license='',
