@@ -55,7 +55,7 @@ class AdatAttrTest(TestCase):
         ])
 
     def test_header_metadata_size(self):
-        self.assertEqual(len(self.adat.header_metadata.keys()), 40)
+        self.assertEqual(len(self.adat.header_metadata.keys()), 38)
 
     def test_header_metadata_spot_check(self):
         self.assertEqual(self.adat.header_metadata['HybNormReference'], 'intraplate')

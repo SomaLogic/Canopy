@@ -1,30 +1,24 @@
 import numpy as np
 import pandas as pd
 
+def calcELOD(x:pd.Series): # x is a pandas series
+    med = np.median(x)
+    absDiff = np.abs(x-med)
+    medDiff = np.median(absDiff)
+    eLOD = med+3*(1.4826*medDiff)
+    return eLOD
+
 
 class AdatMathHelpers:
     """A collection of methods to help with performing common and standard computations on the adat.
     """
 
-    def e_lod(self, groupby=None):
-        """Computes estimated limit of detection of the buffer samples by plate as defined by median(somamer_rfu) + 4.9 * mad(somamer_rfu).
-
-        Parameters
-        ----------
-        groupby : List(str)
-
-        Returns
-        -------
-        e_lod_df : pd.DataFrame
-
-        Examples
-        --------
-        >>> e_lod_df = adat.e_lod()
-        >>> e_lod_df = adat.e_lod(groupby='SampleId')
-        """
-        groupby = groupby or 'PlateId'
-        e_lod_df = self.groupby(groupby).apply(lambda x: x.median() + 4.9 * x.mad())
+    def e_lod_by_reagent(self):
+        df = self.pick_on_meta(axis=0, name='SampleType', values=['Buffer'])
+        df.columns = df.columns.get_level_values('SeqId')
+        e_lod_df = df.apply(calcELOD)
         return e_lod_df
+
 
     @staticmethod
     def _compute_intra_cv(adat, groupby):

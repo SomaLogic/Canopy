@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.abspath('../canopy'))
 # -- Project information -----------------------------------------------------
 
 project = 'canopy'
-copyright = '2020, SomaLogic'
-author = 'SomaLogic, Inc.'
+copyright = '2022, SomaLogic Operating Company, Inc'
+author = 'SomaLogic Operating Company, Inc.'
 
 # The full version, including alpha/beta/rc tags
 release = pkg_resources.require('canopy')[0].version

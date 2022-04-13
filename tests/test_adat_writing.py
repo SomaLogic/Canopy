@@ -7,7 +7,7 @@ import hashlib
 
 def require_side_effect(*args, **kwargs):
     class Version():
-        version = '0.0.1'
+        version = '0.2.1'
     return [Version()]
 
 
@@ -16,8 +16,12 @@ class AdatWritingTest(TestCase):
     """
 
     filename = './tests/data/control_data_written.adat'
+    source_filename = './tests/data/control_data.adat'
 
     def setUp(self):
+        self.source_md5 = hashlib.md5()
+        with open(self.source_filename, 'rb') as f:
+            self.source_md5.update(f.read())
         self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def tearDown(self):
@@ -34,7 +38,7 @@ class AdatWritingTest(TestCase):
         hash_md5 = hashlib.md5()
         with open(self.filename, 'rb') as f:
             hash_md5.update(f.read())
-        self.assertEqual(hash_md5.hexdigest(), '58d675e7e43cc4e142ff94ac6efdfd94')
+        self.assertEqual(hash_md5.hexdigest(), 'e288d94404e1e30a2138b188daa9a7e9')
 
 
 def require_side_effect_0_2(*args, **kwargs):
