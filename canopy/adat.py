@@ -105,7 +105,7 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
         """
 
         if type(path_or_buf) == str:
-            with open(path_or_buf, 'w') as f:
+            with open(path_or_buf, 'w', newline='', encoding='utf-8') as f:
                 io.adat.file.write_adat(self, f, round_rfu, convert_to_v3_seq_ids)
         else:
             io.adat.file.write_adat(self, path_or_buf, round_rfu, convert_to_v3_seq_ids)
