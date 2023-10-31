@@ -31,7 +31,7 @@ pip install -e ./canopy
 
 ### Dependencies
 
-`Python >3.8` is required to install `canopy`. The following package dependencies are installed on a `pip install`:
+`Python >=3.8` is required to install `canopy`. The following package dependencies are installed on a `pip install`:
   - `pandas >= 1.1.0`
   - `numpy >= 1.19.1`
 
@@ -57,10 +57,10 @@ help(canopy)
 *Output*
 ``` python
 #> Help on package canopy:
-#> 
+#>
 #> NAME
 #>     canopy
-#> 
+#>
 #> PACKAGE CONTENTS
 #>     adat
 #>     base (package)
@@ -68,12 +68,12 @@ help(canopy)
 #>     errors
 #>     io (package)
 #>     tools (package)
-#> 
+#>
 #> FILE
 #>     /Users/jallison/Code/canopy/canopy/__init__.py
-#> 
-#> 
-#> 
+#>
+#>
+#>
 ```
 
 ### Internal Objects
@@ -2007,7 +2007,7 @@ They are not intended to be a definitive guide in statistical
 analysis and existing packages do exist in the `Python` universe that perform parts
 or extensions of these techniques. Many variations of the workflows below
 exist, however the framework highlights how one could perform standard
-preliminary analyses on SomaLogic data for: 
+preliminary analyses on SomaLogic data for:
  - Two-group differential expression (t-test)
  - Binary classification (logistic regression)
  - Linear regression
@@ -2100,7 +2100,7 @@ print(clean_data.index.to_frame()['Group'].value_counts())
 #> 1    85
 #> 0    85
 #> Name: Group, dtype: int64
-#> 
+#>
 ```
 
 ### Split the adat based on `Group` and perform t-test across all aptamers
@@ -2482,13 +2482,13 @@ logr_res.summary()
 <table class="simpletable">
 <caption>Generalized Linear Model Regression Results</caption>
 <tr>
-  <th>Dep. Variable:</th>           <td>y</td>        <th>  No. Observations:  </th>  <td>   145</td> 
+  <th>Dep. Variable:</th>           <td>y</td>        <th>  No. Observations:  </th>  <td>   145</td>
 </tr>
 <tr>
-  <th>Model:</th>                  <td>GLM</td>       <th>  Df Residuals:      </th>  <td>   139</td> 
+  <th>Model:</th>                  <td>GLM</td>       <th>  Df Residuals:      </th>  <td>   139</td>
 </tr>
 <tr>
-  <th>Model Family:</th>        <td>Binomial</td>     <th>  Df Model:          </th>  <td>     5</td> 
+  <th>Model Family:</th>        <td>Binomial</td>     <th>  Df Model:          </th>  <td>     5</td>
 </tr>
 <tr>
   <th>Link Function:</th>         <td>logit</td>      <th>  Scale:             </th> <td>  1.0000</td>
@@ -2500,18 +2500,18 @@ logr_res.summary()
   <th>Date:</th>            <td>Fri, 25 Sep 2020</td> <th>  Deviance:          </th> <td>  16.833</td>
 </tr>
 <tr>
-  <th>Time:</th>                <td>15:33:26</td>     <th>  Pearson chi2:      </th>  <td>  17.8</td> 
+  <th>Time:</th>                <td>15:33:26</td>     <th>  Pearson chi2:      </th>  <td>  17.8</td>
 </tr>
 <tr>
-  <th>No. Iterations:</th>         <td>10</td>        <th>                     </th>     <td> </td>   
+  <th>No. Iterations:</th>         <td>10</td>        <th>                     </th>     <td> </td>
 </tr>
 <tr>
-  <th>Covariance Type:</th>     <td>nonrobust</td>    <th>                     </th>     <td> </td>   
+  <th>Covariance Type:</th>     <td>nonrobust</td>    <th>                     </th>     <td> </td>
 </tr>
 </table>
 <table class="simpletable">
 <tr>
-                                          <td></td>                                            <th>coef</th>     <th>std err</th>      <th>z</th>      <th>P>|z|</th>  <th>[0.025</th>    <th>0.975]</th>  
+                                          <td></td>                                            <th>coef</th>     <th>std err</th>      <th>z</th>      <th>P>|z|</th>  <th>[0.025</th>    <th>0.975]</th>
 </tr>
 <tr>
   <th>const</th>                                                                            <td>    1.6106</td> <td>    1.178</td> <td>    1.367</td> <td> 0.172</td> <td>   -0.699</td> <td>    3.920</td>
@@ -2924,15 +2924,15 @@ mod.summary()
   <th>Df Residuals:</th>          <td>   136</td>      <th>  BIC:               </th> <td>   1089.</td>
 </tr>
 <tr>
-  <th>Df Model:</th>              <td>     8</td>      <th>                     </th>     <td> </td>   
+  <th>Df Model:</th>              <td>     8</td>      <th>                     </th>     <td> </td>
 </tr>
 <tr>
-  <th>Covariance Type:</th>      <td>nonrobust</td>    <th>                     </th>     <td> </td>   
+  <th>Covariance Type:</th>      <td>nonrobust</td>    <th>                     </th>     <td> </td>
 </tr>
 </table>
 <table class="simpletable">
 <tr>
-                                      <td></td>                                         <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th>  <th>[0.025</th>    <th>0.975]</th>  
+                                      <td></td>                                         <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th>  <th>[0.025</th>    <th>0.975]</th>
 </tr>
 <tr>
   <th>const</th>                                                                     <td>   55.5436</td> <td>    0.765</td> <td>   72.602</td> <td> 0.000</td> <td>   54.031</td> <td>   57.057</td>

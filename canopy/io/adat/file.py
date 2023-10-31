@@ -1,17 +1,23 @@
 from __future__ import annotations
-from typing import TextIO, Dict, List, Tuple, Union
-from canopy import Adat
-from canopy.tools.math import jround
-from canopy.io.adat.errors import AdatReadError
+
 import csv
 import json
-import pkg_resources
-import warnings
-import re
 import logging
+import re
+import warnings
+from importlib.metadata import version
+from typing import Dict, List, TextIO, Tuple, Union
+
+from canopy import Adat
+from canopy.io.adat.errors import AdatReadError
+from canopy.tools.math import jround
 
 
-def parse_file(f: TextIO) -> Tuple[List[List[float]], Dict[str, List[str]], Dict[str, List[str]], Dict[str, str]]:
+def parse_file(
+    f: TextIO,
+) -> Tuple[
+    List[List[float]], Dict[str, List[str]], Dict[str, List[str]], Dict[str, str]
+]:
     """Returns component pieces of an adat given an adat file object.
 
     Parameters
@@ -29,7 +35,7 @@ def parse_file(f: TextIO) -> Tuple[List[List[float]], Dict[str, List[str]], Dict
         pairs are column-name and an array of each sample's corresponding metadata
 
     column_metadata : Dict[str, List[str]]
-        A dictionary of each row of the adat column metdata where the key-value pairs are
+        A dictionary of each row of the adat column metadata where the key-value pairs are
         row-name and an array of each somamer's corresponding metadata.
 
     header_metadata : Dict[str, str]
@@ -46,7 +52,6 @@ def parse_file(f: TextIO) -> Tuple[List[List[float]], Dict[str, List[str]], Dict
 
     reader = csv.reader(f, delimiter='\t')
     for line in reader:
-
         # Check for trailing Nones
         for index, cell in enumerate(reversed(line)):
             if cell:
@@ -89,7 +94,9 @@ def parse_file(f: TextIO) -> Tuple[List[List[float]], Dict[str, List[str]], Dict
 
             # If we have the report config section, check to see if it was loaded as a dict
             if line[0] == "ReportConfig" and type(header_metadata[line[0]]) != dict:
-                warnings.warn('Malformed ReportConfig section in header.  Setting to an empty dictionary.')
+                warnings.warn(
+                    'Malformed ReportConfig section in header.  Setting to an empty dictionary.'
+                )
                 header_metadata[line[0]] = {}
 
         elif current_section == 'COL_DATA':
@@ -110,10 +117,14 @@ def parse_file(f: TextIO) -> Tuple[List[List[float]], Dict[str, List[str]], Dict
             # Column Metadata Section
             if matrix_depth < col_metadata_length:
                 column_metadata_name = line[row_metadata_offset]
-                column_metadata_data = line[row_metadata_offset + 1:]
+                column_metadata_data = line[row_metadata_offset + 1 :]
 
-                if column_metadata_name == 'SeqId' and re.match(r'\d{3,}-\d{1,3}_\d+', column_metadata_data[0]):
-                    warnings.warn('V3 style seqIds (i.e., 12345-6_7). Converting to V4 Style. The adat file writer has an option to write using the V3 style')
+                if column_metadata_name == 'SeqId' and re.match(
+                    r'\d{3,}-\d{1,3}_\d+', column_metadata_data[0]
+                ):
+                    warnings.warn(
+                        'V3 style seqIds (i.e., 12345-6_7). Converting to V4 Style. The adat file writer has an option to write using the V3 style'
+                    )
                     seq_id_data = [x.split('_')[0] for x in column_metadata_data]
                     version_data = [x.split('_')[1] for x in column_metadata_data]
                     column_metadata[column_metadata_name] = seq_id_data
@@ -141,14 +152,13 @@ def parse_file(f: TextIO) -> Tuple[List[List[float]], Dict[str, List[str]], Dict
 
             # Row Metadata & RFU Section
             elif matrix_depth > col_metadata_length:
-
                 # Store in row metadata into dictionary
                 row_metadata_data = line[:row_metadata_offset]
                 for name, data in zip(row_metadata_names, row_metadata_data):
                     row_metadata[name].append(data)
 
                 # Store the RFU data
-                rfu_row_data = line[row_metadata_offset + 1:]
+                rfu_row_data = line[row_metadata_offset + 1 :]
                 converted_rfu_row_data = list(map(float, rfu_row_data))
                 rfu_matrix.append(converted_rfu_row_data)
 
@@ -160,7 +170,9 @@ def read_file(filepath: str) -> Adat:
 
     WILL BE REMOVED IN A FUTURE RELEASE
     """
-    logging.warning('THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `canopy.read_adat` instead.')
+    logging.warning(
+        'THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `canopy.read_adat` instead.'
+    )
     return read_adat(filepath)
 
 
@@ -184,26 +196,34 @@ def read_adat(path_or_buf: Union[str, TextIO]) -> Adat:
         with open(path_or_buf, 'r') as f:
             rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(f)
     else:
-        rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(path_or_buf)
+        rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(
+            path_or_buf
+        )
 
     return Adat.from_features(
         rfu_matrix=rfu_matrix,
         row_metadata=row_metadata,
         column_metadata=column_metadata,
-        header_metadata=header_metadata
+        header_metadata=header_metadata,
     )
 
 
-def write_file(adat, path: str, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False) -> None:
+def write_file(
+    adat, path: str, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False
+) -> None:
     """DEPRECATED: SEE canopy.write_adat
 
     WILL BE REMOVED IN A FUTURE RELEASE
     """
-    logging.warning('THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `canopy.write_adat` instead.')
+    logging.warning(
+        'THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `canopy.write_adat` instead.'
+    )
     read_adat(adat, path, round_rfu, convert_to_v3_seq_ids)
 
 
-def write_adat(adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False) -> None:
+def write_adat(
+    adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False
+) -> None:
     """Write this Adat to an adat format data source.
 
     Parameters
@@ -233,7 +253,7 @@ def write_adat(adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: b
     """
 
     # Add version number to header_metadata.  If the field already exists, append to it.
-    pkg_version = 'Canopy_' + pkg_resources.require('canopy')[0].version
+    pkg_version = 'Canopy_' + version('canopy')
     if '!GeneratedBy' not in adat.header_metadata:
         adat.header_metadata['!GeneratedBy'] = pkg_version
     elif pkg_version not in adat.header_metadata['!GeneratedBy']:
@@ -255,7 +275,6 @@ def write_adat(adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: b
     # Write HEADER section
     writer.writerow(['^HEADER'])
     for row in adat.header_metadata.items():
-
         # We need to handle the reportconfig in a special way since it has double quotes
         if row[0] == "ReportConfig":
             f.write(row[0] + '\t' + json.dumps(row[1], separators=(',', ':')) + '\r\n')
@@ -284,7 +303,10 @@ def write_adat(adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: b
         # Check if we are converting to the V3 style of adat seqIds
         if column_name == 'SeqId' and convert_to_v3_seq_ids:
             version_data = adat.columns.get_level_values('SeqIdVersion')
-            column_data = [seq_id + '_' + version for seq_id, version in zip(column_data, version_data)]
+            column_data = [
+                seq_id + '_' + version
+                for seq_id, version in zip(column_data, version_data)
+            ]
         if column_name == 'SeqIdVersion' and convert_to_v3_seq_ids:
             continue
 
@@ -299,10 +321,12 @@ def write_adat(adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: b
     extra_nones = len(adat.columns.get_level_values(column_names[0])) + 1
     writer.writerow(row_names + [None for x in range(extra_nones)])
 
-    # Write the row metadata and rfu matrix simulataneously
+    # Write the row metadata and rfu matrix simultaneously
     for i, rfu_row in enumerate(adat.values):
         # Prep the data
-        row_metadata = [adat.index.get_level_values(row_name)[i] for row_name in row_names]
+        row_metadata = [
+            adat.index.get_level_values(row_name)[i] for row_name in row_names
+        ]
         if round_rfu:
             rfu_row = [jround(rfu, 1) for rfu in rfu_row]
         else:
