@@ -12,7 +12,7 @@
 #
 import os
 import sys
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import version
 
 sys.path.insert(0, os.path.abspath('../canopy'))
 
@@ -24,11 +24,8 @@ copyright = '2023, SomaLogic Operating Company, Inc'
 author = 'SomaLogic Operating Company, Inc.'
 
 # The full version, including alpha/beta/rc tags
-try:
-    return version(project)
-except PackageNotFoundError:
-    logger.warning(f"{project} not found.")
-    raise PackageNotFoundError
+
+release = version(project)
 
 # -- General configuration ---------------------------------------------------
 
