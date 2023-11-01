@@ -1,19 +1,18 @@
-from unittest import TestCase, mock
-from canopy import Adat
-import canopy
-import os
 import hashlib
+import os
+from unittest import TestCase, mock
+
+import canopy
+from canopy import Adat
 
 
 def require_side_effect(*args, **kwargs):
-    class Version():
-        version = '0.2.1'
-    return [Version()]
+    version = '0.2.1'
+    return version
 
 
 class AdatWritingTest(TestCase):
-    """Tests if writing can occur and if the written file matches expectation (via md5).
-    """
+    """Tests if writing can occur and if the written file matches expectation (via md5)."""
 
     filename = './tests/data/control_data_written.adat'
     source_filename = './tests/data/control_data.adat'
@@ -32,7 +31,7 @@ class AdatWritingTest(TestCase):
         self.adat.to_adat(self.filename)
         self.assertTrue(os.path.exists(self.filename))
 
-    @mock.patch('pkg_resources.require', require_side_effect)
+    @mock.patch('canopy.io.adat.file.version', require_side_effect)
     def test_adat_md5(self):
         self.adat.to_adat(self.filename)
         hash_md5 = hashlib.md5()
@@ -42,9 +41,8 @@ class AdatWritingTest(TestCase):
 
 
 def require_side_effect_0_2(*args, **kwargs):
-    class Version():
-        version = '0.2'
-    return [Version()]
+    version = '0.2'
+    return version
 
 
 class ConvertV3SeqIdsWriteTestCase(TestCase):
@@ -52,16 +50,26 @@ class ConvertV3SeqIdsWriteTestCase(TestCase):
 
     def setUp(self):
         rfu_data = [[1, 2, 3], [4, 5, 6]]
-        col_metadata = {'SeqId': ['12345-6', '23456-7', '34567-8'], 'SeqIdVersion': ['7', '8', '9'], 'ColCheck': ['PASS', 'FLAG', 'FLAG']}
+        col_metadata = {
+            'SeqId': ['12345-6', '23456-7', '34567-8'],
+            'SeqIdVersion': ['7', '8', '9'],
+            'ColCheck': ['PASS', 'FLAG', 'FLAG'],
+        }
         row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
-        header_metadata = {'AdatId': '1a2b3c', '!AssayRobot': 'Tecan1, Tecan2', 'RunNotes': 'run note 1'}
-        self.adat = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
+        header_metadata = {
+            'AdatId': '1a2b3c',
+            '!AssayRobot': 'Tecan1, Tecan2',
+            'RunNotes': 'run note 1',
+        }
+        self.adat = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
 
     def tearDown(self):
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
-    @mock.patch('pkg_resources.require', require_side_effect_0_2)
+    @mock.patch('canopy.io.adat.file.version', require_side_effect_0_2)
     def test_adat_writing(self):
         self.adat.to_adat(self.filename, convert_to_v3_seq_ids=True)
         hash_md5 = hashlib.md5()
