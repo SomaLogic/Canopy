@@ -1,12 +1,12 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open('README.md', 'r') as f:
     long_description = f.read()
 
 setup(
     name='canopy',
-    python_requires='>3.8.0',
-    version='0.4.1',
+    python_requires='>=3.8',
+    version='0.4.2',
     packages=find_packages(),
     url='http://confluence.sladmin.com/display/INGEN/Canopy',
     license='',
