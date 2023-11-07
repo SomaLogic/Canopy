@@ -1,10 +1,11 @@
 from unittest import TestCase
+
+import pandas as pd
+import pytest
+
 import canopy
 from canopy import Adat
 from canopy.errors import AdatMetaError
-
-import pytest
-import pandas as pd
 
 
 class ExcludeMetaTest(TestCase):
@@ -53,7 +54,9 @@ class ExcludeOnMetaTest(TestCase):
 
     def test_exclude_on_removes_rows(self):
         self.assertIn('Calibrator', self.adat.index.get_level_values('SampleType'))
-        adat = self.adat.exclude_on_meta(axis=0, name='SampleType', values=['Calibrator'])
+        adat = self.adat.exclude_on_meta(
+            axis=0, name='SampleType', values=['Calibrator']
+        )
         self.assertNotIn('Calibrator', adat.index.get_level_values('SampleType'))
 
     def test_exclude_on_removes_columns(self):
@@ -132,7 +135,9 @@ class PickOnMetaTest(TestCase):
         self.assertIn('Calibrator', self.adat.index.get_level_values('SampleType'))
         self.assertIn('Buffer', self.adat.index.get_level_values('SampleType'))
         self.assertIn('QC', self.adat.index.get_level_values('SampleType'))
-        adat = self.adat.pick_on_meta(axis=0, name='SampleType', values=['Calibrator', 'Buffer'])
+        adat = self.adat.pick_on_meta(
+            axis=0, name='SampleType', values=['Calibrator', 'Buffer']
+        )
         self.assertIn('Calibrator', adat.index.get_level_values('SampleType'))
         self.assertIn('Buffer', adat.index.get_level_values('SampleType'))
         self.assertNotIn('QC', adat.index.get_level_values('SampleType'))
@@ -141,7 +146,9 @@ class PickOnMetaTest(TestCase):
         self.assertIn('10000-28', self.adat.columns.get_level_values('SeqId'))
         self.assertIn('10001-7', self.adat.columns.get_level_values('SeqId'))
         self.assertIn('10003-15', self.adat.columns.get_level_values('SeqId'))
-        adat = self.adat.pick_on_meta(axis=1, name='SeqId', values=['10000-28', '10001-7'])
+        adat = self.adat.pick_on_meta(
+            axis=1, name='SeqId', values=['10000-28', '10001-7']
+        )
         self.assertIn('10000-28', adat.columns.get_level_values('SeqId'))
         self.assertIn('10001-7', adat.columns.get_level_values('SeqId'))
         self.assertNotIn('10003-15', adat.columns.get_level_values('SeqId'))
@@ -191,20 +198,44 @@ class ReplaceMetaTest(TestCase):
 class ReplaceKeyedMetaTest(TestCase):
     def setUp(self):
         rfu_data = [[1, 2, 3], [4, 5, 6]]
-        col_metadata = {'SeqId': ['A', 'B', 'C'], 'SeqIdVersion': ['1', '2', '3'], 'ColCheck': ['PASS', 'FLAG', 'FLAG']}
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['1', '2', '3'],
+            'ColCheck': ['PASS', 'FLAG', 'FLAG'],
+        }
         row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
-        header_metadata = {'AdatId': '1a2b3c', '!AssayRobot': 'Tecan1, Tecan2', 'RunNotes': 'run note 1'}
-        self.adat = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
+        header_metadata = {
+            'AdatId': '1a2b3c',
+            '!AssayRobot': 'Tecan1, Tecan2',
+            'RunNotes': 'run note 1',
+        }
+        self.adat = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
 
     def test_replace_keyed_row_meta(self):
         replace_values_dict = {'SL1234': 'A13', 'SL1235': 'A13'}
-        new_adat = self.adat.replace_keyed_meta(axis=0, replaced_meta_name='PlateId', key_meta_name='Barcode', values_dict=replace_values_dict)
-        self.assertEqual(['A13', 'A13'], list(new_adat.index.get_level_values('PlateId')))
+        new_adat = self.adat.replace_keyed_meta(
+            axis=0,
+            replaced_meta_name='PlateId',
+            key_meta_name='Barcode',
+            values_dict=replace_values_dict,
+        )
+        self.assertEqual(
+            ['A13', 'A13'], list(new_adat.index.get_level_values('PlateId'))
+        )
 
     def test_replace_keyed_column_meta(self):
         replace_values_dict = {'A': '5', 'B': '6', 'C': '7'}
-        new_adat = self.adat.replace_keyed_meta(axis=1, replaced_meta_name='SeqIdVersion', key_meta_name='SeqId', values_dict=replace_values_dict)
-        self.assertEqual(['5', '6', '7'], list(new_adat.columns.get_level_values('SeqIdVersion')))
+        new_adat = self.adat.replace_keyed_meta(
+            axis=1,
+            replaced_meta_name='SeqIdVersion',
+            key_meta_name='SeqId',
+            values_dict=replace_values_dict,
+        )
+        self.assertEqual(
+            ['5', '6', '7'], list(new_adat.columns.get_level_values('SeqIdVersion'))
+        )
 
 
 class InsertKeyedMetaTest(TestCase):
@@ -212,54 +243,117 @@ class InsertKeyedMetaTest(TestCase):
         self.adat = canopy.read_adat('./tests/data/control_data.adat')
 
     def test_insert_row_meta(self):
-        new_barcodes = {old_barcode: i for i, old_barcode in enumerate(self.adat.index.get_level_values('Barcode'))}
+        new_barcodes = {
+            old_barcode: i
+            for i, old_barcode in enumerate(self.adat.index.get_level_values('Barcode'))
+        }
         self.assertNotIn('NewBarcode', self.adat.index.names)
-        adat = self.adat.insert_keyed_meta(axis=0, inserted_meta_name='NewBarcode', key_meta_name='Barcode', values_dict=new_barcodes)
-        self.assertEqual(list(new_barcodes.values()), list(adat.index.get_level_values('NewBarcode')))
+        adat = self.adat.insert_keyed_meta(
+            axis=0,
+            inserted_meta_name='NewBarcode',
+            key_meta_name='Barcode',
+            values_dict=new_barcodes,
+        )
+        self.assertEqual(
+            list(new_barcodes.values()), list(adat.index.get_level_values('NewBarcode'))
+        )
 
     def test_insert_column_meta(self):
-        new_seqids = {old_seqid: i for i, old_seqid in enumerate(self.adat.columns.get_level_values('SeqId'))}
+        new_seqids = {
+            old_seqid: i
+            for i, old_seqid in enumerate(self.adat.columns.get_level_values('SeqId'))
+        }
         self.assertNotIn('NewSeqId', self.adat.columns.names)
-        adat = self.adat.insert_keyed_meta(axis=1, inserted_meta_name='NewSeqId', key_meta_name='SeqId', values_dict=new_seqids)
-        self.assertEqual(list(new_seqids.values()), list(adat.columns.get_level_values('NewSeqId')))
+        adat = self.adat.insert_keyed_meta(
+            axis=1,
+            inserted_meta_name='NewSeqId',
+            key_meta_name='SeqId',
+            values_dict=new_seqids,
+        )
+        self.assertEqual(
+            list(new_seqids.values()), list(adat.columns.get_level_values('NewSeqId'))
+        )
 
 
 class UpdateSomamerMetadataFromAdatTestCase(TestCase):
     def setUp(self):
         rfu_data = [[1, 2, 3], [4, 5, 6]]
-        col_metadata = {'SeqId': ['A', 'B', 'C'], 'SeqIdVersion': ['1', '2', '3'], 'ColCheck': ['PASS', 'FLAG', 'FLAG']}
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['1', '2', '3'],
+            'ColCheck': ['PASS', 'FLAG', 'FLAG'],
+        }
         row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
-        header_metadata = {'AdatId': '1a2b3c', '!AssayRobot': 'Tecan1, Tecan2', 'RunNotes': 'run note 1'}
-        self.adat0 = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
+        header_metadata = {
+            'AdatId': '1a2b3c',
+            '!AssayRobot': 'Tecan1, Tecan2',
+            'RunNotes': 'run note 1',
+        }
+        self.adat0 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
 
         rfu_data = [[5, 6, 7], [6, 5, 4]]
-        col_metadata = {'SeqId': ['A', 'B', 'C'], 'SeqIdVersion': ['4', '5', '6'], 'ColCheck': ['PASS', 'PASS', 'FLAG']}
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['4', '5', '6'],
+            'ColCheck': ['PASS', 'PASS', 'FLAG'],
+        }
         row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
-        header_metadata = {'AdatId': '1a2b3d', '!AssayRobot': 'Tecan2', 'RunNotes': 'run note 2'}
-        self.adat1 = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
+        header_metadata = {
+            'AdatId': '1a2b3d',
+            '!AssayRobot': 'Tecan2',
+            'RunNotes': 'run note 2',
+        }
+        self.adat1 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
 
     @pytest.mark.filterwarnings('ignore:Standard column')
     def test_col_meta_replaced(self):
         rfu_data = [[5, 6, 7], [6, 5, 4]]
-        col_metadata = {'SeqId': ['A', 'B', 'C'], 'SeqIdVersion': ['1', '2', '3'], 'ColCheck': ['PASS', 'PASS', 'FLAG']}
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['1', '2', '3'],
+            'ColCheck': ['PASS', 'PASS', 'FLAG'],
+        }
         row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
-        header_metadata = {'AdatId': '1a2b3d', '!AssayRobot': 'Tecan2', 'RunNotes': 'run note 2'}
-        truth_meta_replaced_adat_1 = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
+        header_metadata = {
+            'AdatId': '1a2b3d',
+            '!AssayRobot': 'Tecan2',
+            'RunNotes': 'run note 2',
+        }
+        truth_meta_replaced_adat_1 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
 
         meta_replaced_adat = self.adat1.update_somamer_metadata_from_adat(self.adat0)
         pd.testing.assert_frame_equal(truth_meta_replaced_adat_1, meta_replaced_adat)
 
     def test_missing_col_meta_warns(self):
-        with pytest.warns(UserWarning, match=r'Standard column, \w+, not found in column metadata. Continuing to next.'):
+        with pytest.warns(
+            UserWarning,
+            match=r'Standard column, \w+, not found in column metadata. Continuing to next.',
+        ):
             self.adat1.update_somamer_metadata_from_adat(self.adat0)
 
     @pytest.mark.filterwarnings('ignore:Standard column')
     def test_seq_ids_mismatch_error(self):
         rfu_data = [[5, 6, 7], [6, 5, 4]]
-        col_metadata = {'SeqId': ['A', 'B', 'D'], 'SeqIdVersion': ['4', '5', '6'], 'ColCheck': ['PASS', 'PASS', 'FLAG']}
+        col_metadata = {
+            'SeqId': ['A', 'B', 'D'],
+            'SeqIdVersion': ['4', '5', '6'],
+            'ColCheck': ['PASS', 'PASS', 'FLAG'],
+        }
         row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
-        header_metadata = {'AdatId': '1a2b3d', '!AssayRobot': 'Tecan2', 'RunNotes': 'run note 2'}
-        mismatch_seq_id_adat = Adat.from_features(rfu_data, row_metadata, col_metadata, header_metadata)
+        header_metadata = {
+            'AdatId': '1a2b3d',
+            '!AssayRobot': 'Tecan2',
+            'RunNotes': 'run note 2',
+        }
+        mismatch_seq_id_adat = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
 
         with self.assertRaises(AdatMetaError):
             mismatch_seq_id_adat.update_somamer_metadata_from_adat(self.adat0)

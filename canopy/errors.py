@@ -9,5 +9,6 @@ class AdatKeyError(Exception):
 class AdatMetaError(Exception):
     pass
 
+
 class AnnotationsLiftingError(Exception):
     pass
