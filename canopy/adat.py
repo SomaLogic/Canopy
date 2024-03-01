@@ -1,9 +1,12 @@
 from __future__ import annotations
-from typing import List, Dict, Union, TextIO
-import pandas as pd
+
 import logging
-from .base import AdatMetaHelpers, AdatMathHelpers
+from typing import Dict, List, TextIO, Union
+
+import pandas as pd
+
 from . import io
+from .base import AdatMathHelpers, AdatMetaHelpers
 
 try:
     from cnorm import AdatNormalization
@@ -26,6 +29,7 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
     On subclassing the pandas dataframe:
     https://pandas.pydata.org/pandas-docs/stable/development/extending.html#subclassing-pandas-data-structures
     """
+
     _metadata = ['header_metadata']
 
     def __init__(self, *args, **kwargs) -> None:
@@ -37,9 +41,13 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
         return Adat
 
     @classmethod
-    def from_features(cls, rfu_matrix: List[List[float]], row_metadata: Dict[str, List[str]],
-                      column_metadata: Dict[str, List[str]], header_metadata: Dict[str, str]) -> Adat:
-
+    def from_features(
+        cls,
+        rfu_matrix: List[List[float]],
+        row_metadata: Dict[str, List[str]],
+        column_metadata: Dict[str, List[str]],
+        header_metadata: Dict[str, str],
+    ) -> Adat:
         """Returns an Adat from the component adat file format sections.
 
         Parameters
@@ -52,7 +60,7 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
             pairs are column-name and an array of each sample's corresponding metadata
 
         column_metadata : Dict[str, List[str]]
-            A dictionary of each row of the adat column metdata where the key-value pairs are
+            A dictionary of each row of the adat column metadata where the key-value pairs are
             row-name and an array of each somamer's corresponding metadata.
 
         header_metadata : Dict[str, str]
@@ -67,19 +75,35 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
         >>> adat = Adat.from_features(rfu_matrix, row_metadata, col_metadata, header_metadata)
         """
 
-        index = pd.MultiIndex.from_arrays(list(row_metadata.values()), names=list(row_metadata.keys()))
-        columns = pd.MultiIndex.from_arrays(list(column_metadata.values()), names=list(column_metadata.keys()))
-        return Adat(data=rfu_matrix, index=index, columns=columns, header_metadata=header_metadata)
+        index = pd.MultiIndex.from_arrays(
+            list(row_metadata.values()), names=list(row_metadata.keys())
+        )
+        columns = pd.MultiIndex.from_arrays(
+            list(column_metadata.values()), names=list(column_metadata.keys())
+        )
+        return Adat(
+            data=rfu_matrix,
+            index=index,
+            columns=columns,
+            header_metadata=header_metadata,
+        )
 
     def to_file(self, *args, **kwargs):
         """DEPRECATED: SEE Adat.to_adat
 
         WILL BE REMOVED IN A FUTURE RELEASE
         """
-        logging.warning('THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `Adat.to_adat` instead.')
+        logging.warning(
+            'THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `Adat.to_adat` instead.'
+        )
         self.to_adat(*args, **kwargs)
 
-    def to_adat(self, path_or_buf: Union[str, TextIO], round_rfu: bool = True, convert_to_v3_seq_ids: bool = False) -> None:
+    def to_adat(
+        self,
+        path_or_buf: Union[str, TextIO],
+        round_rfu: bool = True,
+        convert_to_v3_seq_ids: bool = False,
+    ) -> None:
         """Writes the adat to an adat formatted file with the given filename.
 
         Parameters

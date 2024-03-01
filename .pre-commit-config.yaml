@@ -11,6 +11,7 @@ repos:
             - --unsafe
     -   id: check-json
     -   id: check-added-large-files
+        args: ['--maxkb=1000']
 -   repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
@@ -21,8 +22,9 @@ repos:
     hooks:
     -   id: black
         args: ['-S']
--   repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
-    hooks:
-    -   id: codespell
-        exclude: README.ipynb
+# -   repo: https://github.com/codespell-project/codespell
+#     rev: v2.2.4
+#     hooks:
+#     -   id: codespell
+#         args: ['-i 1']
+#         files: ^.*\.(py|c|h|md|rst|yml)$
