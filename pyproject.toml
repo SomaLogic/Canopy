@@ -12,9 +12,15 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-pandas = ">=1.5.0,<3.0.0"
-numpy = {version = "^1.26.1", python="^3.9,<3.13"}
-openpyxl = ">=3.0"
+pandas = [
+    {version = "<=2.0.3", python = ">=3.8, <3.12"},
+    {version = "^2.2", python = ">=3.12"}
+]
+numpy = [
+    {version = ">=1.19,<1.21", python = ">=3.8,<3.9"},
+    {version = "^1.21", python = ">=3.9"}
+]
+openpyxl = "^3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.1"
