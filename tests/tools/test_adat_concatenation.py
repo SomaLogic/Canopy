@@ -317,10 +317,11 @@ class SmartConcatTestCase(TestCase):
         expected_warnings_regex = (
             r'(Adding column to adat: \w+)|(Removing seqIds from \w{3}: \w, \w)'
         )
-        for rec in records:
+        user_warnings = [rec for rec in records if rec.category == UserWarning]
+        for rec in user_warnings:
             self.assertRegex(rec.message.args[0], expected_warnings_regex)
             print(rec.message.args[0])
-        self.assertEqual(7, len(records))
+        self.assertEqual(7, len(user_warnings))
 
     @pytest.mark.filterwarnings('ignore:Removing seqIds from')
     @pytest.mark.filterwarnings('ignore:Standard column,')
