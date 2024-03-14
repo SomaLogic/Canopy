@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "canopy"
-version = "0.5.0"
+version = "0.5.1"
 description = "SomaLogic Python Data Input/Output Library"
 authors = ["SomaLogic"]
 license = "MIT"
@@ -13,11 +13,12 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.8"
 pandas = [
-    {version = "<=2.0.3", python = ">=3.8, <3.12"},
+    {version = "<=2.0.3", python = ">=3.8, <3.9"},
+    {version = ">=1.1.2", python = ">=3.9, <3.12"},
     {version = "^2.2", python = ">=3.12"}
 ]
 numpy = [
-    {version = ">=1.19,<1.21", python = ">=3.8,<3.9"},
+    {version = ">=1.19,<1.25", python = ">=3.8,<3.9"},
     {version = "^1.21", python = ">=3.9"}
 ]
 openpyxl = "^3.0"
