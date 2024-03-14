@@ -5,20 +5,17 @@ description = "SomaLogic Python Data Input/Output Library"
 authors = ["SomaLogic"]
 license = "MIT"
 readme = "README.md"
-include = [
-    { path = "canopy/data/lift.zip" },
-    { path = "*.adat" }
-]
+include = [{ path = "canopy/data/lift.zip" }, { path = "*.adat" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 pandas = [
-    {version = "<=2.0.3", python = ">=3.8, <3.12"},
-    {version = "^2.2", python = ">=3.12"}
+    { version = "<=2.0.3", python = "3.8" },
+    { version = ">2.0.3", python = ">=3.9" },
 ]
 numpy = [
-    {version = ">=1.19,<1.21", python = ">=3.8,<3.9"},
-    {version = "^1.21", python = ">=3.9"}
+    { version = ">=1.19,<1.21", python = ">=3.8,<3.9" },
+    { version = "^1.21", python = ">=3.9" },
 ]
 openpyxl = "^3.0"
 
