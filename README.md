@@ -28,17 +28,26 @@ This document accompanies the Python package `somadata`, which loads the SomaLog
 <a name="installation"></a>
 
 ## Installation
-The easiest way to install `SomaData` is to install directly from
+The easiest way to install `SomaData` is to install directly from PyPI
+
+PIP:
+
+```bash
+pip install SomaData
+```
+
+Alternatively one can install from the GitHub repository.
+
 GitHub:
 
 ``` bash
-pip install git+https://github.com/SomaLogic/somadata.git#egg=somadata
+pip install git+https://github.com/SomaLogic/Canopy.git#egg=somadata
 ```
 
 Alternatively, if you wish to develop or change the source code, you may clone the repository and install manually via:
 
 ``` bash
-git clone https://github.com/SomaLogic/somadata.git
+git clone https://github.com/SomaLogic/Canopy.git
 pip install -e ./somadata
 ```
 
