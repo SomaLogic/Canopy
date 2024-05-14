@@ -14,12 +14,12 @@ import os
 import sys
 from importlib.metadata import version
 
-sys.path.insert(0, os.path.abspath('../canopy'))
+sys.path.insert(0, os.path.abspath('../somadata'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'canopy'
+project = 'somadata'
 copyright = '2023, SomaLogic Operating Company, Inc'
 author = 'SomaLogic Operating Company, Inc.'
 

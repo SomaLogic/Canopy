@@ -2,7 +2,7 @@ from itertools import combinations
 
 import pytest
 
-from canopy.data.lift import LiftData, check_substrings
+from somadata.data.lift import LiftData, check_substrings
 
 
 def test_lift_data_all_positives():

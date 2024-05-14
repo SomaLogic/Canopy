@@ -3,8 +3,8 @@ import pathlib
 import pandas as pd
 import pytest
 
-from canopy import Annotations
-from canopy.io.annotations.file import read_annotations
+from somadata import Annotations
+from somadata.io.annotations.file import read_annotations
 
 
 @pytest.fixture

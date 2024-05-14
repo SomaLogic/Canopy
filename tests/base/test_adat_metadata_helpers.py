@@ -3,14 +3,14 @@ from unittest import TestCase
 import pandas as pd
 import pytest
 
-import canopy
-from canopy import Adat
-from canopy.errors import AdatMetaError
+import somadata
+from somadata import Adat
+from somadata.errors import AdatMetaError
 
 
 class ExcludeMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_exclude_removes_row_metadata(self):
         self.assertIn('PlateId', self.adat.index.names)
@@ -36,7 +36,7 @@ class ExcludeMetaTest(TestCase):
 
 class ExcludeOnMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_exclude_on_runs(self):
         self.adat.exclude_on_meta(axis=0, name='PlatePosition', values=['H8'])
@@ -67,7 +67,7 @@ class ExcludeOnMetaTest(TestCase):
 
 class PickMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_pick_meta_row(self):
         self.assertIn('PlateId', self.adat.index.names)
@@ -108,7 +108,7 @@ class PickMetaTest(TestCase):
 
 class PickOnMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_pick_on_row(self):
         self.assertIn('H8', self.adat.index.get_level_values('PlatePosition'))
@@ -157,7 +157,7 @@ class PickOnMetaTest(TestCase):
 
 class InsertIntoMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_insert_into_row_meta(self):
         new_barcodes = list([str(i) for i in range(self.adat.shape[0])])
@@ -176,7 +176,7 @@ class InsertIntoMetaTest(TestCase):
 
 class ReplaceMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_replace_row_meta(self):
         new_barcodes = list([str(i) for i in range(self.adat.shape[0])])
@@ -240,7 +240,7 @@ class ReplaceKeyedMetaTest(TestCase):
 
 class InsertKeyedMetaTest(TestCase):
     def setUp(self):
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def test_insert_row_meta(self):
         new_barcodes = {

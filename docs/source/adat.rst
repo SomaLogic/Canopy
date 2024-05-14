@@ -13,7 +13,7 @@ Table of Contents
 File Handling
 -------------
 
-.. module:: canopy
+.. module:: somadata
 
 .. autoclass:: Adat
     :members:
@@ -24,15 +24,15 @@ File Handling
 Metadata Helpers
 ----------------
 
-.. autoclass:: canopy.base.AdatMetaHelpers
+.. autoclass:: somadata.base.AdatMetaHelpers
     :members:
 
 .. _concatenation:
 
 Concatenation
 ------------------
-.. automodule:: canopy.tools.adat_concatenation
+.. automodule:: somadata.tools.adat_concatenation
     :members:
 
-.. automodule:: canopy.tools.adat_concatenation_utils
+.. automodule:: somadata.tools.adat_concatenation_utils
     :members:

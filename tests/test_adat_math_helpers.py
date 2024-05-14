@@ -4,9 +4,9 @@ from unittest import TestCase
 import pytest
 from numpy import isclose
 
-import canopy
-from canopy import Adat
-from canopy.data.lift import LiftData
+import somadata
+from somadata import Adat
+from somadata.data.lift import LiftData
 
 
 class TestAdatLift:
@@ -14,7 +14,7 @@ class TestAdatLift:
 
     def __init__(self):
         self.ld = LiftData('v4.0', 'v5.0', 'plasma')
-        self.adat = canopy.read_adat(self.filename)
+        self.adat = somadata.read_adat(self.filename)
         self.lift_adat = self.adat.lift('v5.0')
 
     def test_scaling_math(self):

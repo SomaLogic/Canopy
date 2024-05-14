@@ -3,8 +3,8 @@ from unittest import TestCase
 
 import pandas as pd
 
-from canopy import Adat, Annotations
-from canopy.errors import AnnotationsLiftingError
+from somadata import Adat, Annotations
+from somadata.errors import AnnotationsLiftingError
 
 
 def build_annotation_example():

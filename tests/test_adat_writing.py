@@ -2,8 +2,8 @@ import hashlib
 import os
 from unittest import TestCase, mock
 
-import canopy
-from canopy import Adat
+import somadata
+from somadata import Adat
 
 
 def require_side_effect(*args, **kwargs):
@@ -21,7 +21,7 @@ class AdatWritingTest(TestCase):
         self.source_md5 = hashlib.md5()
         with open(self.source_filename, 'rb') as f:
             self.source_md5.update(f.read())
-        self.adat = canopy.read_adat('./tests/data/control_data.adat')
+        self.adat = somadata.read_adat('./tests/data/control_data.adat')
 
     def tearDown(self):
         if os.path.exists(self.filename):
@@ -31,13 +31,13 @@ class AdatWritingTest(TestCase):
         self.adat.to_adat(self.filename)
         self.assertTrue(os.path.exists(self.filename))
 
-    @mock.patch('canopy.io.adat.file.version', require_side_effect)
+    @mock.patch('somadata.io.adat.file.version', require_side_effect)
     def test_adat_md5(self):
         self.adat.to_adat(self.filename)
         hash_md5 = hashlib.md5()
         with open(self.filename, 'rb') as f:
             hash_md5.update(f.read())
-        self.assertEqual(hash_md5.hexdigest(), 'e288d94404e1e30a2138b188daa9a7e9')
+        self.assertEqual(hash_md5.hexdigest(), 'ff0f3b40b210999093d55e129276201e')
 
 
 def require_side_effect_0_2(*args, **kwargs):
@@ -69,10 +69,10 @@ class ConvertV3SeqIdsWriteTestCase(TestCase):
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
-    @mock.patch('canopy.io.adat.file.version', require_side_effect_0_2)
+    @mock.patch('somadata.io.adat.file.version', require_side_effect_0_2)
     def test_adat_writing(self):
         self.adat.to_adat(self.filename, convert_to_v3_seq_ids=True)
         hash_md5 = hashlib.md5()
         with open(self.filename, 'rb') as f:
             hash_md5.update(f.read())
-        self.assertEqual(hash_md5.hexdigest(), 'd47957bafb2ef8b8b70bf0efd9705c11')
+        self.assertEqual(hash_md5.hexdigest(), '0d94aad767bb4af52a1ea93d41a48d79')
