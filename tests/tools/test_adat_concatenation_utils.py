@@ -3,10 +3,10 @@ from unittest import TestCase
 import pandas as pd
 import pytest
 
-from canopy import Adat
-from canopy.errors import AdatMetaError
-from canopy.tools import adat_concatenation_utils
-from canopy.tools.adat_concatenation import concatenate_adats
+from somadata import Adat
+from somadata.errors import AdatMetaError
+from somadata.tools import adat_concatenation_utils
+from somadata.tools.adat_concatenation import concatenate_adats
 
 
 class AdatColMetaReplaceTestCase(TestCase):

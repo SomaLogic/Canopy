@@ -1,6 +1,6 @@
 from unittest import TestCase
-from canopy import Adat
-import canopy
+from somadata import Adat
+import somadata
 import pytest
 import os
 
@@ -11,8 +11,8 @@ class AdatReadingTest(TestCase):
 
     filename = './tests/data/control_data.adat'
 
-    def test_canopy_read_adat(self):
-        adat = canopy.read_adat(self.filename)
+    def test_somadata_read_adat(self):
+        adat = somadata.read_adat(self.filename)
         self.assertIsInstance(adat, Adat)
 
 
@@ -23,7 +23,7 @@ class AdatAttrTest(TestCase):
     filename = './tests/data/control_data.adat'
 
     def setUp(self):
-        self.adat = canopy.read_adat(self.filename)
+        self.adat = somadata.read_adat(self.filename)
 
     def test_adat_size(self):
         self.assertEqual(self.adat.shape, (11, 5284))
@@ -76,9 +76,9 @@ class WrittenAdatAttrTest(AdatAttrTest):
     filename = './tests/data/control_data_written.adat'
 
     def setUp(self):
-        first_adat = canopy.read_adat('./tests/data/control_data.adat')
+        first_adat = somadata.read_adat('./tests/data/control_data.adat')
         first_adat.to_adat(self.filename)
-        self.adat = canopy.read_adat(self.filename)
+        self.adat = somadata.read_adat(self.filename)
 
     def tearDown(self):
         if os.path.exists(self.filename):
@@ -101,7 +101,7 @@ class ConvertV3SeqIdsReadTestCase(TestCase):
 
     def test_v3_seq_id_file_read_warning(self):
         with pytest.warns(UserWarning) as record:
-            canopy.read_adat('tests/data/v3_test.adat')
+            somadata.read_adat('tests/data/v3_test.adat')
 
         # check that only one warning was raised
         self.assertEqual(len(record), 1)
@@ -113,7 +113,7 @@ class ConvertV3SeqIdsReadTestCase(TestCase):
 
     @pytest.mark.filterwarnings('ignore:V3 style seqIds')
     def test_v3_seq_id_file_read_conversion(self):
-        adat = canopy.read_adat('tests/data/v3_test.adat')
+        adat = somadata.read_adat('tests/data/v3_test.adat')
 
         # check that the adat has the correct column metadata names and data
         self.assertEqual(['SeqId', 'SeqIdVersion', 'ColCheck'], list(adat.columns.names))

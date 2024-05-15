@@ -2,9 +2,9 @@ from unittest import TestCase
 
 import pytest
 
-from canopy import Adat
-from canopy.tools.adat_concatenation import concatenate_adats, smart_adat_concatenation
-from canopy.tools.errors import AdatConcatError
+from somadata import Adat
+from somadata.tools.adat_concatenation import concatenate_adats, smart_adat_concatenation
+from somadata.tools.errors import AdatConcatError
 
 
 class ConcatHeadersTest(TestCase):

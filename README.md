@@ -1,4 +1,4 @@
-# The Python `Canopy` Package from Somalogic, Inc.
+# The Python `SomaData` Package from Somalogic, Inc.
 
 ![cover](https://img.shields.io/badge/coverage-97-success.svg?style=flat&logo=codecov)
 [![License:
@@ -8,7 +8,7 @@ MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://choosealicense.
 
 ## Overview
 
-This document accompanies the Python package `canopy`, which loads the SomaLogic, Inc. structured text data file called an `*.adat`.  The `canopy.Adat` object is an extension of the `pandas.DataFrame` class. The package provides auxiliary functions for extracting relevant information from the ADAT object once in the Python environment. Basic familiarity with the Python environment is assumed, as is the ability to install contributed packages from the Python Package Installer (pip)
+This document accompanies the Python package `somadata`, which loads the SomaLogic, Inc. structured text data file called an `*.adat`.  The `somadata.Adat` object is an extension of the `pandas.DataFrame` class. The package provides auxiliary functions for extracting relevant information from the ADAT object once in the Python environment. Basic familiarity with the Python environment is assumed, as is the ability to install contributed packages from the Python Package Installer (pip)
 
 -----
 
@@ -28,23 +28,32 @@ This document accompanies the Python package `canopy`, which loads the SomaLogic
 <a name="installation"></a>
 
 ## Installation
-The easiest way to install `Canopy` is to install directly from
+The easiest way to install `SomaData` is to install directly from PyPI
+
+PIP:
+
+```bash
+pip install SomaData
+```
+
+Alternatively one can install from the GitHub repository.
+
 GitHub:
 
 ``` bash
-pip install git+https://github.com/SomaLogic/canopy.git#egg=canopy
+pip install git+https://github.com/SomaLogic/Canopy.git#egg=somadata
 ```
 
 Alternatively, if you wish to develop or change the source code, you may clone the repository and install manually via:
 
 ``` bash
-git clone https://github.com/SomaLogic/canopy.git
-pip install -e ./canopy
+git clone https://github.com/SomaLogic/Canopy.git
+pip install -e ./somadata
 ```
 
 ### Dependencies
 
-`Python >=3.8` is required to install `canopy`. The following package dependencies are installed on a `pip install`:
+`Python >=3.8` is required to install `somadata`. The following package dependencies are installed on a `pip install`:
   - `pandas >= 1.1.0`
   - `numpy >= 1.19.1`
 
@@ -54,27 +63,27 @@ pip install -e ./canopy
 
 ## Basics
 
-Upon installation, load `canopy` as normal:
+Upon installation, load `somadata` as normal:
 
 [return to top](#toptoc)
 
 
 ```python
-import canopy
+import somadata
 ```
 
 ### For a traversable index of the library:
 
 
 ```python
-help(canopy)
-# help(canopy.adat) ... etc
+help(somadata)
+# help(somadata.adat) ... etc
 ```
 
-    Help on package canopy:
+    Help on package somadata:
 
     NAME
-        canopy
+        somadata
 
     PACKAGE CONTENTS
         adat
@@ -86,16 +95,16 @@ help(canopy)
         tools (package)
 
     FILE
-        /Users/tjohnson/code/repos/Canopy/canopy/__init__.py
+        /Users/tjohnson/code/repos/SomaData/somadata/__init__.py
 
 
 
 
 ### Internal Objects
 
-The `canopy` package comes with one internal object available to users to run canned examples (or analyses). It can be accessed by perform the import:
+The `somadata` package comes with one internal object available to users to run canned examples (or analyses). It can be accessed by perform the import:
 
-  - `from canopy.data.example_data import example_data`
+  - `from somadata.data.example_data import example_data`
 
 ## Main Features (I/O)
 
@@ -114,18 +123,18 @@ The `canopy` package comes with one internal object available to users to run ca
 
 [return to top](#toptoc)
 
-Loading the sample file from within the canopy library via its path
+Loading the sample file from within the somadata library via its path
 
 
 ```python
-adat = canopy.read_adat('./canopy/data/example_data.adat')
+adat = somadata.read_adat('./somadata/data/example_data.adat')
 type(adat)
 ```
 
 
 
 
-    canopy.adat.Adat
+    somadata.adat.Adat
 
 
 
@@ -1331,7 +1340,7 @@ adat.header_metadata
 
 
 
-Canopy's Adat object inherits the pandas printing methods which displays nicely in Jupyter Notebooks when using `IPython.display.display()`.
+SomaData's Adat object inherits the pandas printing methods which displays nicely in Jupyter Notebooks when using `IPython.display.display()`.
 
 <a name="wrangling"></a>
 
@@ -2368,7 +2377,7 @@ sqrt_adat = adat.apply(np.sqrt)  # equivlane to `np.sqrt(adat)`
 
 ### Subsetting/Slicing the Dataframe
 
-You may extract certain subgroups of samples and/or features. Canopy augments the pandas dataframe with a number of helper functions to aid the user.
+You may extract certain subgroups of samples and/or features. SomaData augments the pandas dataframe with a number of helper functions to aid the user.
 
 [return to top](#toptoc)
 
@@ -5920,7 +5929,7 @@ lifted_adat = adat.lift('11K')
 
 ```python
 # Observing the Lin's CCC of the lifting scale factors.
-from canopy.data import getSomaScanLiftCCC
+from somadata.data import getSomaScanLiftCCC
 
 # the method returns a pandas dataframe containing the available lift Lins's CCC values:
 ccc = getSomaScanLiftCCC()
@@ -6111,7 +6120,7 @@ adat.to_adat('/tmp/out_file.adat')
 <a name="example"></a>
 
 # Typical Analyses
-Although it is beyond the scope of the `Canopy` package, below are 3
+Although it is beyond the scope of the `SomaData` package, below are 3
 sample analyses that typical users/clients would perform on SomaLogic data.
 They are not intended to be a definitive guide in statistical
 analysis and existing packages do exist in the `Python` universe that perform parts
@@ -6128,7 +6137,7 @@ preliminary analyses on SomaLogic data for:
 
 
 ```python
-from canopy.data.example_data import example_data # Example ADAT included with Canopy
+from somadata.data.example_data import example_data # Example ADAT included with SomaData
 from scipy.stats import ttest_ind
 from collections import Counter
 import matplotlib.pyplot as plt

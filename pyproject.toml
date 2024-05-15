@@ -1,14 +1,29 @@
 [tool.poetry]
-name = "canopy"
-version = "0.5.1"
+name = "somadata"
+version = "1.0.0"
 description = "SomaLogic Python Data Input/Output Library"
-authors = ["SomaLogic"]
+authors = [
+    "Joseph Allison",
+    "Ted Johnson",
+    "Kah Young"
+    ]
+maintainers = [
+    "Standard Biotools <support@somalogic.com>"
+]
 license = "MIT"
 readme = "README.md"
 include = [
-    { path = "canopy/data/lift.zip" },
+    { path = "somadata/data/lift.zip" },
     { path = "*.adat" }
 ]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+homepage = "https://www.standardbio.com/"
+repository = "https://github.com/SomaLogic/Canopy"
 
 [tool.poetry.dependencies]
 python = "^3.8"

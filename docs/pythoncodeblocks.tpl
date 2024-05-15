@@ -1,4 +1,4 @@
-{* SHOULD BE PLACED IN $HOME/.virtualenvs/canopy/share/jupyter/nbconvert/templates/pythoncodeblocks.tpl *}
+{* SHOULD BE PLACED IN $HOME/.virtualenvs/somadata/share/jupyter/nbconvert/templates/pythoncodeblocks.tpl *}
 {% extends 'markdown.tpl' %}
 {% block stream %}
 *Output*
