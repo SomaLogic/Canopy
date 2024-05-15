@@ -16,6 +16,14 @@ include = [
     { path = "somadata/data/lift.zip" },
     { path = "*.adat" }
 ]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+homepage = "https://www.standardbio.com/"
+repository = "https://github.com/SomaLogic/Canopy"
 
 [tool.poetry.dependencies]
 python = "^3.8"
