@@ -1,8 +1,8 @@
 # The Python `SomaData` Package from Somalogic, Inc.
 
-![cover](https://img.shields.io/badge/coverage-97-success.svg?style=flat&logo=codecov)
 [![License:
 MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://choosealicense.com/licenses/mit/)
+![PyPI Downloads](https://img.shields.io/pypi/dm/somadata?label=PyPI%20downloads)
 
 -----
 
@@ -1994,7 +1994,7 @@ Row metadata is sample level information which could include added clinical data
 
 
 ```python
-# using ittertools to sumulate some metadata:
+# using ittertools to simulate some metadata:
 from itertools import cycle, islice
 import pandas as pd
 
@@ -5922,7 +5922,7 @@ lifted_adat
 
 
 ```python
-# because some common documentation refers to plex size intead of assay version the tool also supports lifing by naming plex size.
+# because some common documentation refers to plex size instead of assay version the tool also supports lifing by naming plex size.
 lifted_adat = adat.lift('11K')
 ```
 
@@ -6080,7 +6080,7 @@ The tool allows you to display Lin's concordance correlation coefficient ([Lin 1
 
 ```python
 # your exact transformation's Lin's CCC can be selected by filtering the column that contains your matrix and versions
-# Lin's CCC are symetrical v5.0 -> v4.0 == v4.0 -> v5.0.
+# Lin's CCC are symmetrical v5.0 -> v4.0 == v4.0 -> v5.0.
 ccc["Plasma Lin's CCC v5.0 11K to v4.0 5K"]
 ```
 
