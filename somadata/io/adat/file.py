@@ -207,6 +207,41 @@ def read_adat(path_or_buf: Union[str, TextIO]) -> Adat:
         header_metadata=header_metadata,
     )
 
+def read_adat_2_AnnData(path_or_buf: Union[str, TextIO]) -> AnnData:
+    """Returns an adata object instead a somalogic adat file path from the filepath/name.
+    Parameters
+    ----------
+    path_or_buf : Union[str, TextIO]
+        Path or buffer that the file will be read from
+    Examples
+    --------
+    >>> adata=read_adat_2_AnnData(example_data_file)
+    Returns
+    -------
+    adata object instead of  : Adat object
+    """
+    import anndata as ad
+    import numpy as np
+    import pandas as pd
+    
+    if type(path_or_buf) == str:
+        with open(path_or_buf, 'r') as f:
+            rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(f)
+    else:
+        rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(
+            path_or_buf
+        )
+    rfu_matrix_array = np.array(rfu_matrix)
+
+    adata = ad.AnnData(X=rfu_matrix_array)
+    adata.obs = pd.DataFrame(row_metadata)
+    adata.var = pd.DataFrame(column_metadata)
+    adata.uns = header_metadata
+    # make sure that all uns are strings to avoid issues with writing to h5ad files
+    for key, value in adata.uns.items():
+        if not isinstance(value, str):
+            adata.uns[key] = str(value)
+    return adata
 
 def write_file(
     adat, path: str, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False
