@@ -101,8 +101,8 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
     def to_adat(
         self,
         path_or_buf: Union[str, TextIO],
-        round_rfu: bool = True,
-        convert_to_v3_seq_ids: bool = False,
+        *args,
+        **kwargs,
     ) -> None:
         """Writes the adat to an adat formatted file with the given filename.
 
@@ -130,6 +130,6 @@ class Adat(AdatMetaHelpers, AdatMathHelpers, pd.DataFrame, AdatNormalization):
 
         if type(path_or_buf) == str:
             with open(path_or_buf, 'w', newline='', encoding='utf-8') as f:
-                io.adat.file.write_adat(self, f, round_rfu, convert_to_v3_seq_ids)
+                io.adat.file.write_adat(self, f, *args, **kwargs)
         else:
-            io.adat.file.write_adat(self, path_or_buf, round_rfu, convert_to_v3_seq_ids)
+            io.adat.file.write_adat(self, path_or_buf, *args, **kwargs)

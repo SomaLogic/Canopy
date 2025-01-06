@@ -15,6 +15,7 @@ class AdatWritingTest(TestCase):
     """Tests if writing can occur and if the written file matches expectation (via md5)."""
 
     filename = './tests/data/control_data_written.adat'
+    filename_compatibility_mode = './tests/data/control_data_written_compatible.adat'
     source_filename = './tests/data/control_data.adat'
 
     def setUp(self):
@@ -22,10 +23,15 @@ class AdatWritingTest(TestCase):
         with open(self.source_filename, 'rb') as f:
             self.source_md5.update(f.read())
         self.adat = somadata.read_adat('./tests/data/control_data.adat')
+        self.adat_compatibility_mode = somadata.read_adat(
+            './tests/data/control_data.adat', compatibility_mode=True
+        )
 
     def tearDown(self):
         if os.path.exists(self.filename):
             os.remove(self.filename)
+        if os.path.exists(self.filename_compatibility_mode):
+            os.remove(self.filename_compatibility_mode)
 
     def test_adat_write(self):
         self.adat.to_adat(self.filename)
@@ -36,6 +42,14 @@ class AdatWritingTest(TestCase):
         self.adat.to_adat(self.filename)
         hash_md5 = hashlib.md5()
         with open(self.filename, 'rb') as f:
+            hash_md5.update(f.read())
+        self.assertEqual(hash_md5.hexdigest(), 'ff0f3b40b210999093d55e129276201e')
+
+    @mock.patch('somadata.io.adat.file.version', require_side_effect)
+    def test_adat_md5_compatibility(self):
+        self.adat_compatibility_mode.to_adat(self.filename_compatibility_mode)
+        hash_md5 = hashlib.md5()
+        with open(self.filename_compatibility_mode, 'rb') as f:
             hash_md5.update(f.read())
         self.assertEqual(hash_md5.hexdigest(), 'ff0f3b40b210999093d55e129276201e')
 
