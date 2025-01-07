@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import csv
+import io
 import json
 import logging
 import re
 import warnings
 from importlib.metadata import version
-from typing import Dict, List, TextIO, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 from somadata import Adat
 from somadata.io.adat.errors import AdatReadError
@@ -14,7 +15,7 @@ from somadata.tools.math import jround
 
 
 def parse_file(
-    f: TextIO,
+    f: Union[str, io.TextIOWrapper], compatibility_mode: bool = False
 ) -> Tuple[
     List[List[float]], Dict[str, List[str]], Dict[str, List[str]], Dict[str, str]
 ]:
@@ -22,8 +23,10 @@ def parse_file(
 
     Parameters
     ----------
-    f : TextIO
-        An open adat file object.
+    f : Union[str, io.TextIOWrapper]
+        An open adat file object or path to an adat file.
+    compatibility_mode : bool
+        If True, the function will attempt to parse the file where header metadata values are strings.
 
     Returns
     -------
@@ -41,6 +44,11 @@ def parse_file(
     header_metadata : Dict[str, str]
         A dictionary of each row of the header_metadata corresponds to a key-value pair.
     """
+    if type(f) == str:
+        f = open(f, 'r')
+    elif type(f) != io.TextIOWrapper:
+        raise AdatReadError('File must be a string or file object.')
+
     current_section = None
 
     header_metadata = {}
@@ -78,26 +86,25 @@ def parse_file(
             # Not every key in the header has a value
             if len(line) == 1:
                 header_metadata[line[0]] = ''
-
             # Should be the typical case
-            elif len(line) == 2:
+            elif len(line) == 2 and compatibility_mode:
+                header_metadata[line[0]] = line[1]
+            elif len(line) == 2 and not compatibility_mode:
                 try:
                     header_metadata[line[0]] = json.loads(line[1])
                     if type(header_metadata[line[0]]) != dict:
                         header_metadata[line[0]] = line[1]
                 except json.JSONDecodeError:
                     header_metadata[line[0]] = line[1]
-
+                # If we have the report config section, check to see if it was loaded as a dict
+                if line[0] == "ReportConfig" and type(header_metadata[line[0]]) != dict:
+                    warnings.warn(
+                        'Malformed ReportConfig section in header.  Setting to an empty dictionary.'
+                    )
+                    header_metadata[line[0]] = {}
             # More than 2 values to a key should never ever happen
             else:
                 raise AdatReadError('Unexpected size of header: ' + '|'.join(line))
-
-            # If we have the report config section, check to see if it was loaded as a dict
-            if line[0] == "ReportConfig" and type(header_metadata[line[0]]) != dict:
-                warnings.warn(
-                    'Malformed ReportConfig section in header.  Setting to an empty dictionary.'
-                )
-                header_metadata[line[0]] = {}
 
         elif current_section == 'COL_DATA':
             # Get the height of the column metadata section & skip the rest of the section
@@ -162,6 +169,7 @@ def parse_file(
                 converted_rfu_row_data = list(map(float, rfu_row_data))
                 rfu_matrix.append(converted_rfu_row_data)
 
+    f.close()
     return rfu_matrix, row_metadata, column_metadata, header_metadata
 
 
@@ -176,12 +184,12 @@ def read_file(filepath: str) -> Adat:
     return read_adat(filepath)
 
 
-def read_adat(path_or_buf: Union[str, TextIO]) -> Adat:
+def read_adat(path_or_buf: Union[str, io.TextIOWrapper], *args, **kwargs) -> Adat:
     """Returns an Adat from the filepath/name.
 
     Parameters
     ----------
-    path_or_buf : Union[str, TextIO]
+    path_or_buf : Union[str, io.TextIOWrapper]
         Path or buffer that the file will be read from
 
     Examples
@@ -192,13 +200,9 @@ def read_adat(path_or_buf: Union[str, TextIO]) -> Adat:
     -------
     adat : Adat
     """
-    if type(path_or_buf) == str:
-        with open(path_or_buf, 'r') as f:
-            rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(f)
-    else:
-        rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(
-            path_or_buf
-        )
+    rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(
+        path_or_buf, *args, **kwargs
+    )
 
     return Adat.from_features(
         rfu_matrix=rfu_matrix,
@@ -208,21 +212,11 @@ def read_adat(path_or_buf: Union[str, TextIO]) -> Adat:
     )
 
 
-def write_file(
-    adat, path: str, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False
-) -> None:
-    """DEPRECATED: SEE somadata.write_adat
-
-    WILL BE REMOVED IN A FUTURE RELEASE
-    """
-    logging.warning(
-        'THIS FUNCTION IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.\n PLEASE USE `somadata.write_adat` instead.'
-    )
-    read_adat(adat, path, round_rfu, convert_to_v3_seq_ids)
-
-
 def write_adat(
-    adat, f: TextIO, round_rfu: bool = True, convert_to_v3_seq_ids: bool = False
+    adat,
+    f: io.TextIOWrapper,
+    round_rfu: bool = True,
+    convert_to_v3_seq_ids: bool = False,
 ) -> None:
     """Write this Adat to an adat format data source.
 
@@ -244,8 +238,10 @@ def write_adat(
 
     Examples
     --------
-    >>> pd.write_file(adat, 'path/to/out/filename.adat')
-    >>> pd.write_file(adat, 'path/to/out/filename.adat', round_rfu=False)
+    >>> import somadata as sd
+    >>> adat = sd.read_adat('path/to/file.adat')
+    >>> sd.write_adat(adat, 'path/to/out/filename.adat')
+    >>> sd.write_adat(adat, 'path/to/out/filename.adat', round_rfu=False)
 
     Returns
     -------
@@ -276,10 +272,10 @@ def write_adat(
     writer.writerow(['^HEADER'])
     for row in adat.header_metadata.items():
         # We need to handle the reportconfig in a special way since it has double quotes
-        if row[0] == "ReportConfig":
+        if type(row[1]) == dict:
             f.write(row[0] + '\t' + json.dumps(row[1], separators=(',', ':')) + '\r\n')
         else:
-            writer.writerow([x for x in row if x is not None])
+            f.write(row[0] + '\t' + row[1] + '\r\n')
 
     # Write COL_DATA section
     writer.writerow(['^COL_DATA'])
