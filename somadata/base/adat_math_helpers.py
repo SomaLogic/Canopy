@@ -12,7 +12,7 @@ def calcELOD(x: pd.Series):
     med = np.median(x)
     absDiff = np.abs(x - med)
     medDiff = np.median(absDiff)
-    eLOD = med + 3 * (1.4826 * medDiff)
+    eLOD = med + 3.3 * (1.4826 * medDiff)
     return eLOD
 
 
