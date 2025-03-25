@@ -46,8 +46,8 @@ def parse_file(
     """
     if type(f) == str:
         f = open(f, 'r')
-    elif type(f) != io.TextIOWrapper:
-        raise AdatReadError('File must be a string or file object.')
+    elif not hasattr(f, 'read'):
+        raise AdatReadError('File must be a string or file-like object.')
 
     current_section = None
 
@@ -161,9 +161,16 @@ def parse_file(
             elif matrix_depth > col_metadata_length:
                 # Store in row metadata into dictionary
                 row_metadata_data = line[:row_metadata_offset]
+                # Check for missing metadata and handle it
+                if len(row_metadata_data) < len(row_metadata_names):
+                    missing_count = len(row_metadata_names) - len(row_metadata_data)
+                    logging.warning(
+                        f"Row metadata has {missing_count} missing values. "
+                        f"Filling missing entries with empty strings."
+                    )
+                    row_metadata_data = list(row_metadata_data) + [""] * missing_count
                 for name, data in zip(row_metadata_names, row_metadata_data):
                     row_metadata[name].append(data)
-
                 # Store the RFU data
                 rfu_row_data = line[row_metadata_offset + 1 :]
                 converted_rfu_row_data = list(map(float, rfu_row_data))
