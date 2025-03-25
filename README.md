@@ -53,8 +53,8 @@ pip install -e ./somadata
 
 ### Dependencies
 
-`Python >=3.8` is required to install `somadata`. The following package dependencies are installed on a `pip install`:
-  - `pandas >= 1.1.0`
+`Python >=3.9` is required to install `somadata`. The following package dependencies are installed on a `pip install`:
+  - `pandas >= 1.1.2`
   - `numpy >= 1.19.1`
 
 [return to top](#toptoc)
