@@ -279,10 +279,10 @@ def write_adat(
     writer.writerow(['^HEADER'])
     for row in adat.header_metadata.items():
         # We need to handle the reportconfig in a special way since it has double quotes
-        if type(row[1]) == dict:
+        if row[0] == 'ReportConfig' and type(row[1]) == dict:
             f.write(row[0] + '\t' + json.dumps(row[1], separators=(',', ':')) + '\r\n')
         else:
-            f.write(row[0] + '\t' + row[1] + '\r\n')
+            writer.writerow([x for x in row if x is not None])
 
     # Write COL_DATA section
     writer.writerow(['^COL_DATA'])
