@@ -1,10 +1,13 @@
 from __future__ import annotations
-from somadata import Adat
-from somadata.tools.errors import AdatConcatError
-from typing import List, Dict
-from . import adat_concatenation_utils
+
 import copy
 import re
+from typing import Dict, List
+
+from somadata import Adat
+from somadata.tools.errors import AdatConcatError
+
+from . import adat_concatenation_utils
 
 
 def _set_addition(key, value1, value2):
@@ -17,7 +20,9 @@ def _set_addition(key, value1, value2):
 
 def _exact_match(key, value1, value2):
     if value1 != value2:
-        raise AdatConcatError(f'Header metadata mismatch where exact match is required. Key: {key}, Values: {value1}, {value2}')
+        raise AdatConcatError(
+            f'Header metadata mismatch where exact match is required. Key: {key}, Values: {value1}, {value2}'
+        )
     return value1
 
 
@@ -69,7 +74,6 @@ def _concat_header_metadata(adats: List[Adat], merge_strategy=None):
     # Add the rest of the adats' headers
     for adat in adats[1:]:
         for key, value in adat.header_metadata.items():
-
             # If key is not in the base_header, add it
             if key not in base_header:
                 base_header[key] = value
@@ -95,11 +99,17 @@ def _concat_column_metadata(adats: List[Adat]) -> Dict(str, List):
         for name in adat.columns.names:
             values = list(adat.columns.get_level_values(name))
             if name == 'ColCheck':
-                col_checks.append([True if value == 'PASS' else False for value in values])
+                col_checks.append(
+                    [True if value == 'PASS' else False for value in values]
+                )
                 col_metadata['ColCheck'] = []
             elif name in col_metadata:
                 if col_metadata[name] != values:
-                    raise AdatConcatError('Mismatching column metadata in: ' + name)
+                    raise AdatConcatError(
+                        f'Mismatching column metadata in: {name}\n'
+                        f'Existing values: {col_metadata[name]}\n'
+                        f'New values: {values}'
+                    )
             else:
                 col_metadata[name] = values
 
@@ -122,7 +132,10 @@ def _concat_row_metadata(adats: List[Adat]) -> Dict(str, List):
         symmetric_difference = symmetric_difference.union(names ^ set(adat.index.names))
         names = names.union(symmetric_difference)
     if len(symmetric_difference) > 0:
-        raise AdatConcatError('Mismatching index name, ensure row metadata columns match. Names: ' + ', '.join(sorted(symmetric_difference)))
+        raise AdatConcatError(
+            'Mismatching index name, ensure row metadata columns match. Names: '
+            + ', '.join(sorted(symmetric_difference))
+        )
 
     # Get Row Metadata
     row_metadata = {}
@@ -181,12 +194,16 @@ def concatenate_adats(adats: List[Adat], header_merge_strategy: Dict = None) -> 
     >>> adat = concatenate_adats([adat1, adat2, adat3], header_merge_strategy={'default_action': 'null', 'properties': {'AdatId': 'exact'}})
     """
 
-    header_metadata = _concat_header_metadata(adats, merge_strategy=header_merge_strategy)
+    header_metadata = _concat_header_metadata(
+        adats, merge_strategy=header_merge_strategy
+    )
     column_metadata = _concat_column_metadata(adats)
     row_metadata = _concat_row_metadata(adats)
     rfu_matrix = _concat_rfus(adats)
 
-    adat = Adat.from_features(rfu_matrix, row_metadata, column_metadata, header_metadata)
+    adat = Adat.from_features(
+        rfu_matrix, row_metadata, column_metadata, header_metadata
+    )
     return adat
 
 
@@ -200,7 +217,7 @@ def _quick_concat(adats):
         data=rfu_matrix,
         index=row_multiindex,
         columns=adats[0].columns,
-        header_metadata=adats[0].header_metadata
+        header_metadata=adats[0].header_metadata,
     )
 
 
@@ -233,21 +250,23 @@ def smart_adat_concatenation(adats, somamer_source_adat=None):
     # About to change the adats somamer metadata.  Make sure their seqids are the same.
     if type(somamer_source_adat) == Adat:
         adats = adats + [somamer_source_adat]
-        
+
     adats = adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(adats)
 
     # Unpack & update if we're updating
     if type(somamer_source_adat) == Adat:
         somamer_source_adat = adats[-1]
         adats = adats[0:-1]
-        adats = adat_concatenation_utils.convert_somamer_metadata_to_source(adats, somamer_source_adat)
+        adats = adat_concatenation_utils.convert_somamer_metadata_to_source(
+            adats, somamer_source_adat
+        )
 
     header_merge_strategy = {
         'default_action': 'exact_match',
         'properties': {
             'AdatId': 'null',
             '!AdatId': 'null',
-        }
+        },
     }
 
     adats = adat_concatenation_utils.robust_merge_adat_headers(adats)
