@@ -88,7 +88,11 @@ class Annotations(pd.DataFrame):
 
         Examples
         --------
-        >>> updated_adat = Annotations.update_adat_column_meta(adat)
+        >>> from somadata import Annotations, Adat
+        >>> adat = Adat.read_adat('path/to/adat_file.adat')
+        >>> df = pd.read_excel('path/to/annotations.xlsx', index_col='SeqId')
+        >>> ann = Annotations(df)
+        >>> updated_adat = ann.update_adat_column_meta(adat)
         """
 
         xlsx_to_adat_column_map = {
@@ -102,7 +106,16 @@ class Annotations(pd.DataFrame):
             'Entrez Gene ID': 'EntrezGeneID',
         }
 
-        seq_ids = self.index.get_level_values('SeqId')
+        # Check if SeqId is in index or columns
+        if 'SeqId' in self.index.names:
+            seq_ids = self.index.get_level_values('SeqId')
+        elif 'SeqId' in self.columns:
+            seq_ids = self['SeqId']
+        else:
+            raise ValueError(
+                "SeqId not found in either index or columns of annotations data"
+            )
+
         mod_adat = adat.copy()
         for xlsx_col, adat_col in xlsx_to_adat_column_map.items():
             if adat_col not in adat.columns.names:
@@ -219,7 +232,16 @@ class Annotations(pd.DataFrame):
             an_lifting_column = f'{matrix} Scalar {signal_space} to {lift_to_version}'
         scalars = self[an_lifting_column].copy().fillna(1.0)
         # I don't want to modify the annotations in case the object is used elsewhere.
-        scalars.index = self['SeqId']
+
+        # Check if SeqId is in index or columns and set scalars index appropriately
+        if 'SeqId' in self.index.names:
+            scalars.index = self.index.get_level_values('SeqId')
+        elif 'SeqId' in self.columns:
+            scalars.index = self['SeqId']
+        else:
+            raise ValueError(
+                "SeqId not found in either index or columns of annotations data"
+            )
 
         # Check if seq ids will broadcast between adat & annotations (symmetric difference)
         sym_diff = set(scalars.index) ^ set(adat.columns.get_level_values('SeqId'))
