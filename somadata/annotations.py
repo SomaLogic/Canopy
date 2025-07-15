@@ -88,10 +88,9 @@ class Annotations(pd.DataFrame):
 
         Examples
         --------
-        >>> from somadata import Annotations, Adat
-        >>> adat = Adat.read_adat('path/to/adat_file.adat')
-        >>> df = pd.read_excel('path/to/annotations.xlsx', index_col='SeqId')
-        >>> ann = Annotations(df)
+        >>> import somadata as sd
+        >>> adat = sd.read_adat('path/to/adat_file.adat')
+        >>> ann = sd.read_annotations('path/to/annotations.xlsx')
         >>> updated_adat = ann.update_adat_column_meta(adat)
         """
 
