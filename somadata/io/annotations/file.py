@@ -19,6 +19,8 @@ APPROVED_MD5_SET = set(
     [
         '7d92666369d4e33364b11804f2d1f8ce',  # v4 rev 2 as of 2021-08-27
         '5fa46834ed826eb1e8dba88698cf7a76',  # v4.1 rev 2 as of 2021-08-27
+        '26c9f22d083bc3eac871e2dd00586c31',  # v4.1 plasma/serum rev 10 as of 2025-03
+        'd93180bdd291af5d07faafec92823661',  # v5.0 plasma/serum  rev 7 as of 2025-03
     ]
 )
 

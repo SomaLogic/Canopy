@@ -1,14 +1,17 @@
 # The Python `SomaData` Package from Somalogic, Inc.
 
-[![License:
-MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://choosealicense.com/licenses/mit/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://choosealicense.com/licenses/mit/)
+[![PyPI](https://img.shields.io/pypi/v/somadata.svg)](https://pypi.org/project/somadata)
 ![PyPI Downloads](https://img.shields.io/pypi/dm/somadata?label=PyPI%20downloads)
+[![Python Versions](https://img.shields.io/pypi/pyversions/somadata.svg)](https://pypi.org/project/somadata/#files)
+[![Actions](https://img.shields.io/github/actions/workflow/status/SomaLogic/Canopy/publish-pypi.yml?event=push)](https://github.com/SomaLogic/Canopy/actions)
+[![GitHub issues](https://img.shields.io/github/issues/SomaLogic/Canopy.svg)](https://github.com/SomaLogic/Canopy/issues)
 
 -----
 
 ## Overview
 
-This document accompanies the Python package `somadata`, which loads the SomaLogic, Inc. structured text data file called an `*.adat`.  The `somadata.Adat` object is an extension of the `pandas.DataFrame` class. The package provides auxiliary functions for extracting relevant information from the ADAT object once in the Python environment. Basic familiarity with the Python environment is assumed, as is the ability to install contributed packages from the Python Package Installer (pip)
+This document accompanies the Python package `somadata`, which loads the SomaLogic, Inc. structured text data file called an `*.adat`.  The `somadata.Adat` object is an extension of the `pandas.DataFrame` class. The package provides auxiliary functions for extracting relevant information from the ADAT object once in the Python environment. Basic familiarity with the Python environment is assumed, as is the ability to install contributed packages from the Python Package Installer (pip).
 
 -----
 
@@ -65,9 +68,6 @@ pip install -e ./somadata
 
 Upon installation, load `somadata` as normal:
 
-[return to top](#toptoc)
-
-
 ```python
 import somadata
 ```
@@ -102,9 +102,11 @@ help(somadata)
 
 ### Internal Objects
 
-The `somadata` package comes with one internal object available to users to run canned examples (or analyses). It can be accessed by perform the import:
+The `somadata` package comes with one internal object available to users to run canned examples (or analyses). It can be accessed by performing the import:
 
   - `from somadata.data.example_data import example_data`
+
+[return to top](#toptoc)
 
 ## Main Features (I/O)
 
@@ -119,9 +121,6 @@ The `somadata` package comes with one internal object available to users to run 
 <a name="reading"></a>
 
 ### Loading an ADAT
-
-
-[return to top](#toptoc)
 
 Loading the sample file from within the somadata library via its path
 
@@ -6119,7 +6118,7 @@ adat.to_adat('/tmp/out_file.adat')
 
 <a name="example"></a>
 
-# Typical Analyses
+## Typical Analyses
 Although it is beyond the scope of the `SomaData` package, below are 3
 sample analyses that typical users/clients would perform on SomaLogic data.
 They are not intended to be a definitive guide in statistical
@@ -6285,7 +6284,7 @@ plt.show()
 
 ![png](README_files/output_71_0.png)
 
-
+[return to top](#toptoc)
 
 ## Logistic Regression (Predict Sex)
 
@@ -7211,10 +7210,4 @@ plt.show()
 
 -----
 
-
 [return to top](#toptoc)
-
-
-```python
-
-```
