@@ -2,18 +2,19 @@
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "somadata"
 version = "1.2.4"
 description = "SomaLogic Python Data Input/Output Library"
+homepage = "https://www.standardbio.com/"
+repository = "https://github.com/SomaLogic/Canopy"
 authors = [
-    {name = "SomaLogic", email = "support@somalogic.com"},
-    {name = "Joseph Allison"},
-    {name = "Ted Johnson"},
-    {name = "Kah Young"}
+    "Joseph Allison",
+    "Ted Johnson",
+    "Kah Young"
 ]
 keywords = ["somalogic", "bioinformatics", "proteomics", "canopy", "adat"]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -26,25 +27,23 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
 ]
-requires-python = ">=3.9"
-dependencies = [
-    "pandas>=1.1.2",
-    "numpy>=1.19",
-    "openpyxl>=3.0"
-]
 
-[project.urls]
-homepage = "https://www.standardbio.com/"
-repository = "https://github.com/SomaLogic/Canopy"
-issues = "https://github.com/SomaLogic/Canopy/issues"
-
-[tool.poetry]
 include = [
     { path = "somadata/data/lift.zip" },
     { path = "*.adat" }
 ]
 
+[tool.poetry.dependencies]
+python = ">=3.9"
+pandas = ">=1.1.2"
+numpy = ">=1.19"
+openpyxl = ">=3.0"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.1"
 codespell = "^2.2.6"
 pytest-cov = "^6.0.0"
+
+[tools.poetry.urls]
+issues = "https://github.com/SomaLogic/Canopy/issues"
+email = "support@somalogic.com"
