@@ -1,17 +1,28 @@
 from __future__ import annotations
-from somadata.errors import AdatKeyError, AdatMetaError
-from typing import Union, List, Set, Tuple, Dict
-from somadata.tools.pandas import get_pd_axis
-import numpy as np
+
+import logging
 import warnings
+from typing import Dict, List, Set, Tuple, Union
+
+import numpy as np
 import pandas as pd
+
+from somadata.errors import AdatKeyError, AdatMetaError
+from somadata.tools.pandas import get_pd_axis
+
+logger = logging.getLogger(__name__)
 
 
 class AdatMetaHelpers:
-    """A collection of methods to help with altering the adat metadata and the adat based on the metadata.
-    """
-    def _filter_on_meta(self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)], include: bool = True) -> Adat:
+    """A collection of methods to help with altering the adat metadata and the adat based on the metadata."""
 
+    def _filter_on_meta(
+        self,
+        axis: int,
+        name: str,
+        values: Union[List(str), Set(str), Tuple(str)],
+        include: bool = True,
+    ) -> Adat:
         # Check to see if values is the right variable type
         if not isinstance(values, (list, tuple, set)):
             raise TypeError('"values" must be a list, tuple, or set.')
@@ -25,7 +36,9 @@ class AdatMetaHelpers:
         # Check to ensure all values are in the metadata
         metadata_values = set(metadata.get_level_values(name))
         if not metadata_values.issuperset(values):
-            raise KeyError(f'Some or all provided values not found in metadata column, {name}.')
+            raise KeyError(
+                f'Some or all provided values not found in metadata column, {name}.'
+            )
 
         # Iterate over the selected multiindex and fill the keep array
         for value in metadata.get_level_values(name):
@@ -47,8 +60,9 @@ class AdatMetaHelpers:
         # Return the subsetted adat (default) or modify the current adat in place
         return adat.copy()
 
-    def _filter_meta(self, axis: int, names: Union[List(str), Set(str), Tuple(str)], include: bool) -> Adat:
-
+    def _filter_meta(
+        self, axis: int, names: Union[List(str), Set(str), Tuple(str)], include: bool
+    ) -> Adat:
         # Check to see if names is the right variable type
         if not isinstance(names, (list, tuple, set)):
             raise TypeError('"values" must be a list, tuple, or set.')
@@ -79,23 +93,32 @@ class AdatMetaHelpers:
 
         return adat
 
-    def _insert_meta(self, axis: int, name: str, values: Union[List(str), Tuple(str)], replace: bool) -> Adat:
-
+    def _insert_meta(
+        self, axis: int, name: str, values: Union[List(str), Tuple(str)], replace: bool
+    ) -> Adat:
         adat = self.copy()
         if axis == 0:
             if not replace and name in adat.index.names:
-                raise AdatKeyError('Name already exists in index, use `adat.replace_meta` instead.')
+                raise AdatKeyError(
+                    'Name already exists in index, use `adat.replace_meta` instead.'
+                )
             elif replace and name not in adat.index.names:
-                raise AdatKeyError('Name does not exists in index, use `adat.insert_meta` instead.')
+                raise AdatKeyError(
+                    'Name does not exists in index, use `adat.insert_meta` instead.'
+                )
             index_df = adat.index.to_frame()
             index_df[name] = values
             adat.index = pd.MultiIndex.from_frame(index_df)
 
         elif axis == 1:
             if not replace and name in adat.columns.names:
-                raise AdatKeyError('Name already exists in columns, use `adat.replace_meta` instead.')
+                raise AdatKeyError(
+                    'Name already exists in columns, use `adat.replace_meta` instead.'
+                )
             elif replace and name not in adat.columns.names:
-                raise AdatKeyError('Name does not exists in columns, use `adat.insert_meta` instead.')
+                raise AdatKeyError(
+                    'Name does not exists in columns, use `adat.insert_meta` instead.'
+                )
 
             columns_df = adat.columns.to_frame()
             columns_df.loc[:, name] = values
@@ -103,7 +126,9 @@ class AdatMetaHelpers:
 
         return adat
 
-    def exclude_on_meta(self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)]) -> Adat:
+    def exclude_on_meta(
+        self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)]
+    ) -> Adat:
         """Returns an adat with rfu rows or columns excluded given the multiindex name and values to exclude on.
 
         Parameters
@@ -131,7 +156,9 @@ class AdatMetaHelpers:
         """
         return self._filter_on_meta(axis, name, values, include=False)
 
-    def pick_on_meta(self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)]) -> Adat:
+    def pick_on_meta(
+        self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)]
+    ) -> Adat:
         """Returns an adat with rfu rows or columns excluded given the multiindex name and values to keep.
 
         Parameters
@@ -160,7 +187,9 @@ class AdatMetaHelpers:
 
         return self._filter_on_meta(axis, name, values, include=True)
 
-    def pick_meta(self, axis: int, names: Union[List(str), Set(str), Tuple(str)]) -> Adat:
+    def pick_meta(
+        self, axis: int, names: Union[List(str), Set(str), Tuple(str)]
+    ) -> Adat:
         """Returns an adat with excluded metadata/multiindices given the names to keep.
 
         Parameters
@@ -184,7 +213,9 @@ class AdatMetaHelpers:
         """
         return self._filter_meta(axis, names, include=True)
 
-    def exclude_meta(self, axis: int, names: Union[List(str), Set(str), Tuple(str)]) -> Adat:
+    def exclude_meta(
+        self, axis: int, names: Union[List(str), Set(str), Tuple(str)]
+    ) -> Adat:
         """Returns an adat with excluded metadata/multiindices given the names to exclude.
 
         Parameters
@@ -209,7 +240,9 @@ class AdatMetaHelpers:
 
         return self._filter_meta(axis, names, include=False)
 
-    def insert_meta(self, axis: int, name: str, values: Union[List(str), Tuple(str)]) -> Adat:
+    def insert_meta(
+        self, axis: int, name: str, values: Union[List(str), Tuple(str)]
+    ) -> Adat:
         """Returns an adat with the given metadata/multiindices added.
 
         Metadata/multiindex name must not already exist in the adat.
@@ -238,7 +271,9 @@ class AdatMetaHelpers:
         """
         return self._insert_meta(axis, name, values, replace=False)
 
-    def replace_meta(self, axis: int, name: str, values: Union[List(str), Tuple(str)]) -> Adat:
+    def replace_meta(
+        self, axis: int, name: str, values: Union[List(str), Tuple(str)]
+    ) -> Adat:
         """Returns an adat with the given metadata/multiindices added.
 
         Metadata/multiindex must already exist in the adat.
@@ -267,7 +302,13 @@ class AdatMetaHelpers:
         """
         return self._insert_meta(axis, name, values, replace=True)
 
-    def insert_keyed_meta(self, axis: int, inserted_meta_name: str, key_meta_name: str, values_dict: Dict(str, str)) -> Adat:
+    def insert_keyed_meta(
+        self,
+        axis: int,
+        inserted_meta_name: str,
+        key_meta_name: str,
+        values_dict: Dict(str, str),
+    ) -> Adat:
         """Inserts metadata into Adat given a dictionary of values keyed to existing metadata.
 
         If a key does not exist in values_dict, the function will fill in missing data with empty strings
@@ -304,7 +345,9 @@ class AdatMetaHelpers:
         key_meta = metadata.get_level_values(key_meta_name)
 
         if inserted_meta_name in metadata.names:
-            raise AdatKeyError('Name already exists in index, use `adat.replace_keyed_meta` instead.')
+            raise AdatKeyError(
+                'Name already exists in index, use `adat.replace_keyed_meta` instead.'
+            )
 
         for key in key_meta:
             if key in values_dict:
@@ -313,11 +356,19 @@ class AdatMetaHelpers:
                 values.append('')
 
         if None in values:
-            warnings.warn('Empty string values inserted into metadata.', category=Warning)
+            warnings.warn(
+                'Empty string values inserted into metadata.', category=Warning
+            )
 
         return self.insert_meta(axis, inserted_meta_name, values)
 
-    def replace_keyed_meta(self, axis: int, replaced_meta_name: str, values_dict: Dict(str, str), key_meta_name: str = None) -> Adat:
+    def replace_keyed_meta(
+        self,
+        axis: int,
+        replaced_meta_name: str,
+        values_dict: Dict(str, str),
+        key_meta_name: str = None,
+    ) -> Adat:
         """Updates metadata in an Adat given a dictionary of values keyed to existing metadata.
 
         If a key does not exist in values_dict, the function will fill in missing data with pre-existing
@@ -357,7 +408,9 @@ class AdatMetaHelpers:
         values_to_update = metadata.get_level_values(replaced_meta_name)
 
         if replaced_meta_name not in metadata.names:
-            raise AdatKeyError('Name does not exists in index, use `adat.insert_keyed_meta` instead.')
+            raise AdatKeyError(
+                'Name does not exists in index, use `adat.insert_keyed_meta` instead.'
+            )
 
         warning_str = 'Some keys not provided, using original values for those keys'
         warnings.filterwarnings('once', message=warning_str)
@@ -370,7 +423,9 @@ class AdatMetaHelpers:
 
         return self.replace_meta(axis, replaced_meta_name, values)
 
-    def update_somamer_metadata_from_adat(self, adat: Adat) -> Adat:
+    def update_somamer_metadata_from_adat(
+        self, adat: Adat, strict: bool = True
+    ) -> Adat:
         """Given an Adat with different SOMAmer reagent metadata, returns this adat with that somamer metadata.
 
         An adat method that updates adats with disparate somamer metadata by unifying their somamer column
@@ -390,32 +445,65 @@ class AdatMetaHelpers:
         Examples
         --------
         >>> new_adat = adat.update_somamer_metadata_from_adat(other_adat)
-        >>> new_adat = adat.update_somamer_metadata_from_adat(other_adat)
         """
-
         # Check to make sure seq_ids & order are identical
-        if list(adat.columns.get_level_values('SeqId')) != list(self.columns.get_level_values('SeqId')):
-            raise AdatMetaError('SeqIds do not match the provided adat. Unable to perform metadata substitution')
+        if list(adat.columns.get_level_values('SeqId')) != list(
+            self.columns.get_level_values('SeqId')
+        ):
+            raise AdatMetaError(
+                'SeqIds do not match the provided adat. Unable to perform metadata substitution'
+            )
 
-        columns_to_overwrite = [
-            'SeqIdVersion', 'SomaId', 'TargetFullName', 'Target', 'UniProt',
-            'EntrezGeneID', 'EntrezGeneSymbol', 'Organism', 'Units', 'Type', 'Dilution',
+        standard_columns = [
+            'SeqIdVersion',
+            'SomaId',
+            'TargetFullName',
+            'Target',
+            'UniProt',
+            'EntrezGeneID',
+            'EntrezGeneSymbol',
+            'Organism',
+            'Units',
+            'Type',
+            'Dilution',
         ]
+
+        if strict:
+            columns_to_overwrite = standard_columns
+        else:
+            columns_to_overwrite = set(adat.columns.names).intersection(
+                set(self.columns.names)
+            ) - set(['SeqId'])
+            # Log non-standard columns that will be overwritten
+            non_standard_columns = [
+                col for col in columns_to_overwrite if col not in standard_columns
+            ]
+            if non_standard_columns:
+                logger.warning(
+                    f'Overwriting non-standard columns. This may cause unintended consequences: {", ".join(non_standard_columns)}'
+                )
 
         new_meta_adat = self.copy()
         # Modify adat for each name in columns_to_overwrite
         for column_name in columns_to_overwrite:
-
             # Check to see if the column exists. If it doesn't, throw a warning & move on to the next one
             if column_name not in new_meta_adat.columns.names:
-                warnings.warn(f'Standard column, {column_name}, not found in column metadata. Continuing to next.')
+                logger.warning(
+                    f'Standard column, {column_name}, not found in column metadata. Continuing to next.'
+                )
                 continue
             # If it does exist in the source adat but not in the provided adat, we have problems!
             elif column_name not in adat.columns.names:
-                AdatMetaError(f'Standard column, {column_name}, not found in provided column metadata but exists in source adat.')
+                AdatMetaError(
+                    f'Standard column, {column_name}, not found in provided column metadata but exists in source adat.'
+                )
 
             # Replace metadata
-            new_meta_adat = new_meta_adat.replace_meta(axis=1, name=column_name, values=adat.columns.get_level_values(column_name))
+            new_meta_adat = new_meta_adat.replace_meta(
+                axis=1,
+                name=column_name,
+                values=adat.columns.get_level_values(column_name),
+            )
 
         return new_meta_adat
 
@@ -454,7 +542,9 @@ class AdatMetaHelpers:
                 try:
                     reorder_index.append(metadata_order.index(metadata))
                 except ValueError:
-                    raise AdatMetaError(f'Source metadata, {metadata}, not found in adat index, {name}')
+                    raise AdatMetaError(
+                        f'Source metadata, {metadata}, not found in adat index, {name}'
+                    )
             adat = adat.iloc[reorder_index]
         elif axis == 1:
             metadata_order = list(source_adat.columns.get_level_values(name))
@@ -462,7 +552,9 @@ class AdatMetaHelpers:
                 try:
                     reorder_index.append(metadata_order.index(metadata))
                 except ValueError:
-                    raise AdatMetaError(f'Source metadata, {metadata}, not found in adat column, {name}')
+                    raise AdatMetaError(
+                        f'Source metadata, {metadata}, not found in adat column, {name}'
+                    )
             adat = adat.iloc[:, reorder_index]
 
         return adat

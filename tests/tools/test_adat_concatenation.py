@@ -1,9 +1,13 @@
+import logging
 from unittest import TestCase
 
 import pytest
 
 from somadata import Adat
-from somadata.tools.adat_concatenation import concatenate_adats, smart_adat_concatenation
+from somadata.tools.adat_concatenation import (
+    concatenate_adats,
+    smart_adat_concatenation,
+)
 from somadata.tools.errors import AdatConcatError
 
 
@@ -312,16 +316,20 @@ class SmartConcatTestCase(TestCase):
         self.assertEqual(expected_row_names, concat_adat.index.names)
 
     def test_smart_adat_warnings(self):
-        with pytest.warns(UserWarning) as records:
+        with self.assertLogs(level=logging.WARNING) as cm:
             smart_adat_concatenation([self.adat0, self.adat1, self.adat2])
-        expected_warnings_regex = (
-            r'(Adding column to adat: \w+)|(Removing seqIds from \w{3}: \w, \w)'
-        )
-        user_warnings = [rec for rec in records if rec.category == UserWarning]
-        for rec in user_warnings:
-            self.assertRegex(rec.message.args[0], expected_warnings_regex)
-            print(rec.message.args[0])
-        self.assertEqual(7, len(user_warnings))
+
+        # Check that we have the expected warnings
+        warning_messages = cm.output
+        expected_patterns = ['Adding column to adat:', 'Removing seqIds from']
+
+        # Verify we have warnings matching our expected patterns
+        matching_warnings = [
+            msg
+            for msg in warning_messages
+            if any(pattern in msg for pattern in expected_patterns)
+        ]
+        self.assertEqual(7, len(matching_warnings))
 
     @pytest.mark.filterwarnings('ignore:Removing seqIds from')
     @pytest.mark.filterwarnings('ignore:Standard column,')

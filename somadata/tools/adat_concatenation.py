@@ -221,7 +221,12 @@ def _quick_concat(adats):
     )
 
 
-def smart_adat_concatenation(adats, somamer_source_adat=None):
+def smart_adat_concatenation(
+    adats: list[Adat],
+    somamer_source_adat=None,
+    strict: bool = True,
+    merge_strategy: str = 'inner',
+) -> Adat:
     """Given list of adats and (optionally) a somamer metadata source adat, returns a single adat with all data.
 
     An smart adat concatenation method that will modify the adats to agree in its row, column, and header metadata.
@@ -232,9 +237,14 @@ def smart_adat_concatenation(adats, somamer_source_adat=None):
     ----------
     adats : List[Adat]
         List of Adat objects
-
     somamer_source_adat : Adat
         Adat that serves as the source for the SOMAmer Reagent metadata.
+    strict : bool
+        Whether the source adat should update all column metadata fields or just the standard ones.
+        If False, will update all fields that match between the source and target adats.
+    merge_strategy : str
+        Merge strategy for the inner merge of the RFU matrix.  Options are 'inner' or 'outer'.
+        Useful for retaining new SOMAmers that may not be present in all adats.
 
     Returns
     -------
@@ -251,14 +261,21 @@ def smart_adat_concatenation(adats, somamer_source_adat=None):
     if type(somamer_source_adat) == Adat:
         adats = adats + [somamer_source_adat]
 
-    adats = adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(adats)
+    if merge_strategy == 'inner':
+        adats = adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(adats)
+    elif merge_strategy == 'outer':
+        adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(adats)
+    else:
+        raise ValueError(
+            f'Invalid merge strategy: {merge_strategy}.  Options are "inner" or "outer".'
+        )
 
     # Unpack & update if we're updating
     if type(somamer_source_adat) == Adat:
         somamer_source_adat = adats[-1]
         adats = adats[0:-1]
         adats = adat_concatenation_utils.convert_somamer_metadata_to_source(
-            adats, somamer_source_adat
+            adats, somamer_source_adat, strict
         )
 
     header_merge_strategy = {

@@ -1,3 +1,4 @@
+import logging
 from unittest import TestCase
 
 import pandas as pd
@@ -331,11 +332,17 @@ class UpdateSomamerMetadataFromAdatTestCase(TestCase):
         pd.testing.assert_frame_equal(truth_meta_replaced_adat_1, meta_replaced_adat)
 
     def test_missing_col_meta_warns(self):
-        with pytest.warns(
-            UserWarning,
-            match=r'Standard column, \w+, not found in column metadata. Continuing to next.',
-        ):
+        with self.assertLogs(level=logging.WARNING) as cm:
             self.adat1.update_somamer_metadata_from_adat(self.adat0)
+
+        self.assertTrue(
+            any(
+                'Standard column' in message
+                and 'not found in column metadata' in message
+                for message in cm.output
+            ),
+            "Expected warning about missing column metadata not found.",
+        )
 
     @pytest.mark.filterwarnings('ignore:Standard column')
     def test_seq_ids_mismatch_error(self):
@@ -357,3 +364,52 @@ class UpdateSomamerMetadataFromAdatTestCase(TestCase):
 
         with self.assertRaises(AdatMetaError):
             mismatch_seq_id_adat.update_somamer_metadata_from_adat(self.adat0)
+
+    def test_strict_false_updates_custom_columns(self):
+        """Test that strict=False updates custom (non-standard) column metadata fields."""
+        # Create source adat with custom column metadata
+        rfu_data = [[1, 2, 3], [4, 5, 6]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['1', '2', '3'],
+            'CustomField': ['custom1', 'custom2', 'custom3'],
+        }
+        row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
+        header_metadata = {'AdatId': 'source123'}
+        source_adat = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        # Create target adat with different custom values
+        rfu_data = [[5, 6, 7], [6, 5, 4]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['10', '20', '30'],
+            'CustomField': ['different1', 'different2', 'different3'],
+        }
+        row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
+        header_metadata = {'AdatId': 'target456'}
+        target_adat = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        # Update with strict=False should update custom fields and log warning
+        with self.assertLogs(level=logging.WARNING) as cm:
+            updated_adat = target_adat.update_somamer_metadata_from_adat(
+                source_adat, strict=False
+            )
+
+        # Verify warning about non-standard columns
+        self.assertTrue(
+            any(
+                'Overwriting non-standard columns' in message
+                and 'CustomField' in message
+                for message in cm.output
+            )
+        )
+
+        # Custom field should be updated from source
+        self.assertEqual(
+            list(updated_adat.columns.get_level_values('CustomField')),
+            ['custom1', 'custom2', 'custom3'],
+        )
