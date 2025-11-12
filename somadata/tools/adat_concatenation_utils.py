@@ -1,12 +1,22 @@
 from __future__ import annotations
-from typing import List, Dict
-from ..adat import Adat
-from copy import deepcopy
+
+import logging
 import re
-import warnings
+from copy import deepcopy
+from typing import Dict, List
+
+import numpy as np
+import pandas as pd
+
+from ..adat import Adat
+
+logger = logging.getLogger(__name__)
 
 
-def convert_somamer_metadata_to_source(adats: List[Adat], source_adat: Adat) -> List[Adat]:
+def convert_somamer_metadata_to_source(
+    adats: List[Adat],
+    source_adat: Adat,
+) -> List[Adat]:
     """Given a list of adat dataframes and a 'source' adat dataframe, returns the list with updated somamer metadata.
 
     An adat concatenation method that prepares adats with disparate somamer metadata for merging by unifying their
@@ -39,7 +49,9 @@ def convert_somamer_metadata_to_source(adats: List[Adat], source_adat: Adat) -> 
     return new_meta_adats
 
 
-def _merge_subheader(master_subheader_list: Dict, to_be_merged_subheader_list: Dict) -> Dict:
+def _merge_subheader(
+    master_subheader_list: Dict, to_be_merged_subheader_list: Dict
+) -> Dict:
     for to_be_merged_entry in to_be_merged_subheader_list:
         merged = False
         for master_value_entry in master_subheader_list:
@@ -60,7 +72,9 @@ def _merge_headers(all_header_metadata: List[Dict]) -> Dict:
             if subheader not in merged_header_metadata:
                 merged_header_metadata[subheader] = values_array
             else:
-                merged_header_metadata[subheader] = _merge_subheader(deepcopy(merged_header_metadata[subheader]), values_array)
+                merged_header_metadata[subheader] = _merge_subheader(
+                    deepcopy(merged_header_metadata[subheader]), values_array
+                )
     return merged_header_metadata
 
 
@@ -76,7 +90,9 @@ def _get_adat_ids(adat: Adat) -> List[str]:
 
     # Otherwise, build the adat ids
     plate_ids = adat.index.get_level_values('PlateId')
-    plate_ids = list(dict.fromkeys(plate_ids))  # Gets unique plate ids & maintains order
+    plate_ids = list(
+        dict.fromkeys(plate_ids)
+    )  # Gets unique plate ids & maintains order
     # See about making something unique and non-redundant
     for plate_id in plate_ids:
         if title_subheader in plate_id:
@@ -86,16 +102,18 @@ def _get_adat_ids(adat: Adat) -> List[str]:
     return adat_ids
 
 
-def _convert_header_meta_to_contain_adat_id(header_metadata: Dict, adat_ids: List[str]) -> Dict:
+def _convert_header_meta_to_contain_adat_id(
+    header_metadata: Dict, adat_ids: List[str]
+) -> Dict:
     for subheader, value in header_metadata.items():
         # See if the subheader has already been formatted by a previous concatenation, otherwise convert it
-        if type(header_metadata[subheader]) == list and 'adat_ids' in header_metadata[subheader][0]:
+        if (
+            type(header_metadata[subheader]) == list
+            and 'adat_ids' in header_metadata[subheader][0]
+        ):
             continue
         else:
-            header_metadata[subheader] = [{
-                "adat_ids": adat_ids,
-                "value": value
-            }]
+            header_metadata[subheader] = [{"adat_ids": adat_ids, "value": value}]
     return header_metadata
 
 
@@ -103,7 +121,9 @@ def _get_all_header_metadata_by_plate(adats: List[Adat]) -> List[Dict]:
     all_header_metadata = []
     for adat in adats:
         adat_ids = _get_adat_ids(adat)
-        converted_header_metadata = _convert_header_meta_to_contain_adat_id(adat.header_metadata, adat_ids)
+        converted_header_metadata = _convert_header_meta_to_contain_adat_id(
+            adat.header_metadata, adat_ids
+        )
         all_header_metadata.append(converted_header_metadata)
     return all_header_metadata
 
@@ -180,7 +200,7 @@ def order_merge_row_meta_names(all_row_meta_names: List[List[str]]) -> List[str]
         'SampleGroup',
         'SiteId',
         'TubeUniqueID',
-        'CLI'
+        'CLI',
     ]
 
     norm_regex_name_match = [
@@ -204,7 +224,9 @@ def order_merge_row_meta_names(all_row_meta_names: List[List[str]]) -> List[str]
     ordered_metadata_names = []
 
     # Add to list the names that appear in the typical names
-    ordered_metadata_names += [name for name in typical_row_meta_order if name in all_meta_across_adats]
+    ordered_metadata_names += [
+        name for name in typical_row_meta_order if name in all_meta_across_adats
+    ]
 
     # Add to the list the names that have not already been added and are not normalization names
     for name in all_meta_across_adats:
@@ -248,9 +270,11 @@ def unify_row_meta_column_names(adats: List[Adat]) -> List[Adat]:
 
     new_adats = []
     for adat in adats:
-        names_missing_in_adat = [name for name in ordered_row_meta_names if name not in adat.index.names]
+        names_missing_in_adat = [
+            name for name in ordered_row_meta_names if name not in adat.index.names
+        ]
         for name in names_missing_in_adat:
-            warnings.warn(f'Adding column to adat: {name}')
+            logger.warning(f'Adding column to adat: {name}')
             adat[name] = ['' for i in range(adat.shape[0])]
         new_adat = adat.reset_index().set_index(ordered_row_meta_names)
         new_adats.append(new_adat)
@@ -271,14 +295,94 @@ def prepare_rfu_matrix_for_inner_merge(adats: List[Adat]) -> List[Adat]:
         removed_seq_ids = ', '.join(symmetric_difference)
         plate_ids = ', '.join(set(adat.index.get_level_values('PlateId')))
         if removed_seq_ids:
-            warnings.warn(f'Removing seqIds from {plate_ids}: {removed_seq_ids}')
+            logger.warning(f'Removing seqIds from {plate_ids}: {removed_seq_ids}')
 
     # Remove the seq ids from the adats:
     seq_id_subset = tuple(seq_id_subset)
     new_adats = []
     for adat in adats:
         current_seq_ids = adat.columns.get_level_values('SeqId')
-        keep_drop = [True if seq_id in seq_id_subset else False for seq_id in current_seq_ids]
+        keep_drop = [
+            True if seq_id in seq_id_subset else False for seq_id in current_seq_ids
+        ]
         new_adats.append(adat.iloc[:, keep_drop].copy())
+
+    return new_adats
+
+
+def prepare_rfu_matrix_for_outer_merge(adats: List[Adat]) -> List[Adat]:
+    """Prepare adats for outer merge by adding missing SeqIds to each adat.
+
+    For each adat, this function identifies SeqIds present in other adats but missing
+    from the current one, and adds columns for those SeqIds with NaN values and empty
+    metadata (preserving the adat's column structure).
+
+    Parameters
+    ----------
+    adats : List[Adat]
+        List of Adat objects to prepare for outer merge
+
+    Returns
+    -------
+    new_adats : List[Adat]
+        List of Adat objects with all SeqIds present across all input adats,
+        sorted by SeqId
+
+    Examples
+    --------
+    >>> prepared_adats = prepare_rfu_matrix_for_outer_merge([adat1, adat2, adat3])
+    """
+    seqid_level = 'SeqId'
+
+    # Get the union of all SeqIds across all adats
+    all_seq_ids = set()
+    for adat in adats:
+        all_seq_ids.update(adat.columns.get_level_values(seqid_level))
+
+    new_adats = []
+
+    for adat in adats:
+        # Get current SeqIds in this adat
+        current_seq_ids = set(adat.columns.get_level_values(seqid_level))
+
+        # Find missing SeqIds
+        missing_seq_ids = all_seq_ids - current_seq_ids
+
+        if len(missing_seq_ids) > 0:
+            logger.warning(
+                f'Adding {len(missing_seq_ids)} SeqIds to {adat.header_metadata.get("!Title", "Unknown")}.'
+            )
+
+            # Get level names from current adat (preserve its structure)
+            adat_levels = list(adat.columns.names)
+            seqid_idx = adat_levels.index(seqid_level)
+
+            # Create new column tuples for missing SeqIds
+            # Use adat's structure and fill with empty strings
+            new_col_tuples = []
+            for seqid in sorted(missing_seq_ids):
+                # Create a tuple with the same number of levels as adat
+                col_values = [''] * len(adat_levels)
+                col_values[seqid_idx] = seqid  # Set the SeqId
+                new_col_tuples.append(tuple(col_values))
+
+            # Create new MultiIndex with adat's level names
+            new_columns = pd.MultiIndex.from_tuples(new_col_tuples, names=adat_levels)
+
+            # Create DataFrame with missing columns filled with NaN
+            missing_data = pd.DataFrame(np.nan, index=adat.index, columns=new_columns)
+
+            # Concatenate to add the missing columns
+            adat_expanded = pd.concat([adat, missing_data], axis=1)
+
+            # Convert back to Adat type
+            adat = Adat(adat_expanded, header_metadata=adat.header_metadata)
+
+        # Sort columns by SeqId
+        seqid_idx = adat.columns.names.index(seqid_level)
+        sorted_cols = sorted(adat.columns, key=lambda x: x[seqid_idx])
+        adat_sorted = Adat(adat[sorted_cols], header_metadata=adat.header_metadata)
+
+        new_adats.append(adat_sorted)
 
     return new_adats

@@ -1,3 +1,4 @@
+import logging
 from unittest import TestCase
 
 import pandas as pd
@@ -73,13 +74,19 @@ class AdatColMetaReplaceTestCase(TestCase):
         )
 
     def test_missing_col_meta_warns(self):
-        with pytest.warns(
-            UserWarning,
-            match=r'Standard column, \w+, not found in column metadata. Continuing to next.',
-        ):
+        with self.assertLogs(level=logging.WARNING) as cm:
             adat_concatenation_utils.convert_somamer_metadata_to_source(
                 self.adats, self.adats[0]
             )
+
+        self.assertTrue(
+            any(
+                'Standard column' in message
+                and 'not found in column metadata' in message
+                for message in cm.output
+            ),
+            "Expected warning about missing column metadata not found.",
+        )
 
     @pytest.mark.filterwarnings('ignore:Standard column')
     def test_seq_ids_mismatch_error(self):
@@ -620,19 +627,29 @@ class RowMetaAdatMergeTestCase(TestCase):
         )
 
     def test_merge_norm_data(self):
-        with pytest.warns(UserWarning, match=r'Adding column to adat: \w+'):
+        with self.assertLogs(level=logging.WARNING) as cm:
             new_adats = adat_concatenation_utils.unify_row_meta_column_names(
                 [self.adat0, self.adat1]
             )
+
+        self.assertTrue(
+            any('Adding column to adat:' in message for message in cm.output),
+            "Expected warning about adding column to adat not found.",
+        )
         expected_row_names = ['PlateId', 'Barcode', 'HybControlNormScale', 'RowCheck']
         for adat in new_adats:
             self.assertEqual(expected_row_names, list(adat.index.names))
 
     def test_merge_three_adats(self):
-        with pytest.warns(UserWarning, match=r'Adding column to adat: \w+'):
+        with self.assertLogs(level=logging.WARNING) as cm:
             new_adats = adat_concatenation_utils.unify_row_meta_column_names(
                 [self.adat0, self.adat1, self.adat2]
             )
+
+        self.assertTrue(
+            any('Adding column to adat:' in message for message in cm.output),
+            "Expected warning about adding column to adat not found.",
+        )
         expected_row_names = [
             'PlateId',
             'Barcode',
@@ -702,10 +719,15 @@ class SeqIdInnerMergeTestCase(TestCase):
             )
 
     def test_inner_merge_two_adats_warning(self):
-        with pytest.warns(UserWarning, match=r'Removing seqIds from \w{3}: \w{1}'):
+        with self.assertLogs(level=logging.WARNING) as cm:
             adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(
                 [self.adat0, self.adat1]
             )
+
+        self.assertTrue(
+            any('Removing seqIds from' in message for message in cm.output),
+            "Expected warning about removing seqIds not found.",
+        )
 
     @pytest.mark.filterwarnings('ignore:Removing seqIds from')
     def test_inner_merge_three_adats(self):
@@ -719,7 +741,203 @@ class SeqIdInnerMergeTestCase(TestCase):
             )
 
     def test_inner_merge_three_adats_warning(self):
-        with pytest.warns(UserWarning, match=r'Removing seqIds from \w{3}: \w{1}'):
+        with self.assertLogs(level=logging.WARNING) as cm:
             adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(
                 [self.adat0, self.adat1, self.adat2]
+            )
+
+        self.assertTrue(
+            any('Removing seqIds from' in message for message in cm.output),
+            "Expected warning about removing seqIds not found.",
+        )
+
+
+class SeqIdOuterMergeTestCase(TestCase):
+    def setUp(self):
+        rfu_data = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'SeqIdVersion': ['1', '2', '3'],
+            'ColCheck': ['PASS', 'FLAG', 'FLAG'],
+        }
+        row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
+        header_metadata = {
+            'AdatId': '1a2b3c',
+            '!AssayRobot': 'Tecan1, Tecan2',
+            'RunNotes': 'run note 1',
+            '!Title': 'TestAdat0',
+        }
+        self.adat0 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        rfu_data = [[5.0, 6.0, 7.0], [6.0, 5.0, 4.0]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'D'],
+            'SeqIdVersion': ['1', '2', '3'],
+            'ColCheck': ['PASS', 'PASS', 'FLAG'],
+        }
+        row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
+        header_metadata = {
+            'AdatId': '1a2b3d',
+            '!AssayRobot': 'Tecan2',
+            'RunNotes': 'run note 2',
+            '!Title': 'TestAdat1',
+        }
+        self.adat1 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        rfu_data = [[8.0, 9.0, 1.0], [1.0, 4.0, 8.0]]
+        col_metadata = {'SeqId': ['A', 'D', 'E'], 'SeqIdVersion': ['1', '2', '3']}
+        row_metadata = {'PlateId': ['A14', 'A14'], 'Barcode': ['SL1238', 'SL1239']}
+        header_metadata = {
+            'AdatId': '1a2b3e',
+            '!AssayRobot': 'Tecan3',
+            'RunNotes': 'run note 3',
+            '!Title': 'TestAdat2',
+        }
+        self.adat2 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_two_adats(self):
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1]
+        )
+        expected_seq_ids = ['A', 'B', 'C', 'D']
+        for adat in mod_adats:
+            self.assertEqual(
+                expected_seq_ids, sorted(adat.columns.get_level_values('SeqId'))
+            )
+            # Check that all adats have the same number of columns
+            self.assertEqual(4, len(adat.columns))
+
+    def test_outer_merge_two_adats_warning(self):
+        with self.assertLogs(level=logging.WARNING) as cm:
+            adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+                [self.adat0, self.adat1]
+            )
+
+        self.assertTrue(
+            any(
+                'Adding' in message and 'SeqIds to' in message for message in cm.output
+            ),
+            "Expected warning about adding SeqIds not found.",
+        )
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_three_adats(self):
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1, self.adat2]
+        )
+        expected_seq_ids = ['A', 'B', 'C', 'D', 'E']
+        for adat in mod_adats:
+            self.assertEqual(
+                expected_seq_ids, sorted(adat.columns.get_level_values('SeqId'))
+            )
+            # Check that all adats have the same number of columns
+            self.assertEqual(5, len(adat.columns))
+
+    def test_outer_merge_three_adats_warning(self):
+        with self.assertLogs(level=logging.WARNING) as cm:
+            adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+                [self.adat0, self.adat1, self.adat2]
+            )
+
+        self.assertTrue(
+            any(
+                'Adding' in message and 'SeqIds to' in message for message in cm.output
+            ),
+            "Expected warning about adding SeqIds not found.",
+        )
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_preserves_column_structure(self):
+        """Test that outer merge preserves each adat's original column metadata structure."""
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1]
+        )
+
+        # Check that column metadata structure is preserved
+        self.assertEqual(self.adat0.columns.names, mod_adats[0].columns.names)
+        self.assertEqual(self.adat1.columns.names, mod_adats[1].columns.names)
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_fills_nan(self):
+        """Test that missing columns are filled with NaN values."""
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1]
+        )
+
+        # adat0 should have NaN for SeqId 'D' (which was only in adat1)
+        d_col_idx = mod_adats[0].columns.get_level_values('SeqId').tolist().index('D')
+        self.assertTrue(pd.isna(mod_adats[0].iloc[0, d_col_idx]))
+        self.assertTrue(pd.isna(mod_adats[0].iloc[1, d_col_idx]))
+
+        # adat1 should have NaN for SeqId 'C' (which was only in adat0)
+        c_col_idx = mod_adats[1].columns.get_level_values('SeqId').tolist().index('C')
+        self.assertTrue(pd.isna(mod_adats[1].iloc[0, c_col_idx]))
+        self.assertTrue(pd.isna(mod_adats[1].iloc[1, c_col_idx]))
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_preserves_existing_data(self):
+        """Test that existing data is preserved after outer merge."""
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1]
+        )
+
+        # Check that original data in adat0 is preserved
+        a_col_idx = mod_adats[0].columns.get_level_values('SeqId').tolist().index('A')
+        self.assertEqual(1.0, mod_adats[0].iloc[0, a_col_idx])
+        self.assertEqual(4.0, mod_adats[0].iloc[1, a_col_idx])
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_sorted_by_seqid(self):
+        """Test that columns are sorted by SeqId after outer merge."""
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1, self.adat2]
+        )
+
+        for adat in mod_adats:
+            seq_ids = list(adat.columns.get_level_values('SeqId'))
+            self.assertEqual(sorted(seq_ids), seq_ids)
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_empty_metadata_for_new_columns(self):
+        """Test that new columns have empty strings for non-SeqId metadata."""
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [self.adat0, self.adat1]
+        )
+
+        # Find a column that was added to adat0 (e.g., SeqId 'D')
+        d_col_idx = mod_adats[0].columns.get_level_values('SeqId').tolist().index('D')
+
+        # Check that non-SeqId metadata is empty string
+        col_tuple = mod_adats[0].columns[d_col_idx]
+        seqid_idx = mod_adats[0].columns.names.index('SeqId')
+
+        for i, value in enumerate(col_tuple):
+            if i == seqid_idx:
+                self.assertEqual('D', value)  # SeqId should be 'D'
+            else:
+                self.assertEqual('', value)  # Other metadata should be empty string
+
+    @pytest.mark.filterwarnings('ignore:Adding .* SeqIds to')
+    def test_outer_merge_no_changes_when_seqids_match(self):
+        """Test that no changes are made when SeqIds already match."""
+        # Create two adats with identical SeqIds
+        adat_a = self.adat0.copy()
+        adat_b = self.adat0.copy()
+
+        mod_adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(
+            [adat_a, adat_b]
+        )
+
+        # Both should have the same SeqIds as original
+        for adat in mod_adats:
+            self.assertEqual(
+                list(self.adat0.columns.get_level_values('SeqId')),
+                list(adat.columns.get_level_values('SeqId')),
             )

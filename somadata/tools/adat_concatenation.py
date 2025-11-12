@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import re
 from typing import Dict, List
 
@@ -8,6 +9,8 @@ from somadata import Adat
 from somadata.tools.errors import AdatConcatError
 
 from . import adat_concatenation_utils
+
+logger = logging.getLogger(__name__)
 
 
 def _set_addition(key, value1, value2):
@@ -103,6 +106,42 @@ def _concat_column_metadata(adats: List[Adat]) -> Dict(str, List):
                     [True if value == 'PASS' else False for value in values]
                 )
                 col_metadata['ColCheck'] = []
+            elif name == 'CalReference' or name == 'PlateScale_Reference':
+                # Concatenate unique values delimited by |
+                if name in col_metadata:
+                    # Merge with existing values
+                    merged_values = []
+                    has_differences = False
+                    for existing_val, new_val in zip(col_metadata[name], values):
+                        # Split by pipe and get unique values, filtering out blanks
+                        existing_set = set(
+                            x.strip() for x in str(existing_val).split('|') if x.strip()
+                        )
+                        new_set = set(
+                            x.strip() for x in str(new_val).split('|') if x.strip()
+                        )
+                        unique_values = existing_set.union(new_set)
+
+                        # Track if any values differ
+                        if existing_set != new_set and existing_set and new_set:
+                            has_differences = True
+
+                        # If no values, keep empty string
+                        if not unique_values:
+                            merged_values.append('')
+                        else:
+                            merged_values.append(' | '.join(sorted(unique_values)))
+
+                    # Log once if differences were found
+                    if has_differences:
+                        logger.warning(
+                            f'{name} values differ across adats and are being merged with "|" delimiter. '
+                            f'This may cause unintended consequences downstream.'
+                        )
+
+                    col_metadata[name] = merged_values
+                else:
+                    col_metadata[name] = values
             elif name in col_metadata:
                 if col_metadata[name] != values:
                     raise AdatConcatError(
@@ -221,7 +260,11 @@ def _quick_concat(adats):
     )
 
 
-def smart_adat_concatenation(adats, somamer_source_adat=None):
+def smart_adat_concatenation(
+    adats: list[Adat],
+    somamer_source_adat=None,
+    merge_strategy: str = 'inner',
+) -> Adat:
     """Given list of adats and (optionally) a somamer metadata source adat, returns a single adat with all data.
 
     An smart adat concatenation method that will modify the adats to agree in its row, column, and header metadata.
@@ -232,9 +275,11 @@ def smart_adat_concatenation(adats, somamer_source_adat=None):
     ----------
     adats : List[Adat]
         List of Adat objects
-
     somamer_source_adat : Adat
         Adat that serves as the source for the SOMAmer Reagent metadata.
+    merge_strategy : str
+        Merge strategy for the RFU matrix. Options are 'inner' or 'outer'.
+        Use 'outer' to retain new SOMAmers that may not be present in all adats.
 
     Returns
     -------
@@ -251,7 +296,14 @@ def smart_adat_concatenation(adats, somamer_source_adat=None):
     if type(somamer_source_adat) == Adat:
         adats = adats + [somamer_source_adat]
 
-    adats = adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(adats)
+    if merge_strategy == 'inner':
+        adats = adat_concatenation_utils.prepare_rfu_matrix_for_inner_merge(adats)
+    elif merge_strategy == 'outer':
+        adats = adat_concatenation_utils.prepare_rfu_matrix_for_outer_merge(adats)
+    else:
+        raise ValueError(
+            f'Invalid merge strategy: {merge_strategy}.  Options are "inner" or "outer".'
+        )
 
     # Unpack & update if we're updating
     if type(somamer_source_adat) == Adat:
