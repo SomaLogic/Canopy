@@ -165,6 +165,102 @@ class ConcatColumnsTest(TestCase):
 
         self.assertRaises(AdatConcatError, concatenate_adats, self.adats)
 
+    def test_calreference_platescale_concatenation(self):
+        """Test that CalReference and PlateScale_Reference are concatenated with pipe delimiter."""
+        rfu_data = [[1, 2, 3], [4, 5, 6]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'ColCheck': ['PASS', 'FLAG', 'FLAG'],
+            'CalReference': ['ref1', 'ref2', 'ref1'],
+            'PlateScale_Reference': ['scale1', 'scale2', 'scale1'],
+        }
+        row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
+        header_metadata = {'AdatId': '1a2b3c'}
+        adat1 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        rfu_data = [[5, 6, 7], [6, 5, 4]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'ColCheck': ['PASS', 'PASS', 'FLAG'],
+            'CalReference': ['ref2', 'ref3', 'ref1'],
+            'PlateScale_Reference': ['scale2', 'scale3', 'scale2'],
+        }
+        row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
+        header_metadata = {'AdatId': '1a2b3d'}
+        adat2 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        with self.assertLogs(level=logging.WARNING) as cm:
+            concat_adat = concatenate_adats([adat1, adat2])
+
+        # CalReference should have unique values concatenated with pipe delimiter, sorted
+        cal_refs = list(concat_adat.columns.get_level_values('CalReference'))
+        self.assertEqual(cal_refs, ['ref1 | ref2', 'ref2 | ref3', 'ref1'])
+
+        # PlateScale_Reference should have unique values concatenated with pipe delimiter, sorted
+        plate_scales = list(
+            concat_adat.columns.get_level_values('PlateScale_Reference')
+        )
+        self.assertEqual(
+            plate_scales, ['scale1 | scale2', 'scale2 | scale3', 'scale1 | scale2']
+        )
+
+        # Verify warnings about differing values (should be one warning per field)
+        cal_ref_warnings = [
+            msg for msg in cm.output if 'CalReference values differ' in msg
+        ]
+        plate_scale_warnings = [
+            msg for msg in cm.output if 'PlateScale_Reference values differ' in msg
+        ]
+
+        self.assertEqual(len(cal_ref_warnings), 1)
+        self.assertEqual(len(plate_scale_warnings), 1)
+        self.assertTrue('unintended consequences downstream' in cal_ref_warnings[0])
+        self.assertTrue('unintended consequences downstream' in plate_scale_warnings[0])
+
+    def test_calreference_platescale_with_blanks(self):
+        """Test that blank CalReference and PlateScale_Reference values are not pipe delimited."""
+        rfu_data = [[1, 2, 3], [4, 5, 6]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'ColCheck': ['PASS', 'FLAG', 'FLAG'],
+            'CalReference': ['ref1', '', 'ref1'],
+            'PlateScale_Reference': ['', 'scale2', ''],
+        }
+        row_metadata = {'PlateId': ['A12', 'A12'], 'Barcode': ['SL1234', 'SL1235']}
+        header_metadata = {'AdatId': '1a2b3c'}
+        adat1 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        rfu_data = [[5, 6, 7], [6, 5, 4]]
+        col_metadata = {
+            'SeqId': ['A', 'B', 'C'],
+            'ColCheck': ['PASS', 'PASS', 'FLAG'],
+            'CalReference': ['', 'ref3', ''],
+            'PlateScale_Reference': ['scale1', '', 'scale2'],
+        }
+        row_metadata = {'PlateId': ['A13', 'A13'], 'Barcode': ['SL1236', 'SL1237']}
+        header_metadata = {'AdatId': '1a2b3d'}
+        adat2 = Adat.from_features(
+            rfu_data, row_metadata, col_metadata, header_metadata
+        )
+
+        concat_adat = concatenate_adats([adat1, adat2])
+
+        # CalReference: blanks should be filtered out
+        cal_refs = list(concat_adat.columns.get_level_values('CalReference'))
+        self.assertEqual(cal_refs, ['ref1', 'ref3', 'ref1'])
+
+        # PlateScale_Reference: blanks should be filtered out
+        plate_scales = list(
+            concat_adat.columns.get_level_values('PlateScale_Reference')
+        )
+        self.assertEqual(plate_scales, ['scale1', 'scale2', 'scale2'])
+
 
 class ConcatRfuTest(TestCase):
     def setUp(self):

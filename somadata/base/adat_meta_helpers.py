@@ -423,9 +423,7 @@ class AdatMetaHelpers:
 
         return self.replace_meta(axis, replaced_meta_name, values)
 
-    def update_somamer_metadata_from_adat(
-        self, adat: Adat, strict: bool = True
-    ) -> Adat:
+    def update_somamer_metadata_from_adat(self, adat: Adat) -> Adat:
         """Given an Adat with different SOMAmer reagent metadata, returns this adat with that somamer metadata.
 
         An adat method that updates adats with disparate somamer metadata by unifying their somamer column
@@ -445,7 +443,9 @@ class AdatMetaHelpers:
         Examples
         --------
         >>> new_adat = adat.update_somamer_metadata_from_adat(other_adat)
+        >>> new_adat = adat.update_somamer_metadata_from_adat(other_adat)
         """
+
         # Check to make sure seq_ids & order are identical
         if list(adat.columns.get_level_values('SeqId')) != list(
             self.columns.get_level_values('SeqId')
@@ -454,7 +454,7 @@ class AdatMetaHelpers:
                 'SeqIds do not match the provided adat. Unable to perform metadata substitution'
             )
 
-        standard_columns = [
+        columns_to_overwrite = [
             'SeqIdVersion',
             'SomaId',
             'TargetFullName',
@@ -467,21 +467,6 @@ class AdatMetaHelpers:
             'Type',
             'Dilution',
         ]
-
-        if strict:
-            columns_to_overwrite = standard_columns
-        else:
-            columns_to_overwrite = set(adat.columns.names).intersection(
-                set(self.columns.names)
-            ) - set(['SeqId'])
-            # Log non-standard columns that will be overwritten
-            non_standard_columns = [
-                col for col in columns_to_overwrite if col not in standard_columns
-            ]
-            if non_standard_columns:
-                logger.warning(
-                    f'Overwriting non-standard columns. This may cause unintended consequences: {", ".join(non_standard_columns)}'
-                )
 
         new_meta_adat = self.copy()
         # Modify adat for each name in columns_to_overwrite

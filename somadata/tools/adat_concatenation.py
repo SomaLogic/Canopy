@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import re
 from typing import Dict, List
 
@@ -8,6 +9,8 @@ from somadata import Adat
 from somadata.tools.errors import AdatConcatError
 
 from . import adat_concatenation_utils
+
+logger = logging.getLogger(__name__)
 
 
 def _set_addition(key, value1, value2):
@@ -103,6 +106,42 @@ def _concat_column_metadata(adats: List[Adat]) -> Dict(str, List):
                     [True if value == 'PASS' else False for value in values]
                 )
                 col_metadata['ColCheck'] = []
+            elif name == 'CalReference' or name == 'PlateScale_Reference':
+                # Concatenate unique values delimited by |
+                if name in col_metadata:
+                    # Merge with existing values
+                    merged_values = []
+                    has_differences = False
+                    for existing_val, new_val in zip(col_metadata[name], values):
+                        # Split by pipe and get unique values, filtering out blanks
+                        existing_set = set(
+                            x.strip() for x in str(existing_val).split('|') if x.strip()
+                        )
+                        new_set = set(
+                            x.strip() for x in str(new_val).split('|') if x.strip()
+                        )
+                        unique_values = existing_set.union(new_set)
+
+                        # Track if any values differ
+                        if existing_set != new_set and existing_set and new_set:
+                            has_differences = True
+
+                        # If no values, keep empty string
+                        if not unique_values:
+                            merged_values.append('')
+                        else:
+                            merged_values.append(' | '.join(sorted(unique_values)))
+
+                    # Log once if differences were found
+                    if has_differences:
+                        logger.warning(
+                            f'{name} values differ across adats and are being merged with "|" delimiter. '
+                            f'This may cause unintended consequences downstream.'
+                        )
+
+                    col_metadata[name] = merged_values
+                else:
+                    col_metadata[name] = values
             elif name in col_metadata:
                 if col_metadata[name] != values:
                     raise AdatConcatError(
@@ -224,7 +263,6 @@ def _quick_concat(adats):
 def smart_adat_concatenation(
     adats: list[Adat],
     somamer_source_adat=None,
-    strict: bool = True,
     merge_strategy: str = 'inner',
 ) -> Adat:
     """Given list of adats and (optionally) a somamer metadata source adat, returns a single adat with all data.
@@ -239,9 +277,6 @@ def smart_adat_concatenation(
         List of Adat objects
     somamer_source_adat : Adat
         Adat that serves as the source for the SOMAmer Reagent metadata.
-    strict : bool
-        Whether the source adat should update all column metadata fields or just the standard ones.
-        If False, will update all fields that match between the source and target adats.
     merge_strategy : str
         Merge strategy for the inner merge of the RFU matrix.  Options are 'inner' or 'outer'.
         Useful for retaining new SOMAmers that may not be present in all adats.
@@ -275,7 +310,7 @@ def smart_adat_concatenation(
         somamer_source_adat = adats[-1]
         adats = adats[0:-1]
         adats = adat_concatenation_utils.convert_somamer_metadata_to_source(
-            adats, somamer_source_adat, strict
+            adats, somamer_source_adat
         )
 
     header_merge_strategy = {

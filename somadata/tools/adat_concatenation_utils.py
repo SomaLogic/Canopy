@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def convert_somamer_metadata_to_source(
-    adats: List[Adat], source_adat: Adat, strict: bool = True
+    adats: List[Adat],
+    source_adat: Adat,
 ) -> List[Adat]:
     """Given a list of adat dataframes and a 'source' adat dataframe, returns the list with updated somamer metadata.
 
@@ -30,11 +31,6 @@ def convert_somamer_metadata_to_source(
     source_adat : Adat
         An Adat object
 
-    strict : bool, optional
-        Whether to match for all fields or just the selected fields. Options are:
-        - False: Match for all fields.
-        - True: Match for selected fields.
-
     Returns
     -------
     modified_adats : List[Adat]
@@ -47,7 +43,7 @@ def convert_somamer_metadata_to_source(
     """
     new_meta_adats = []
     for adat in adats:
-        new_meta_adat = adat.update_somamer_metadata_from_adat(source_adat, strict)
+        new_meta_adat = adat.update_somamer_metadata_from_adat(source_adat)
         new_meta_adats.append(new_meta_adat)
 
     return new_meta_adats
