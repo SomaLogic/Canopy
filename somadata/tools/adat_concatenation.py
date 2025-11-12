@@ -278,8 +278,8 @@ def smart_adat_concatenation(
     somamer_source_adat : Adat
         Adat that serves as the source for the SOMAmer Reagent metadata.
     merge_strategy : str
-        Merge strategy for the inner merge of the RFU matrix.  Options are 'inner' or 'outer'.
-        Useful for retaining new SOMAmers that may not be present in all adats.
+        Merge strategy for the RFU matrix. Options are 'inner' or 'outer'.
+        Use 'outer' to retain new SOMAmers that may not be present in all adats.
 
     Returns
     -------
