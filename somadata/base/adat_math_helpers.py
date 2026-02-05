@@ -8,7 +8,18 @@ from ..data.lift import LiftData
 
 
 def calcELOD(x: pd.Series):
-    """Calculated the estimated limit of detection based on x a pd.Series of SomaScan measurements of buffer."""
+    """Calculate the estimated limit of detection based on x a pd.Series of SomaScan measurements of buffer.
+
+    Parameters
+    ----------
+    x : pd.Series
+        A pandas Series of SomaScan measurements of buffer.
+
+    Returns
+    -------
+    float
+        The estimated limit of detection (eLOD).
+    """
     med = np.median(x)
     absDiff = np.abs(x - med)
     medDiff = np.median(absDiff)
@@ -93,10 +104,10 @@ class AdatMathHelpers:
 
         Examples
         --------
-        >>> # the adat stores the current assay version. This value is used by the tool to select the correct reference but you are not required to ender it.
+        >>> # the adat stores the current assay version. This value is used by the tool to select the correct reference but you are not required to enter it.
         >>> adat.header_metadata['!AssayVersion']
         'v5.0'
-        >>> # the adat stores the matrix. This value is used by the tool to select the correct reference but you are not required to ender it.
+        >>> # the adat stores the matrix. This value is used by the tool to select the correct reference but you are not required to enter it.
         >>> adat.header_metadata['StudyMatrix']
         'EDTA Plasma'
         >>> lifted_adat = adat.lift('v4.1') # lifting to the previous assay version.
