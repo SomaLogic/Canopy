@@ -48,7 +48,7 @@ class Annotations(pd.DataFrame):
 
     def __delitem__(self, key) -> None:
         super().__delitem__(key)
-        if LIFTING_COLUMN_REGEX.match(key):
+        if isinstance(key, str) and LIFTING_COLUMN_REGEX.match(key):
             self._update_supported_lifting_options()
 
     def _update_supported_lifting_options(self):
@@ -56,12 +56,19 @@ class Annotations(pd.DataFrame):
         self.supported_lifting_signal_space = set()
 
         for name in self.columns:
-            if LIFTING_COLUMN_REGEX.match(name):
+            if isinstance(name, str) and LIFTING_COLUMN_REGEX.match(name):
                 supported_info = name.split(' ')
                 self.supported_lifting_matrices.add(supported_info[0])
-                self.supported_lifting_signal_space.add(
-                    (supported_info[2], supported_info[5])
-                )
+                if len(supported_info) >= 7:
+                    # New format with matrix sizes (e.g., "11K", "7K")
+                    self.supported_lifting_signal_space.add(
+                        (supported_info[2], supported_info[5])
+                    )
+                elif len(supported_info) >= 5:
+                    # Old format without matrix sizes
+                    self.supported_lifting_signal_space.add(
+                        (supported_info[2], supported_info[4])
+                    )
 
     def update_adat_column_meta(self, adat: Adat) -> Adat:
         """Utility to update a provided adat's column metadata to match the annotations object.

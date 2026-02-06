@@ -221,3 +221,96 @@ class AdatLiftingTestCase(TestCase):
         self._assert_error_contains_message(
             cm, "SeqId not found in either index or columns"
         )
+
+
+class AnnotationsLiftingColumnParsingTestCase(TestCase):
+    """Test cases for parsing both old and new format lifting column names."""
+
+    def test_new_format_with_matrix_sizes(self):
+        """Test parsing of new format: 'Plasma Scalar v5.0 11K to v4.1 7K'"""
+        csv_data = (
+            'SeqId,SomaId,Plasma Scalar v5.0 11K to v4.1 7K\n54321-21,SL054321,0.8\n'
+        )
+        an = create_annotations_from_csv(csv_data, index_col='SeqId')
+
+        self.assertIn('Plasma', an.supported_lifting_matrices)
+        self.assertIn(('v5.0', 'v4.1'), an.supported_lifting_signal_space)
+
+    def test_old_format_without_matrix_sizes(self):
+        """Test parsing of old format: 'Serum Scalar v4.1 to v4.0'"""
+        csv_data = 'SeqId,SomaId,Serum Scalar v4.1 to v4.0\n54321-21,SL054321,0.625\n'
+        an = create_annotations_from_csv(csv_data, index_col='SeqId')
+
+        self.assertIn('Serum', an.supported_lifting_matrices)
+        self.assertIn(('v4.1', 'v4.0'), an.supported_lifting_signal_space)
+
+    def test_multiple_lifting_columns_mixed_formats(self):
+        """Test parsing when both old and new format columns exist"""
+        csv_data = 'SeqId,SomaId,Plasma Scalar v5.0 11K to v4.1 7K,Serum Scalar v4.1 to v4.0\n54321-21,SL054321,0.8,0.625\n'
+        an = create_annotations_from_csv(csv_data, index_col='SeqId')
+
+        # Check both matrices are detected
+        self.assertIn('Plasma', an.supported_lifting_matrices)
+        self.assertIn('Serum', an.supported_lifting_matrices)
+
+        # Check both signal spaces are detected
+        self.assertIn(('v5.0', 'v4.1'), an.supported_lifting_signal_space)
+        self.assertIn(('v4.1', 'v4.0'), an.supported_lifting_signal_space)
+
+    def test_non_string_column_names(self):
+        """Test that non-string column names (NaN, float) don't cause errors"""
+        import numpy as np
+
+        # Create annotations with NaN/float column names
+        data = {'SomaId': ['SL054321'], 'Plasma Scalar v4.0 to v4.1': [0.8]}
+        df = pd.DataFrame(data, index=['54321-21'])
+        df.index.name = 'SeqId'
+
+        # Add a NaN column name
+        df[np.nan] = [1.0]
+        df[3.14] = [2.0]
+
+        an = Annotations(df)
+
+        # Should not raise an error
+        self.assertIn('Plasma', an.supported_lifting_matrices)
+        self.assertIn(('v4.0', 'v4.1'), an.supported_lifting_signal_space)
+
+    def test_linns_ccc_columns_ignored(self):
+        """Test that Lin's CCC columns don't get parsed as lifting columns"""
+        csv_data = "SeqId,SomaId,Plasma Scalar v4.1 to v4.0,Plasma Lin's CCC\n54321-21,SL054321,0.625,0.967\n"
+        an = create_annotations_from_csv(csv_data, index_col='SeqId')
+
+        # Only Scalar column should be detected
+        self.assertEqual(len(an.supported_lifting_matrices), 1)
+        self.assertEqual(len(an.supported_lifting_signal_space), 1)
+
+    def test_setitem_updates_lifting_options(self):
+        """Test that adding a lifting column updates supported options"""
+        csv_data = 'SeqId,SomaId\n54321-21,SL054321\n'
+        an = create_annotations_from_csv(csv_data, index_col='SeqId')
+
+        # Initially no lifting options
+        self.assertEqual(len(an.supported_lifting_matrices), 0)
+
+        # Add a lifting column
+        an['Plasma Scalar v4.0 to v4.1'] = [0.8]
+
+        # Should now have lifting options
+        self.assertIn('Plasma', an.supported_lifting_matrices)
+        self.assertIn(('v4.0', 'v4.1'), an.supported_lifting_signal_space)
+
+    def test_delitem_updates_lifting_options(self):
+        """Test that deleting a lifting column updates supported options"""
+        csv_data = 'SeqId,SomaId,Plasma Scalar v4.0 to v4.1\n54321-21,SL054321,0.8\n'
+        an = create_annotations_from_csv(csv_data, index_col='SeqId')
+
+        # Initially has lifting options
+        self.assertIn('Plasma', an.supported_lifting_matrices)
+
+        # Delete the lifting column
+        del an['Plasma Scalar v4.0 to v4.1']
+
+        # Should no longer have lifting options
+        self.assertEqual(len(an.supported_lifting_matrices), 0)
+        self.assertEqual(len(an.supported_lifting_signal_space), 0)
