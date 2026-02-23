@@ -16,9 +16,7 @@ from somadata.tools.math import jround
 
 def parse_file(
     f: Union[str, io.TextIOWrapper], compatibility_mode: bool = False
-) -> Tuple[
-    List[List[float]], Dict[str, List[str]], Dict[str, List[str]], Dict[str, str]
-]:
+) -> Tuple[List[List[float]], Dict[str, List[str]], Dict[str, List], Dict[str, str]]:
     """Returns component pieces of an adat given an adat file object.
 
     Parameters
@@ -37,9 +35,9 @@ def parse_file(
         A dictionary of each column of the row metadata where the key-value
         pairs are column-name and an array of each sample's corresponding metadata
 
-    column_metadata : Dict[str, List[str]]
+    column_metadata : Dict[str, List]
         A dictionary of each row of the adat column metadata where the key-value pairs are
-        row-name and an array of each somamer's corresponding metadata.
+        row-name and an array of each somamer's corresponding metadata (mixed types).
 
     header_metadata : Dict[str, str]
         A dictionary of each row of the header_metadata corresponds to a key-value pair.
@@ -201,7 +199,7 @@ def read_adat(path_or_buf: Union[str, io.TextIOWrapper], *args, **kwargs) -> Ada
 
     Examples
     --------
-    >>> adat = Adat.from_file('path/to/file.adat')
+    >>> adat = read_adat('path/to/file.adat')
 
     Returns
     -------

@@ -8,6 +8,22 @@ zip_path = Path(__file__).parent / 'lift.zip'
 
 
 def check_substrings(full, sub1, sub2):
+    """Check if two substrings exist in a string and if sub1 appears before sub2.
+
+    Parameters
+    ----------
+    full : str
+        The full string to search in.
+    sub1 : str
+        The first substring to find.
+    sub2 : str
+        The second substring to find.
+
+    Returns
+    -------
+    bool
+        True if both substrings are in full and sub1 appears before sub2, False otherwise.
+    """
     if not sub1 in full:
         return False
     if not sub2 in full:
@@ -16,7 +32,14 @@ def check_substrings(full, sub1, sub2):
 
 
 def getSomaScanLiftCCC():
-    """Return the SomaScan Lifting Lin's CCC DataFrame."""
+    """Return the SomaScan Lifting Lin's CCC DataFrame.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing Lin's Concordance Correlation Coefficient (CCC) values
+        for SomaScan lifting across different assay versions.
+    """
     data = []
     versions = ['s11k.json', 's7k.json', 's5k.json']
     with ZipFile(zip_path, 'r') as zp:
@@ -40,12 +63,16 @@ class LiftData:
     def __init__(self, from_plex, to_plex, matrix):
         """Instantiate a LiftData Object.
 
-        Parameters:
-        from_plex: The SomaScan assay version to lift from i.e. v5.0.
-        to_plex: The SomaScan assay version to lift to ie i.e. v4.1
-        matrix: The matrix you would like a reference for. 'serum' and 'plasma' are supported.
+        Parameters
+        ----------
+        from_plex : str
+            The SomaScan assay version to lift from i.e. v5.0.
+        to_plex : str
+            The SomaScan assay version to lift to ie i.e. v4.1
+        matrix : str
+            The matrix you would like a reference for. 'serum' and 'plasma' are supported.
         """
-        # instantiate these variables they should not persist accross the class.
+        # instantiate these variables they should not persist across the class.
         self._scale_factors = pd.Series(dtype='float')
         self._matrix = None
         self._lins_ccc = pd.Series(dtype='float')
@@ -66,11 +93,15 @@ class LiftData:
     def _get_colname(self, kind='Scalar'):
         """Iterate through the column names and find the one that matches the __init__ parameters and kind.
 
-        Parameters:
-        kind: str. 'Scalar' or 'CCC' along with the assay versions determines the column name returned.
+        Parameters
+        ----------
+        kind : str
+            'Scalar' or 'CCC' along with the assay versions determines the column name returned.
 
-        Returns:
-        col: str. A column name from the reference data.
+        Returns
+        -------
+        col : str
+            A column name from the reference data.
         """
         mat = self.matrix.capitalize()
         for col in self._df.columns:
@@ -90,7 +121,7 @@ class LiftData:
         )
 
     def _extract_reference(self):
-        """From the reference DataFrame scalars and CCC for the target matrix and target version."""
+        """Extract the reference DataFrame scalars and CCC for the target matrix and target version."""
         self._scale_factors = self._df[self._get_colname(kind='Scalar')]
         self._lins_ccc = self._df[self._get_colname(kind='CCC')]
 
@@ -112,8 +143,8 @@ class LiftData:
 
     @property
     def lins_ccc(self):
+        """Lazy load Lin's CCC."""
         if self._lins_ccc.empty:
-            """Lazy load Lin's CCC."""
             self._extract_reference()
         return self._lins_ccc
 

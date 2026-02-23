@@ -20,7 +20,7 @@ class AdatMetaHelpers:
         self,
         axis: int,
         name: str,
-        values: Union[List(str), Set(str), Tuple(str)],
+        values: Union[List[str], Set[str], Tuple[str]],
         include: bool = True,
     ) -> Adat:
         # Check to see if values is the right variable type
@@ -61,7 +61,7 @@ class AdatMetaHelpers:
         return adat.copy()
 
     def _filter_meta(
-        self, axis: int, names: Union[List(str), Set(str), Tuple(str)], include: bool
+        self, axis: int, names: Union[List[str], Set[str], Tuple[str]], include: bool
     ) -> Adat:
         # Check to see if names is the right variable type
         if not isinstance(names, (list, tuple, set)):
@@ -94,7 +94,7 @@ class AdatMetaHelpers:
         return adat
 
     def _insert_meta(
-        self, axis: int, name: str, values: Union[List(str), Tuple(str)], replace: bool
+        self, axis: int, name: str, values: Union[List[str], Tuple[str]], replace: bool
     ) -> Adat:
         adat = self.copy()
         if axis == 0:
@@ -127,7 +127,7 @@ class AdatMetaHelpers:
         return adat
 
     def exclude_on_meta(
-        self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)]
+        self, axis: int, name: str, values: Union[List[str], Set[str], Tuple[str]]
     ) -> Adat:
         """Returns an adat with rfu rows or columns excluded given the multiindex name and values to exclude on.
 
@@ -141,7 +141,7 @@ class AdatMetaHelpers:
         name : str
             The name of the metadata/multiindex row/column to filter based on.
 
-        values : List(str) | Set(str) | Tuple(str)
+        values : List[str] | Set[str] | Tuple[str]
             The values to filter on.  Can be a tuple, list, or set.
 
         Returns
@@ -157,7 +157,7 @@ class AdatMetaHelpers:
         return self._filter_on_meta(axis, name, values, include=False)
 
     def pick_on_meta(
-        self, axis: int, name: str, values: Union[List(str), Set(str), Tuple(str)]
+        self, axis: int, name: str, values: Union[List[str], Set[str], Tuple[str]]
     ) -> Adat:
         """Returns an adat with rfu rows or columns excluded given the multiindex name and values to keep.
 
@@ -171,7 +171,7 @@ class AdatMetaHelpers:
         name : str
             The name of the metadata/multiindex row/column to filter based on.
 
-        values : List(str) | Set(str) | Tuple(str)
+        values : List[str] | Set[str] | Tuple[str]
             The values to filter on.  Can be a tuple, list, or set.
 
         Returns
@@ -188,7 +188,7 @@ class AdatMetaHelpers:
         return self._filter_on_meta(axis, name, values, include=True)
 
     def pick_meta(
-        self, axis: int, names: Union[List(str), Set(str), Tuple(str)]
+        self, axis: int, names: Union[List[str], Set[str], Tuple[str]]
     ) -> Adat:
         """Returns an adat with excluded metadata/multiindices given the names to keep.
 
@@ -199,7 +199,7 @@ class AdatMetaHelpers:
             0 - row metadata,
             1 - column metadata
 
-        names : List(str) | Set(str) | Tuple(str)
+        names : List[str] | Set[str] | Tuple[str]
             The names to filter on.  Can be a tuple, list, or set.
 
         Returns
@@ -214,7 +214,7 @@ class AdatMetaHelpers:
         return self._filter_meta(axis, names, include=True)
 
     def exclude_meta(
-        self, axis: int, names: Union[List(str), Set(str), Tuple(str)]
+        self, axis: int, names: Union[List[str], Set[str], Tuple[str]]
     ) -> Adat:
         """Returns an adat with excluded metadata/multiindices given the names to exclude.
 
@@ -225,7 +225,7 @@ class AdatMetaHelpers:
             0 - row metadata,
             1 - column metadata
 
-        names : List(str) | Set(str) | Tuple(str)
+        names : List[str] | Set[str] | Tuple[str]
             The names to filter on.  Can be a tuple, list, or set.
 
         Returns
@@ -241,7 +241,7 @@ class AdatMetaHelpers:
         return self._filter_meta(axis, names, include=False)
 
     def insert_meta(
-        self, axis: int, name: str, values: Union[List(str), Tuple(str)]
+        self, axis: int, name: str, values: Union[List[str], Tuple[str]]
     ) -> Adat:
         """Returns an adat with the given metadata/multiindices added.
 
@@ -257,7 +257,7 @@ class AdatMetaHelpers:
         name : str
             The name of the index to be added.
 
-        values : List(str) | Tuple(str)
+        values : List[str] | Tuple[str]
             Values to be added to the metadata/multiindex.  Can be a tuple or list
 
         Returns
@@ -272,7 +272,7 @@ class AdatMetaHelpers:
         return self._insert_meta(axis, name, values, replace=False)
 
     def replace_meta(
-        self, axis: int, name: str, values: Union[List(str), Tuple(str)]
+        self, axis: int, name: str, values: Union[List[str], Tuple[str]]
     ) -> Adat:
         """Returns an adat with the given metadata/multiindices added.
 
@@ -288,7 +288,7 @@ class AdatMetaHelpers:
         name : str
             The name of the index to be added.
 
-        values : List(str) | Tuple(str)
+        values : List[str] | Tuple[str]
             Values to be added to the metadata/multiindex.  Can be a tuple or list
 
         Returns
@@ -307,7 +307,7 @@ class AdatMetaHelpers:
         axis: int,
         inserted_meta_name: str,
         key_meta_name: str,
-        values_dict: Dict(str, str),
+        values_dict: Dict[str, str],
     ) -> Adat:
         """Inserts metadata into Adat given a dictionary of values keyed to existing metadata.
 
@@ -327,7 +327,7 @@ class AdatMetaHelpers:
         key_meta_name : str
             The name of the index to use as the key-map.
 
-        values_dict : Dict(str, str)
+        values_dict : Dict[str, str]
             Values to be added to the metadata/multiindex keyed to the existing values in `key_meta_name`.
 
         Returns
@@ -337,7 +337,7 @@ class AdatMetaHelpers:
         Examples
         --------
         >>> new_adat = adat.insert_keyed_meta(axis=0, inserted_meta_name='NewBarcode', key_meta_name='Barcode', values_dict={"J12345": "1"})
-        >>> new_adat = adat.insert_keyed_meta(axis=1, inserted_meta_name='NewProteinType', key_meta_name='Type', values_dict={"Protein": "Buffer")
+        >>> new_adat = adat.insert_keyed_meta(axis=1, inserted_meta_name='NewProteinType', key_meta_name='Type', values_dict={"Protein": "Buffer"})
         """
 
         values = []
@@ -366,7 +366,7 @@ class AdatMetaHelpers:
         self,
         axis: int,
         replaced_meta_name: str,
-        values_dict: Dict(str, str),
+        values_dict: Dict[str, str],
         key_meta_name: str = None,
     ) -> Adat:
         """Updates metadata in an Adat given a dictionary of values keyed to existing metadata.
@@ -387,7 +387,7 @@ class AdatMetaHelpers:
         key_meta_name : str, optional
             The name of the index to use as the key-map.  Will default to `replaced_meta_name` if None.
 
-        values_dict : Dict(str, str)
+        values_dict : Dict[str, str]
             Values to be added to the metadata/multiindex keyed to the existing values in `key_meta_name`.
 
         Returns
@@ -396,8 +396,8 @@ class AdatMetaHelpers:
 
         Examples
         --------
-        >>> new_adat = adat.replace_keyed_meta(axis=0, inserted_meta_name='Barcode', key_meta_name='SampleType', values_dict={"J12345": "Calibrator"})
-        >>> new_adat = adat.replace_keyed_meta(axis=1, inserted_meta_name='Type', key_meta_name='SeqId', values_dict={"12345-6": "ProteinSet1")
+        >>> new_adat = adat.replace_keyed_meta(axis=0, replaced_meta_name='Barcode', key_meta_name='SampleType', values_dict={"J12345": "Calibrator"})
+        >>> new_adat = adat.replace_keyed_meta(axis=1, replaced_meta_name='Type', key_meta_name='SeqId', values_dict={"12345-6": "ProteinSet1"})
         """
 
         key_meta_name = key_meta_name or replaced_meta_name
@@ -442,7 +442,6 @@ class AdatMetaHelpers:
 
         Examples
         --------
-        >>> new_adat = adat.update_somamer_metadata_from_adat(other_adat)
         >>> new_adat = adat.update_somamer_metadata_from_adat(other_adat)
         """
 
@@ -517,7 +516,7 @@ class AdatMetaHelpers:
 
         Examples
         --------
-        >>> new_adat = adat.reorder_on_metadata(axis=1, name='SeqId', other_adat)
+        >>> new_adat = adat.reorder_on_metadata(axis=1, name='SeqId', source_adat=other_adat)
         """
         reorder_index = []
         adat = self.copy()

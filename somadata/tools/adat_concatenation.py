@@ -94,7 +94,7 @@ def _concat_header_metadata(adats: List[Adat], merge_strategy=None):
     return base_header
 
 
-def _concat_column_metadata(adats: List[Adat]) -> Dict(str, List):
+def _concat_column_metadata(adats: List[Adat]) -> Dict[str, List]:
     # Get Col Metadata
     col_metadata = {}
     col_checks = []
@@ -163,7 +163,7 @@ def _concat_column_metadata(adats: List[Adat]) -> Dict(str, List):
     return col_metadata
 
 
-def _concat_row_metadata(adats: List[Adat]) -> Dict(str, List):
+def _concat_row_metadata(adats: List[Adat]) -> Dict[str, List]:
     # Check if Row Metadata Matches
     names = set(adats[0].index.names)
     symmetric_difference = set()
