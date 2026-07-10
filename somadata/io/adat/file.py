@@ -10,7 +10,13 @@ from importlib.metadata import version
 from typing import Dict, List, Tuple, Union
 
 from somadata import Adat
-from somadata.io.adat.errors import AdatReadError
+from somadata.io.adat.errors import AdatReadError, AdatWriteError
+from somadata.io.adat.v2_fields import (
+    serialize_header_value_v2 as _serialize_header_value_v2,
+    v2_col_field_type as _v2_col_field_type,
+    v2_row_field_type as _v2_row_field_type,
+    validate_v2_header_fields as _validate_v2_header_fields,
+)
 from somadata.tools.math import jround
 
 
@@ -230,8 +236,8 @@ def write_adat(
     adat : Adat
         Adat Pandas dataframe to be written.
 
-    path : str
-        The file path to write to.
+    f : io.TextIOWrapper
+        The file path or open file object to write to.
 
     round_rfu : bool
         Rounds the RFU matrix to one decimal place if True,
@@ -239,7 +245,7 @@ def write_adat(
 
     convert_to_v3_seq_ids : bool
         Combines the column metadata for SeqId and
-        SeqIdVersion to the V3 style (12345-6_7)
+        SeqIdVersion to the V3 style (12345-6_7).  Ignored for v2.0 ADATs.
 
     Examples
     --------
@@ -252,7 +258,31 @@ def write_adat(
     -------
     None
     """
+    if adat.header_metadata.get('FileVersion') == '2.0':
+        _write_adat_v2(adat, f, round_rfu=round_rfu)
+    else:
+        _write_adat(adat, f, round_rfu=round_rfu, convert_to_v3_seq_ids=convert_to_v3_seq_ids)
 
+
+def _write_adat(
+    adat,
+    f: io.TextIOWrapper,
+    round_rfu: bool = True,
+    convert_to_v3_seq_ids: bool = False,
+) -> None:
+    """Write a pre-v2.0 ADAT file.
+
+    Parameters
+    ----------
+    adat : Adat
+        Adat Pandas dataframe to be written.
+    f : io.TextIOWrapper
+        Open writable file object.
+    round_rfu : bool
+        Round RFU values to one decimal place when True (default).
+    convert_to_v3_seq_ids : bool
+        Combine SeqId and SeqIdVersion columns into V3 style (12345-6_7).
+    """
     # Add version number to header_metadata.  If the field already exists, append to it.
     pkg_version = 'SomaData_' + version('somadata')
     if '!GeneratedBy' not in adat.header_metadata:
@@ -339,3 +369,78 @@ def write_adat(
         row += [None]
         row += rfu_row
         writer.writerow(row)
+
+
+def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
+    """Write an ADAT v2.0 file.
+
+    Implements the v2.0 format rules:
+    - No ``!Checksum`` line
+    - No ``!`` prefix on Name/Type rows in ^COL_DATA / ^ROW_DATA
+    - JSON header values serialized as single-line minified JSON
+    - Sections in order: ^HEADER, ^COL_DATA, ^ROW_DATA, ^TABLE_BEGIN
+    - Validates the closed header field set before writing
+
+    Parameters
+    ----------
+    adat : Adat
+        Adat with ``FileVersion == "2.0"`` in its header metadata.
+    f : io.TextIOWrapper
+        Open writable file object.
+    round_rfu : bool
+        Round RFU values to one decimal place when True (default).
+    """
+    if not _validate_v2_header_fields(adat.header_metadata):
+        raise AdatWriteError(
+            'v2.0 ADAT header metadata is not compliant with the closed field set '
+            'See logged warnings above for details.'
+        )
+
+    writer = csv.writer(f, delimiter='\t', lineterminator='\r\n')
+
+    # --- ^HEADER ---
+    writer.writerow(['^HEADER'])
+    for key, value in adat.header_metadata.items():
+        serialized = _serialize_header_value_v2(key, value)
+        if serialized:
+            f.write(key + '\t' + serialized + '\r\n')
+        else:
+            writer.writerow([key])
+
+    # --- ^COL_DATA ---
+    column_names = list(adat.columns.names)
+    column_types = [_v2_col_field_type(name) for name in column_names]
+
+    writer.writerow(['^COL_DATA'])
+    writer.writerow(['Name'] + column_names)
+    writer.writerow(['Type'] + column_types)
+
+    # --- ^ROW_DATA ---
+    row_names = list(adat.index.names)
+    row_types = [_v2_row_field_type(name) for name in row_names]
+
+    writer.writerow(['^ROW_DATA'])
+    writer.writerow(['Name'] + row_names)
+    writer.writerow(['Type'] + row_types)
+
+    # --- ^TABLE_BEGIN ---
+    writer.writerow(['^TABLE_BEGIN'])
+
+    # Write column metadata rows (one row per COL_DATA field)
+    column_offset = [None] * len(row_names)
+    for column_name in column_names:
+        column_data = list(adat.columns.get_level_values(column_name))
+        writer.writerow(column_offset + [column_name] + column_data)
+
+    # Write the row metadata header line
+    extra_nones = len(adat.columns.get_level_values(column_names[0])) + 1
+    writer.writerow(list(row_names) + [None] * extra_nones)
+
+    # Write row metadata + RFU data
+    for i, rfu_row in enumerate(adat.values):
+        row_meta = [adat.index.get_level_values(name)[i] for name in row_names]
+        if round_rfu:
+            rfu_values = [jround(v, 1) for v in rfu_row]
+        else:
+            rfu_values = list(rfu_row)
+        writer.writerow(row_meta + [None] + rfu_values)
