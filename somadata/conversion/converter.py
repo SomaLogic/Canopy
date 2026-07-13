@@ -232,7 +232,13 @@ def _assemble_v2_adat(
         columns=columns,
         header_metadata=header,
     )
-    validate_v2_header_fields(header)
+    if not validate_v2_header_fields(header):
+        from somadata.conversion.errors import ConversionError
+
+        raise ConversionError(
+            'Converted header metadata is not compliant with the v2.0 closed field set. '
+            'See logged warnings above for details.'
+        )
     return result
 
 
