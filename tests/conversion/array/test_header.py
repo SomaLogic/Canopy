@@ -2,19 +2,13 @@
 
 from __future__ import annotations
 
-import json
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 import pytest
 
 from somadata.conversion.array import ArrayConversionContext
 from somadata.conversion.array.header import convert_array_header
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
-from conftest import make_full_legacy_array_adat
+from tests.conversion.conftest import make_full_legacy_array_adat
 
 
 @pytest.fixture
