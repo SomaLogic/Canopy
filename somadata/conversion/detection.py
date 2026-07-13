@@ -4,7 +4,8 @@ import re
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from somadata.conversion.errors import AssayVersionError, UnrecognizedFormatError
+from somadata.conversion.errors import (AssayVersionError,
+                                        UnrecognizedFormatError)
 
 if TYPE_CHECKING:
     from somadata.adat import Adat

@@ -12,12 +12,9 @@ import datetime
 import logging
 from typing import TYPE_CHECKING
 
-from somadata.conversion._helpers import (
-    consolidate_plate_fields,
-    generate_guid,
-    lookup_header,
-    parse_process_steps,
-)
+from somadata.conversion._helpers import (consolidate_plate_fields,
+                                          generate_guid, lookup_header,
+                                          parse_process_steps)
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:
