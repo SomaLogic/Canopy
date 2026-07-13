@@ -1,17 +1,12 @@
 """Tests for somadata.conversion.array.validation.validate_source_array_adat."""
 from __future__ import annotations
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 import pytest
 
 from somadata.conversion.array.validation import validate_source_array_adat
 from somadata.conversion.errors import ConversionError
 
-from conftest import make_adat, make_full_legacy_array_adat
+from tests.conversion.conftest import make_adat, make_full_legacy_array_adat
 
 
 # ---------------------------------------------------------------------------
