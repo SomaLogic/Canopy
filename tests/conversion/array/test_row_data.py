@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 import pytest
 
 from somadata.conversion.array import ArrayConversionContext
 from somadata.conversion.array.row_data import convert_array_row_data
 
-from conftest import make_full_legacy_array_adat
+from tests.conversion.conftest import make_full_legacy_array_adat
 
 
 @pytest.fixture
