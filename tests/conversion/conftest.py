@@ -86,7 +86,7 @@ def make_v2_combined_adat() -> Adat:
     return make_adat(header={'FileVersion': '2.0'})
 
 
-def make_full_legacy_array_adat(n_samples: int = 3) -> Adat:
+def make_full_legacy_array_adat() -> Adat:
     """Array Adat with ALL legacy header/col/row fields for conversion testing.
 
     Includes:
