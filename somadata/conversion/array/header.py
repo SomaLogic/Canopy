@@ -17,7 +17,6 @@ from somadata.conversion._helpers import (
     generate_guid,
     lookup_header,
     parse_process_steps,
-    strip_bang_prefix,
 )
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
