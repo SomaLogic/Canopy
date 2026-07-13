@@ -62,8 +62,9 @@ def lookup_header(header: dict, *keys: str) -> str:
     for key in keys:
         for candidate in (key, f'!{key}'):
             val = header.get(candidate, '')
-            if val:
-                return str(val)
+            val_str = '' if val is None else str(val).strip()
+            if val_str:
+                return val_str
     return ''
 
 
