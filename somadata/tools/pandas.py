@@ -1,5 +1,6 @@
-from somadata.errors import AdatBaseError
 import pandas as pd
+
+from somadata.errors import AdatBaseError
 
 
 def get_pd_axis(obj, axis: int) -> pd.MultiIndex:
@@ -8,5 +9,6 @@ def get_pd_axis(obj, axis: int) -> pd.MultiIndex:
     elif axis == 1:
         return obj.columns
     else:
-        raise AdatBaseError('Not a valid axis, please choose "0" for row metadata or "1" column metadata')
-   
+        raise AdatBaseError(
+            'Not a valid axis, please choose "0" for row metadata or "1" column metadata'
+        )

@@ -84,3 +84,140 @@ def make_ngs_adat() -> Adat:
 def make_v2_combined_adat() -> Adat:
     """Minimal Adat already in v2.0 combined format."""
     return make_adat(header={'FileVersion': '2.0'})
+
+
+def make_full_legacy_array_adat() -> Adat:
+    """Array Adat with ALL legacy header/col/row fields for conversion testing.
+
+    Includes:
+    - Header: plate-keyed fields, GeneratedBy, ProteinEffectiveDate,
+      CreatedDate, AdatId, ProcessSteps, ReportConfig
+    - COL_DATA: Cal_PLT1, CalQcRatio_PLT1_QC1, PlateScale_Reference,
+      CalReference, QcReference_QC1, EntrezGeneID, medNormRef_ReferenceRFU,
+      ColCheck, SeqIdVersion, SomaId, Units, eLOD, Type (with Hyb Control rows)
+    - ROW_DATA: PlatePosition, HybControlNormScale, RowCheck, StudyId,
+      SubjectID, Barcode2d, NormScale_0.5, PlateRunDate, ControlId,
+      SampleName, ExtIdentifier
+    """
+    header = {
+        '!AdatId': 'SL-99999',
+        '!AssayVersion': 'V4',
+        '!Title': 'Test Study',
+        '!StudyOrganism': 'Human',
+        '!StudyMatrix': 'EDTA Plasma',
+        '!UseRestriction': 'Research Use Only',
+        '!GeneratedBy': 'SomaSuite 4.0.0',
+        '!ProteinEffectiveDate': '2020-08-07',
+        '!CreatedDate': '2021-01-15',
+        '!ProcessSteps': 'Raw RFU, Hyb Normalization, medNormInt, plateScale, Calibration',
+        '!ReportConfig': 'DefaultReport',
+        # Plate-keyed fields
+        'PlateScale_Scalar_PLT1': '1.02',
+        'PlateScale_Scalar_PLT2': '0.98',
+        'CalPlateTailPercent_PLT1': '5.2',
+        'CalPlateTailPercent_PLT2': '4.8',
+        'CalPlateTailTest_PLT1': 'PASS',
+        'CalPlateTailTest_PLT2': 'WARNING',
+        'PlateScale_PassFlag_PLT1': 'PASS',
+        'PlateScale_PassFlag_PLT2': 'FLAG',
+        'PlateTailPercent_PLT1': '3.1',
+        'PlateTailTest_PLT1': 'PASS',
+    }
+
+    row_names = [
+        'SampleId',
+        'SampleType',
+        'PlateId',
+        'PlatePosition',
+        'SlideId',
+        'Subarray',
+        'HybControlNormScale',
+        'RowCheck',
+        'StudyId',
+        'SubjectID',
+        'Barcode2d',
+        'NormScale_0.5',
+        'PlateRunDate',
+        'ControlId',
+        'SampleName',
+        'ExtIdentifier',
+    ]
+
+    row_values = [
+        ['S1', 'S2', 'S3'],  # SampleId
+        ['Sample', 'Calibrator', 'QC'],  # SampleType
+        ['PLT1', 'PLT1', 'PLT1'],  # PlateId
+        ['A1', 'A2', 'A3'],  # PlatePosition
+        ['258740110837', '258740110837', '258740110837'],  # SlideId
+        ['3', '3', '3'],  # Subarray
+        ['1.05', '0.35', '2.60'],  # HybControlNormScale
+        ['PASS', 'PASS', 'FLAG'],  # RowCheck
+        ['ST-001', 'ST-001', 'ST-001'],  # StudyId
+        ['SUBJ-1', 'SUBJ-2', 'SUBJ-3'],  # SubjectID
+        ['TUBE-A', 'TUBE-B', 'TUBE-C'],  # Barcode2d
+        ['1.1', '1.0', '0.9'],  # NormScale_0.5
+        ['', '2021-01-10', '2021-01-10'],  # PlateRunDate (S1 blank)
+        ['', '', ''],  # ControlId (to be filled)
+        ['Alice', 'Bob', 'Charlie'],  # SampleName
+        ['EXT-1', 'EXT-2', 'EXT-3'],  # ExtIdentifier
+    ]
+
+    col_names_seq = ['10000-28', '10001-7', '10002-66']
+
+    col_names = [
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+        col_names_seq,
+    ]
+    col_level_names = [
+        'SeqId',
+        'Target',
+        'Type',
+        'EntrezGeneID',
+        'Cal_PLT1',
+        'CalQcRatio_PLT1_QC1',
+        'PlateScale_Reference',
+        'CalReference',
+        'QcReference_QC1',
+        'medNormRef_ReferenceRFU',
+        'SeqIdVersion',
+        'SomaId',
+        'ColCheck',
+    ]
+
+    col_values = [
+        col_names_seq,  # SeqId
+        ['ProteinA', 'ProteinB', 'HybCtrl'],  # Target
+        ['Protein', 'Protein', 'Hybridization Control'],  # Type
+        ['12345', '67890', ''],  # EntrezGeneID
+        ['1.01', '1.03', '0.99'],  # Cal_PLT1
+        ['0.97', '1.02', '1.00'],  # CalQcRatio_PLT1_QC1
+        ['SL-REF-1', 'SL-REF-1', 'SL-REF-1'],  # PlateScale_Reference
+        ['SL-CAL-1', 'SL-CAL-1', 'SL-CAL-1'],  # CalReference
+        ['SL-QC-1', 'SL-QC-1', 'SL-QC-1'],  # QcReference_QC1
+        ['SL-MEDNORM-1', 'SL-MEDNORM-1', 'SL-MEDNORM-1'],  # medNormRef_ReferenceRFU
+        ['4', '4', '4'],  # SeqIdVersion
+        ['SL-1', 'SL-2', 'SL-3'],  # SomaId
+        ['PASS', 'PASS', 'PASS'],  # ColCheck
+    ]
+
+    index = pd.MultiIndex.from_arrays(row_values, names=row_names)
+    columns = pd.MultiIndex.from_arrays(col_values, names=col_level_names)
+    data = [[1000.0, 1500.0, 200.0]] * len(row_values[0])
+
+    return Adat(
+        data=data,
+        index=index,
+        columns=columns,
+        header_metadata=header,
+    )

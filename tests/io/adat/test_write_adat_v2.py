@@ -1,4 +1,5 @@
 """Tests for the v2.0 ADAT writer path."""
+
 from __future__ import annotations
 
 import io
@@ -16,7 +17,6 @@ from somadata.io.adat.v2_fields import (
     v2_col_field_type as _v2_col_field_type,
     v2_row_field_type as _v2_row_field_type,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -58,7 +58,11 @@ def _make_v2_adat(
         default_header.update(header)
 
     row_names = row_names or ['SampleId', 'SampleType', 'PlateId']
-    row_values = row_values or [['S1', 'S2'], ['Sample', 'Sample'], ['PLT001', 'PLT001']]
+    row_values = row_values or [
+        ['S1', 'S2'],
+        ['Sample', 'Sample'],
+        ['PLT001', 'PLT001'],
+    ]
 
     if col_levels is not None:
         arrays = [col_levels[n] for n in col_levels]
@@ -71,7 +75,9 @@ def _make_v2_adat(
     n_samples = len(row_values[0])
     n_analytes = len(col_index)
     data = rfu or [[1000.0] * n_analytes for _ in range(n_samples)]
-    return Adat(data=data, index=index, columns=col_index, header_metadata=default_header)
+    return Adat(
+        data=data, index=index, columns=col_index, header_metadata=default_header
+    )
 
 
 def _write_to_string(adat: Adat, **kwargs) -> str:
@@ -101,17 +107,30 @@ def _parse_sections(content: str) -> dict[str, list[str]]:
 
 class TestV2ColFieldType:
     def test_static_string_fields(self):
-        for name in ('SeqId', 'Target', 'TargetFullName', 'Type', 'Organism', 'HybControl'):
+        for name in (
+            'SeqId',
+            'Target',
+            'TargetFullName',
+            'Type',
+            'Organism',
+            'HybControl',
+        ):
             assert _v2_col_field_type(name) is FieldType.STRING
 
     def test_static_integer_field(self):
         assert _v2_col_field_type('EntrezGeneId') is FieldType.INTEGER
 
     def test_dynamic_platform_specific_calibrate(self):
-        assert _v2_col_field_type('PlatformSpecificCalibrate_PLT001_ScaleFactor') is FieldType.DECIMAL
+        assert (
+            _v2_col_field_type('PlatformSpecificCalibrate_PLT001_ScaleFactor')
+            is FieldType.DECIMAL
+        )
 
     def test_dynamic_cross_platform_calibrate(self):
-        assert _v2_col_field_type('CrossPlatformCalibrate_PLT001_ScaleFactor') is FieldType.DECIMAL
+        assert (
+            _v2_col_field_type('CrossPlatformCalibrate_PLT001_ScaleFactor')
+            is FieldType.DECIMAL
+        )
 
     def test_dynamic_qc_ratio(self):
         assert _v2_col_field_type('QCRatio_PLT001') is FieldType.DECIMAL
@@ -136,7 +155,12 @@ class TestV2RowFieldType:
             assert _v2_row_field_type(name) is FieldType.INTEGER
 
     def test_decimal_fields(self):
-        for name in ('HybNormScaleFactor', 'SOMAmerNormReads', 'RefCorr', 'Q30WeightedMean'):
+        for name in (
+            'HybNormScaleFactor',
+            'SOMAmerNormReads',
+            'RefCorr',
+            'Q30WeightedMean',
+        ):
             assert _v2_row_field_type(name) is FieldType.DECIMAL
 
     def test_date_field(self):
@@ -172,7 +196,9 @@ class TestSerializeHeaderValueV2:
         assert _serialize_header_value_v2('AssayType', 'Array') == 'Array'
 
     def test_date_field_passthrough(self):
-        assert _serialize_header_value_v2('FileCreatedDate', '2026-01-31') == '2026-01-31'
+        assert (
+            _serialize_header_value_v2('FileCreatedDate', '2026-01-31') == '2026-01-31'
+        )
 
     def test_none_value_becomes_empty_string(self):
         assert _serialize_header_value_v2('Title', None) == ''
@@ -229,7 +255,10 @@ class TestWriteAdatV2SectionOrder:
     def test_sections_in_correct_order(self):
         adat = _make_v2_adat()
         out = _write_to_string(adat)
-        positions = {s: out.index(s) for s in ('^HEADER', '^COL_DATA', '^ROW_DATA', '^TABLE_BEGIN')}
+        positions = {
+            s: out.index(s)
+            for s in ('^HEADER', '^COL_DATA', '^ROW_DATA', '^TABLE_BEGIN')
+        }
         assert positions['^HEADER'] < positions['^COL_DATA']
         assert positions['^COL_DATA'] < positions['^ROW_DATA']
         assert positions['^ROW_DATA'] < positions['^TABLE_BEGIN']
@@ -262,7 +291,9 @@ class TestWriteAdatV2Header:
         out = _write_to_string(adat)
         lines = out.splitlines()
         title_lines = [l for l in lines if l.startswith('Title')]
-        assert any('\t' not in l or l.endswith('\t') or l == 'Title' for l in title_lines)
+        assert any(
+            '\t' not in l or l.endswith('\t') or l == 'Title' for l in title_lines
+        )
 
 
 class TestWriteAdatV2ColData:
@@ -416,7 +447,11 @@ class TestWriteAdatV2TableData:
     def test_row_metadata_written_in_table(self):
         adat = _make_v2_adat(
             row_names=['SampleId', 'SampleType', 'PlateId'],
-            row_values=[['SAMPLE-001', 'SAMPLE-002'], ['Sample', 'Sample'], ['PLT999', 'PLT999']],
+            row_values=[
+                ['SAMPLE-001', 'SAMPLE-002'],
+                ['Sample', 'Sample'],
+                ['PLT999', 'PLT999'],
+            ],
         )
         out = _write_to_string(adat)
         assert 'SAMPLE-001' in out
@@ -471,16 +506,19 @@ class TestWriteAdatV2HeaderValidation:
 
     def test_compliant_header_returns_true(self):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat()
         assert validate_v2_header_fields(adat.header_metadata) is True
 
     def test_extra_field_returns_false(self):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat(header={'LegacyField': 'x'})
         assert validate_v2_header_fields(adat.header_metadata) is False
 
     def test_missing_field_returns_false(self):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat()
         adat = adat.copy()
         adat.header_metadata = {
@@ -490,6 +528,7 @@ class TestWriteAdatV2HeaderValidation:
 
     def test_extra_and_missing_returns_false(self):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat(header={'ExtraField': 'x'})
         adat = adat.copy()
         adat.header_metadata = {
@@ -499,6 +538,7 @@ class TestWriteAdatV2HeaderValidation:
 
     def test_extra_field_emits_warning(self, caplog):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat(header={'LegacyField': 'some_value', 'AnotherExtra': 'x'})
         with caplog.at_level(logging.WARNING, logger='somadata.io.adat.v2_fields'):
             validate_v2_header_fields(adat.header_metadata)
@@ -507,6 +547,7 @@ class TestWriteAdatV2HeaderValidation:
 
     def test_missing_field_emits_warning(self, caplog):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat()
         adat = adat.copy()
         adat.header_metadata = {
@@ -518,6 +559,7 @@ class TestWriteAdatV2HeaderValidation:
 
     def test_both_extra_and_missing_each_emit_separate_warning(self, caplog):
         from somadata.io.adat.v2_fields import validate_v2_header_fields
+
         adat = _make_v2_adat(header={'ExtraField': 'x'})
         adat = adat.copy()
         adat.header_metadata = {
@@ -533,12 +575,14 @@ class TestWriteAdatV2HeaderValidation:
 class TestWriteAdatV2HeaderValidationException:
     def test_extra_field_raises(self):
         from somadata.io.adat.errors import AdatWriteError
+
         adat = _make_v2_adat(header={'LegacyField': 'x'})
         with pytest.raises(AdatWriteError):
             _write_to_string(adat)
 
     def test_missing_field_raises(self):
         from somadata.io.adat.errors import AdatWriteError
+
         adat = _make_v2_adat()
         adat = adat.copy()
         adat.header_metadata = {
@@ -549,6 +593,7 @@ class TestWriteAdatV2HeaderValidationException:
 
     def test_extra_and_missing_raises(self):
         from somadata.io.adat.errors import AdatWriteError
+
         adat = _make_v2_adat(header={'ExtraField': 'x'})
         adat = adat.copy()
         adat.header_metadata = {
@@ -559,6 +604,7 @@ class TestWriteAdatV2HeaderValidationException:
 
     def test_compliant_header_does_not_raise(self):
         from somadata.io.adat.errors import AdatWriteError
+
         adat = _make_v2_adat()
         try:
             _write_to_string(adat)

@@ -3,8 +3,16 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
+from somadata.conversion.array import ArrayConversionContext
+from somadata.conversion.array.col_data import convert_array_col_data
+from somadata.conversion.array.header import convert_array_header
+from somadata.conversion.array.row_data import convert_array_row_data
+from somadata.conversion.array.validation import validate_source_array_adat
 from somadata.conversion.detection import InputType, detect_input_type
 from somadata.conversion.errors import UnsupportedCombinationError
+from somadata.io.adat.v2_fields import validate_v2_header_fields
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -57,12 +65,10 @@ def to_v2_adat(
     if not adats:
         raise ValueError('adats must contain at least one ADAT.')
     if len(adats) > 2:
-        raise ValueError(
-            f'to_v2_adat() accepts max 2 inputs. Received: {len(adats)}.'
-        )
+        raise ValueError(f'to_v2_adat() accepts max 2 inputs. Received: {len(adats)}.')
 
     loaded = [_load(adat) for adat in adats]
-    
+
     if len(loaded) == 1:
         input_type = detect_input_type(loaded[0])
 
@@ -149,9 +155,7 @@ def _merge_bridged_array_and_v2(
     )
 
 
-def _merge_ngs_and_v2(
-    adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None
-) -> Adat:
+def _merge_ngs_and_v2(adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None) -> Adat:
     """Merge a native NGS ADAT and an existing v2.0 ADAT into a Mixed or NGS v2.0 output."""
     raise NotImplementedError(
         'Merging native_ngs + v2_combined is not yet implemented.'
@@ -178,23 +182,69 @@ def _merge_v2_combined_adats(
 
 def _convert_bridged_array(adat: Adat, *, med_norm_ref: str | None) -> Adat:
     """Convert a single bridged array ADAT to Array v2.0 format."""
-    raise NotImplementedError(
-        'Converting bridged_array to v2.0 is not yet implemented.'
-    )
+    return _run_array_conversion(adat)
 
 
 def _convert_native_array(adat: Adat, *, med_norm_ref: str | None) -> Adat:
     """Convert a single native array ADAT to Array v2.0 format."""
-    raise NotImplementedError(
-        'Converting native_array to v2.0 is not yet implemented.'
+    return _run_array_conversion(adat)
+
+
+def _run_array_conversion(adat: Adat, *, assay_type: str = 'Array') -> Adat:
+    """Shared array conversion pipeline used by both native and bridged paths."""
+    validate_source_array_adat(adat)
+    ctx = ArrayConversionContext.from_adat(adat)
+    new_header = convert_array_header(adat, ctx, assay_type=assay_type)
+    new_columns = convert_array_col_data(adat)
+    new_index = convert_array_row_data(adat, ctx)
+    return _assemble_v2_adat(adat, new_header, new_columns, new_index)
+
+
+def _assemble_v2_adat(
+    source: Adat,
+    header: dict,
+    columns: pd.MultiIndex,
+    index: pd.MultiIndex,
+) -> Adat:
+    """Construct a v2.0 Adat from converted components.
+
+    Parameters
+    ----------
+    source : Adat
+        The original ADAT; only its RFU matrix values are used.
+    header : dict
+        The converted v2.0 header_metadata dict.
+    columns : pd.MultiIndex
+        The converted v2.0 column MultiIndex.
+    index : pd.MultiIndex
+        The converted v2.0 row MultiIndex.
+
+    Returns
+    -------
+    Adat
+        A new Adat with the converted structure.
+    """
+    from somadata.adat import Adat as AdatClass
+
+    result = AdatClass(
+        data=source.values,
+        index=index,
+        columns=columns,
+        header_metadata=header,
     )
+    if not validate_v2_header_fields(header):
+        from somadata.conversion.errors import ConversionError
+
+        raise ConversionError(
+            'Converted header metadata is not compliant with the v2.0 closed field set. '
+            'See logged warnings above for details.'
+        )
+    return result
 
 
 def _convert_native_ngs(adat: Adat, *, med_norm_ref: str | None) -> Adat:
     """Convert a single native NGS ADAT to NGS v2.0 format."""
-    raise NotImplementedError(
-        'Converting native_ngs to v2.0 is not yet implemented.'
-    )
+    raise NotImplementedError('Converting native_ngs to v2.0 is not yet implemented.')
 
 
 # ---------------------------------------------------------------------------
@@ -211,20 +261,19 @@ def _convert_native_ngs(adat: Adat, *, med_norm_ref: str | None) -> Adat:
 # ---------------------------------------------------------------------------
 
 _APPROVED_PAIR_CONVERSIONS: dict = {
-    frozenset({InputType.BRIDGED_ARRAY, InputType.NATIVE_NGS}):
-        _merge_bridged_array_and_ngs,
-    frozenset({InputType.BRIDGED_ARRAY, InputType.V2_COMBINED}):
-        _merge_bridged_array_and_v2,
-    frozenset({InputType.NATIVE_NGS, InputType.V2_COMBINED}):
-        _merge_ngs_and_v2,
-    (InputType.NATIVE_ARRAY, InputType.NATIVE_ARRAY):
-        _merge_native_arrays,
-    (InputType.V2_COMBINED, InputType.V2_COMBINED):
-        _merge_v2_combined_adats,
+    frozenset(
+        {InputType.BRIDGED_ARRAY, InputType.NATIVE_NGS}
+    ): _merge_bridged_array_and_ngs,
+    frozenset(
+        {InputType.BRIDGED_ARRAY, InputType.V2_COMBINED}
+    ): _merge_bridged_array_and_v2,
+    frozenset({InputType.NATIVE_NGS, InputType.V2_COMBINED}): _merge_ngs_and_v2,
+    (InputType.NATIVE_ARRAY, InputType.NATIVE_ARRAY): _merge_native_arrays,
+    (InputType.V2_COMBINED, InputType.V2_COMBINED): _merge_v2_combined_adats,
 }
 
 _APPROVED_SINGLE_CONVERSIONS: dict[InputType, object] = {
     InputType.BRIDGED_ARRAY: _convert_bridged_array,
-    InputType.NATIVE_ARRAY:  _convert_native_array,
-    InputType.NATIVE_NGS:    _convert_native_ngs,
+    InputType.NATIVE_ARRAY: _convert_native_array,
+    InputType.NATIVE_NGS: _convert_native_ngs,
 }

@@ -8,6 +8,7 @@ JSON-typed header values.  They are kept separate from the writer so that
 conversion code (somadata/conversion/) can import them without pulling in I/O
 dependencies.
 """
+
 from __future__ import annotations
 
 import json
@@ -234,4 +235,3 @@ def validate_v2_header_fields(header_metadata: dict) -> bool:
         )
 
     return not extra and not missing
-

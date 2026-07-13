@@ -31,7 +31,6 @@ from tests.conversion.conftest import (
     make_v2_combined_adat,
 )
 
-
 # ---------------------------------------------------------------------------
 # _load() helper
 # ---------------------------------------------------------------------------
@@ -232,12 +231,16 @@ class TestUnsupportedCombinations:
 
     def test_bridged_array_plus_bridged_array_rejected(self):
         """bridged_array + bridged_array is not an approved path."""
-        with pytest.raises(UnsupportedCombinationError, match='Unsupported input combination'):
+        with pytest.raises(
+            UnsupportedCombinationError, match='Unsupported input combination'
+        ):
             to_v2_adat([make_bridged_array_adat(), make_bridged_array_adat()])
 
     def test_native_ngs_plus_native_ngs_rejected(self):
         """native_ngs + native_ngs is not an approved path."""
-        with pytest.raises(UnsupportedCombinationError, match='Unsupported input combination'):
+        with pytest.raises(
+            UnsupportedCombinationError, match='Unsupported input combination'
+        ):
             to_v2_adat([make_ngs_adat(), make_ngs_adat()])
 
 
@@ -268,9 +271,9 @@ class TestApprovedPathsTable:
             _APPROVED_SINGLE_CONVERSIONS.values()
         )
         for handler in all_handlers:
-            assert not re.search(r'_path_\d+$', handler.__name__), (
-                f'Handler {handler.__name__!r} still uses a numeric path ID suffix'
-            )
+            assert not re.search(
+                r'_path_\d+$', handler.__name__
+            ), f'Handler {handler.__name__!r} still uses a numeric path ID suffix'
 
 
 # ---------------------------------------------------------------------------

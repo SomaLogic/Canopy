@@ -27,16 +27,16 @@ def jround(x: float, n_digits: int = 1) -> float:
     """
     dig = np.floor(n_digits + 0.5)
     sgn = 1
-    if(x < 0.):
-        sgn = -1.
+    if x < 0.0:
+        sgn = -1.0
         x = -x
 
-    if (dig == 0):
-        return(sgn * np.rint(x))
-    elif (dig > 0):
+    if dig == 0:
+        return sgn * np.rint(x)
+    elif dig > 0:
         pow10 = pow(10, dig)
         intx = np.floor(x)
-        return(sgn * (intx + np.rint((x - intx) * pow10) / pow10))
+        return sgn * (intx + np.rint((x - intx) * pow10) / pow10)
     else:
         pow10 = pow(10, dig)
-        return(sgn * np.rint(x / pow10) * pow10)
+        return sgn * np.rint(x / pow10) * pow10
