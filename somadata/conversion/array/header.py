@@ -121,7 +121,7 @@ def convert_array_header(
     # ------------------------------------------------------------------
     old_adat_id = ctx.source_adat_id or lookup_header(hdr, 'AdatId')
     if old_adat_id:
-        out['SourceFile'] = {'1': {'AdatId': old_adat_id}}
+        out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
 
     # ------------------------------------------------------------------
     # 4. SOMAmerReferenceSource  ← ProteinEffectiveDate
