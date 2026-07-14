@@ -32,6 +32,8 @@ def validate_source_ngs_adat(adat: object) -> None:
     
     # Required header fields for NGS conversion
     required_fields = {
+        'ProcessSteps': 'Comma-separated processing steps string',
+        'SOMAmerReferenceSource': 'SOMAmer reagent annotation reference identifier',
         'Version': 'DPQ software version',
         'RunId': 'Sequencing run identifier',
         'InstrumentType': 'Sequencing instrument type',
@@ -52,28 +54,17 @@ def validate_source_ngs_adat(adat: object) -> None:
             f'Missing required NGS header fields: {", ".join(missing)}'
         )
     
-    # Check for NGS platform marker: SOMAmerReads column should exist
+    # Check for NGS platform marker: SOMAmerReads should exist as a ROW_DATA field
+    # (or, rarely, as a COL_DATA level name / flat column label).
+    if hasattr(adat, 'index') and hasattr(adat.index, 'names'):
+        if 'SOMAmerReads' in adat.index.names:
+            return  # Valid NGS
+
     if hasattr(adat, 'columns'):
-        col_names = []
-        if hasattr(adat.columns, 'names'):
-            # MultiIndex columns
-            if 'SOMAmerReads' in adat.columns.names:
-                return  # Valid NGS
-            # Check level values
-            for level in range(adat.columns.nlevels):
-                col_names.extend(adat.columns.get_level_values(level))
-        else:
-            col_names = list(adat.columns)
-        
-        # Look for SOMAmerReads in any column level
-        if any('SOMAmerReads' in str(name) for name in col_names):
+        if 'SOMAmerReads' in getattr(adat.columns, 'names', []):
             return  # Valid NGS
-    
-    # Check row metadata for SOMAmerReads
-    if hasattr(adat, 'index'):
-        if hasattr(adat.index, 'names') and 'SOMAmerReads' in adat.index.names:
+        if 'SOMAmerReads' in list(adat.columns):
             return  # Valid NGS
-    
     raise ConversionError(
         'ADAT does not appear to be NGS format: missing SOMAmerReads column/field. '
         'NGS ADATs should have sequencing read count metadata.'

@@ -52,6 +52,17 @@ class TestValidateSourceNGSAdat:
             validate_source_ngs_adat(adat)
 
     def test_accepts_somamer_reads_in_columns(self, minimal_ngs_adat):
-        # Edge case: SOMAmerReads could theoretically be in columns
-        # (though unusual); validation should still pass
-        validate_source_ngs_adat(minimal_ngs_adat)
+        adat = minimal_ngs_adat
+        # Remove SOMAmerReads from row metadata and add it as a COL_DATA level name.
+        adat.index = adat.index.droplevel('SOMAmerReads')
+
+        import pandas as pd
+
+        col_names = list(adat.columns.names) + ['SOMAmerReads']
+        col_values = [
+            list(adat.columns.get_level_values(i)) for i in range(adat.columns.nlevels)
+        ]
+        col_values.append([''] * len(adat.columns))
+        adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
+
+        validate_source_ngs_adat(adat)  # Should not raise

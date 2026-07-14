@@ -48,6 +48,7 @@ def make_ngs_adat(
     header = {
         '!AssayVersion': assay_version,
         '!ProcessSteps': process_steps,
+        '!SOMAmerReferenceSource': '2025-04-10',
         '!Version': '4.0.1',  # DPQ version
         '!RunId': 'RUN12345',
         '!InstrumentType': 'NovaSeq6000',

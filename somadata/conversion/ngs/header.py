@@ -9,15 +9,16 @@ convert_ngs_header(adat, ctx, assay_type='NGS') -> dict
 from __future__ import annotations
 
 import datetime
-import json
 import logging
 import re
 from typing import TYPE_CHECKING
 
-from somadata.conversion._helpers import (consolidate_plate_fields,
-                                          generate_guid, lookup_header,
-                                          parse_process_steps,
-                                          strip_bang_prefix)
+from somadata.conversion._helpers import (
+    generate_guid,
+    lookup_header,
+    parse_process_steps,
+    strip_bang_prefix,
+)
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:

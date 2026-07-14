@@ -47,8 +47,6 @@ _FIELDS_TO_REMOVE: frozenset[str] = frozenset({
 # ---------------------------------------------------------------------------
 _QC_CHECK_RE = re.compile(r'^QCCheck_(.+?)_ScaleFactor$')
 _QC_CHECK_PASSFLAG_RE = re.compile(r'^QCCheck_(.+?)_PassFlag$')
-_REF_FIELD_RE = re.compile(r'^Ref\.(.+)$')
-
 
 def _rename_col_field(name: str) -> str | None:
     """Return the v2.0 name for a legacy NGS COL_DATA field.
