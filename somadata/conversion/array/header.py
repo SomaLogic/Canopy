@@ -119,13 +119,7 @@ def convert_array_header(
     if old_adat_id:
         out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
     else:
-        # Use md5sum of source file if available, otherwise compute from object
-        md5sum = ctx.source_file_md5sum
-        if md5sum is None:
-            from somadata.conversion._helpers import _compute_adat_md5sum
-
-            md5sum = _compute_adat_md5sum(adat)
-        out['SourceFile'] = {ctx.source_file_id: {'md5sum': md5sum}}
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': ctx.source_file_md5sum}}
 
     # ------------------------------------------------------------------
     # 4. SOMAmerReferenceSource  ← ProteinEffectiveDate
