@@ -12,6 +12,11 @@ from somadata.conversion.array.row_data import convert_array_row_data
 from somadata.conversion.array.validation import validate_source_array_adat
 from somadata.conversion.detection import InputType, detect_input_type
 from somadata.conversion.errors import UnsupportedCombinationError
+from somadata.conversion.ngs import NGSConversionContext
+from somadata.conversion.ngs.col_data import convert_ngs_col_data
+from somadata.conversion.ngs.header import convert_ngs_header
+from somadata.conversion.ngs.row_data import convert_ngs_row_data
+from somadata.conversion.ngs.validation import validate_source_ngs_adat
 from somadata.io.adat.v2_fields import validate_v2_header_fields
 
 if TYPE_CHECKING:
@@ -244,7 +249,31 @@ def _assemble_v2_adat(
 
 def _convert_native_ngs(adat: Adat, *, med_norm_ref: str | None) -> Adat:
     """Convert a single native NGS ADAT to NGS v2.0 format."""
-    raise NotImplementedError('Converting native_ngs to v2.0 is not yet implemented.')
+    return _run_ngs_conversion(adat)
+
+
+def _run_ngs_conversion(adat: Adat, *, assay_type: str = 'NGS') -> Adat:
+    """Shared NGS conversion pipeline used by single-NGS and merge paths.
+
+    Parameters
+    ----------
+    adat : Adat
+        The source NGS ADAT to convert.
+    assay_type : str, optional
+        ``'NGS'`` for single-NGS conversions (default); callers that are
+        merging two sources pass ``'Mixed'``.
+
+    Returns
+    -------
+    Adat
+        A new Adat in v2.0 format with ``AssayType = assay_type``.
+    """
+    validate_source_ngs_adat(adat)
+    ctx = NGSConversionContext.from_adat(adat)
+    new_header = convert_ngs_header(adat, ctx, assay_type=assay_type)
+    new_columns = convert_ngs_col_data(adat)
+    new_index = convert_ngs_row_data(adat, ctx)
+    return _assemble_v2_adat(adat, new_header, new_columns, new_index)
 
 
 # ---------------------------------------------------------------------------
