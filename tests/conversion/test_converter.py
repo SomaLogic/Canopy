@@ -39,7 +39,9 @@ from tests.conversion.conftest import (
 class TestLoad:
     def test_returns_adat_unchanged(self):
         adat = make_native_array_adat()
-        assert _load(adat) is adat
+        loaded_adat, md5sum = _load(adat)
+        assert loaded_adat is adat
+        assert md5sum is None
 
     def test_raises_type_error_on_bad_type(self):
         with pytest.raises(TypeError, match='file path.*or an Adat object'):
@@ -110,7 +112,7 @@ class TestSingleInputRouting:
             {InputType.BRIDGED_ARRAY: mock},
         ):
             to_v2_adat([adat])
-        mock.assert_called_once_with(adat, med_norm_ref=None)
+        mock.assert_called_once_with(adat, md5sum=None, med_norm_ref=None)
 
     def test_native_array_routes_to_convert_native_array(self):
         adat = make_native_array_adat()
@@ -120,7 +122,7 @@ class TestSingleInputRouting:
             {InputType.NATIVE_ARRAY: mock},
         ):
             to_v2_adat([adat])
-        mock.assert_called_once_with(adat, med_norm_ref=None)
+        mock.assert_called_once_with(adat, md5sum=None, med_norm_ref=None)
 
     def test_native_ngs_routes_to_convert_native_ngs(self):
         adat = make_ngs_adat()
@@ -130,7 +132,7 @@ class TestSingleInputRouting:
             {InputType.NATIVE_NGS: mock},
         ):
             to_v2_adat([adat])
-        mock.assert_called_once_with(adat, med_norm_ref=None)
+        mock.assert_called_once_with(adat, md5sum=None, med_norm_ref=None)
 
 
 # ---------------------------------------------------------------------------

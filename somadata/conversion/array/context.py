@@ -28,6 +28,9 @@ class ArrayConversionContext:
     created_date : str
         The legacy ``CreatedDate`` header value; used as a fallback for
         blank ``PlateRunDate`` values in ROW_DATA.
+    source_file_md5sum : str or None
+        MD5 checksum of the source ADAT file, if available. Used as a
+        fallback identifier when the source ADAT lacks an AdatId.
     """
 
     source_adat_id: str = ''
@@ -36,15 +39,20 @@ class ArrayConversionContext:
     report_config_id: str = '1'
     source_file_id: str = '1'
     created_date: str = ''
+    source_file_md5sum: str | None = None
 
     @classmethod
-    def from_adat(cls, adat: object) -> ArrayConversionContext:
+    def from_adat(
+        cls, adat: object, source_file_md5sum: str | None = None
+    ) -> ArrayConversionContext:
         """Build a context by extracting values from *adat.header_metadata*.
 
         Parameters
         ----------
         adat : Adat
             The source array ADAT.
+        source_file_md5sum : str or None, optional
+            MD5 checksum of the source ADAT file, if available.
 
         Returns
         -------
@@ -55,4 +63,5 @@ class ArrayConversionContext:
             source_adat_id=lookup_header(hdr, 'AdatId'),
             generated_by=lookup_header(hdr, 'GeneratedBy'),
             created_date=lookup_header(hdr, 'CreatedDate'),
+            source_file_md5sum=source_file_md5sum,
         )

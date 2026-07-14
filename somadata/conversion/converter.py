@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from somadata.conversion._helpers import (_compute_adat_md5sum,
+                                          _compute_file_md5sum)
 from somadata.conversion.array import ArrayConversionContext
 from somadata.conversion.array.col_data import convert_array_col_data
 from somadata.conversion.array.header import convert_array_header
@@ -12,6 +14,11 @@ from somadata.conversion.array.row_data import convert_array_row_data
 from somadata.conversion.array.validation import validate_source_array_adat
 from somadata.conversion.detection import InputType, detect_input_type
 from somadata.conversion.errors import UnsupportedCombinationError
+from somadata.conversion.ngs import NGSConversionContext
+from somadata.conversion.ngs.col_data import convert_ngs_col_data
+from somadata.conversion.ngs.header import convert_ngs_header
+from somadata.conversion.ngs.row_data import convert_ngs_row_data
+from somadata.conversion.ngs.validation import validate_source_ngs_adat
 from somadata.io.adat.v2_fields import validate_v2_header_fields
 
 if TYPE_CHECKING:
@@ -70,22 +77,25 @@ def to_v2_adat(
     loaded = [_load(adat) for adat in adats]
 
     if len(loaded) == 1:
-        input_type = detect_input_type(loaded[0])
+        adat, md5sum = loaded[0]
+        input_type = detect_input_type(adat)
 
         if input_type is InputType.V2_COMBINED:
             logger.warning('Input already v2.0. Returning as-is.')
-            return loaded[0]
+            return adat
 
         handler = _APPROVED_SINGLE_CONVERSIONS.get(input_type)
         if handler is None:
             raise UnsupportedCombinationError(
                 f'Unsupported input combination: {input_type.value}.'
             )
-        return handler(loaded[0], med_norm_ref=med_norm_ref)
+        return handler(adat, md5sum=md5sum, med_norm_ref=med_norm_ref)
 
     # Two inputs
-    type_a = detect_input_type(loaded[0])
-    type_b = detect_input_type(loaded[1])
+    adat_a, md5_a = loaded[0]
+    adat_b, md5_b = loaded[1]
+    type_a = detect_input_type(adat_a)
+    type_b = detect_input_type(adat_b)
 
     # native_array cannot be combined with any NGS-space input; the array
     # must be bridged first.
@@ -105,7 +115,7 @@ def to_v2_adat(
         raise UnsupportedCombinationError(
             f'Unsupported input combination: {type_a.value} + {type_b.value}.'
         )
-    return handler(loaded[0], loaded[1], med_norm_ref=med_norm_ref)
+    return handler(adat_a, adat_b, med_norm_ref=med_norm_ref)
 
 
 # ---------------------------------------------------------------------------
@@ -113,15 +123,25 @@ def to_v2_adat(
 # ---------------------------------------------------------------------------
 
 
-def _load(adat: str | Adat) -> Adat:
-    """Return an Adat, reading from disk if a path string was supplied."""
+def _load(adat: str | Adat) -> tuple[Adat, str | None]:
+    """Return an Adat and optional md5sum, reading from disk if a path string was supplied.
+
+    Returns
+    -------
+    tuple[Adat, str | None]
+        The loaded Adat and the md5sum of the source file (if loaded from file).
+        Returns None for the md5sum when an in-memory Adat object is passed.
+    """
     from somadata.adat import Adat as AdatClass
     from somadata.io.adat.file import read_adat
 
     if isinstance(adat, str):
-        return read_adat(adat)
+        # Compute md5sum of file before reading
+        md5sum = _compute_file_md5sum(adat)
+        loaded_adat = read_adat(adat)
+        return loaded_adat, md5sum
     if isinstance(adat, AdatClass):
-        return adat
+        return adat, None
     raise TypeError(
         f'Each element of adats must be a file path (str) or an Adat object; '
         f'got {type(adat).__name__!r}.'
@@ -180,20 +200,43 @@ def _merge_v2_combined_adats(
     )
 
 
-def _convert_bridged_array(adat: Adat, *, med_norm_ref: str | None) -> Adat:
+def _convert_bridged_array(
+    adat: Adat, *, md5sum: str | None, med_norm_ref: str | None
+) -> Adat:
     """Convert a single bridged array ADAT to Array v2.0 format."""
-    return _run_array_conversion(adat)
+    return _run_array_conversion(adat, md5sum=md5sum)
 
 
-def _convert_native_array(adat: Adat, *, med_norm_ref: str | None) -> Adat:
+def _convert_native_array(
+    adat: Adat, *, md5sum: str | None, med_norm_ref: str | None
+) -> Adat:
     """Convert a single native array ADAT to Array v2.0 format."""
-    return _run_array_conversion(adat)
+    return _run_array_conversion(adat, md5sum=md5sum)
 
 
-def _run_array_conversion(adat: Adat, *, assay_type: str = 'Array') -> Adat:
-    """Shared array conversion pipeline used by both native and bridged paths."""
+def _run_array_conversion(
+    adat: Adat, *, md5sum: str | None = None, assay_type: str = 'Array'
+) -> Adat:
+    """Shared array conversion pipeline used by both native and bridged paths.
+
+    Parameters
+    ----------
+    adat : Adat
+        The source array ADAT to convert.
+    md5sum : str or None, optional
+        MD5 checksum of the source ADAT file, if available. Used as a
+        fallback identifier when the source ADAT lacks an AdatId.
+    assay_type : str, optional
+        ``'Array'`` for single-array conversions (default); callers that are
+        merging two sources pass ``'Mixed'``.
+
+    Returns
+    -------
+    Adat
+        A new Adat in v2.0 format with ``AssayType = assay_type``.
+    """
     validate_source_array_adat(adat)
-    ctx = ArrayConversionContext.from_adat(adat)
+    ctx = ArrayConversionContext.from_adat(adat, source_file_md5sum=md5sum)
     new_header = convert_array_header(adat, ctx, assay_type=assay_type)
     new_columns = convert_array_col_data(adat)
     new_index = convert_array_row_data(adat, ctx)
@@ -242,9 +285,40 @@ def _assemble_v2_adat(
     return result
 
 
-def _convert_native_ngs(adat: Adat, *, med_norm_ref: str | None) -> Adat:
+def _convert_native_ngs(
+    adat: Adat, *, md5sum: str | None, med_norm_ref: str | None
+) -> Adat:
     """Convert a single native NGS ADAT to NGS v2.0 format."""
-    raise NotImplementedError('Converting native_ngs to v2.0 is not yet implemented.')
+    return _run_ngs_conversion(adat, md5sum=md5sum)
+
+
+def _run_ngs_conversion(
+    adat: Adat, *, md5sum: str | None = None, assay_type: str = 'NGS'
+) -> Adat:
+    """Shared NGS conversion pipeline used by single-NGS and merge paths.
+
+    Parameters
+    ----------
+    adat : Adat
+        The source NGS ADAT to convert.
+    md5sum : str or None, optional
+        MD5 checksum of the source ADAT file, if available. Used as a
+        fallback identifier when the source ADAT lacks an AdatId.
+    assay_type : str, optional
+        ``'NGS'`` for single-NGS conversions (default); callers that are
+        merging two sources pass ``'Mixed'``.
+
+    Returns
+    -------
+    Adat
+        A new Adat in v2.0 format with ``AssayType = assay_type``.
+    """
+    validate_source_ngs_adat(adat)
+    ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=md5sum)
+    new_header = convert_ngs_header(adat, ctx, assay_type=assay_type)
+    new_columns = convert_ngs_col_data(adat)
+    new_index = convert_ngs_row_data(adat, ctx)
+    return _assemble_v2_adat(adat, new_header, new_columns, new_index)
 
 
 # ---------------------------------------------------------------------------
