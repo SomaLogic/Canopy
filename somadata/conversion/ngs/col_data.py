@@ -35,18 +35,21 @@ _COL_RENAMES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Fields to drop entirely from the output MultiIndex
 # ---------------------------------------------------------------------------
-_FIELDS_TO_REMOVE: frozenset[str] = frozenset({
-    'SomaId',
-    'Units',
-    'LoD.Plasma',
-    'LoD.Serum',
-})
+_FIELDS_TO_REMOVE: frozenset[str] = frozenset(
+    {
+        'SomaId',
+        'Units',
+        'LoD.Plasma',
+        'LoD.Serum',
+    }
+)
 
 # ---------------------------------------------------------------------------
 # Dynamic rename patterns
 # ---------------------------------------------------------------------------
 _QC_CHECK_RE = re.compile(r'^QCCheck_(.+?)_ScaleFactor$')
 _QC_CHECK_PASSFLAG_RE = re.compile(r'^QCCheck_(.+?)_PassFlag$')
+
 
 def _rename_col_field(name: str) -> str | None:
     """Return the v2.0 name for a legacy NGS COL_DATA field.
@@ -121,16 +124,16 @@ def _ensure_ngs_ref_prefix(name: str) -> str:
     # If already has Ref.NGS prefix, pass through
     if name.startswith('Ref.NGS.'):
         return name
-    
+
     # If Ref.MedNorm.*, pass through (shared between Array and NGS)
     if name.startswith('Ref.MedNorm.'):
         return name
-    
+
     # Otherwise, insert NGS after Ref.
     # e.g., Ref.Bridging.* → Ref.NGS.Bridging.*
     if name.startswith('Ref.'):
         return name.replace('Ref.', 'Ref.NGS.', 1)
-    
+
     return name
 
 

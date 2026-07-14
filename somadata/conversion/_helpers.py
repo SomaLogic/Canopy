@@ -16,6 +16,101 @@ def generate_guid() -> str:
     return f'GID-{uuid.uuid4()}'
 
 
+def _compute_file_md5sum(file_path: str) -> str:
+    """Compute MD5 checksum of a file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file.
+
+    Returns
+    -------
+    str
+        Hexadecimal MD5 digest (32 characters).
+    """
+    import hashlib
+
+    md5 = hashlib.md5()
+    with open(file_path, 'rb') as f:
+        # Read in chunks for memory efficiency
+        for chunk in iter(lambda: f.read(8192), b''):
+            md5.update(chunk)
+    return md5.hexdigest()
+
+
+def _compute_adat_md5sum(adat: object) -> str:
+    """Compute MD5 checksum of an Adat's structure and data.
+
+    Computes a deterministic hash of the Adat's header metadata, column
+    structure, row structure, and RFU values. Used as a fallback identifier
+    when the source ADAT lacks an AdatId and was not loaded from a file.
+
+    Parameters
+    ----------
+    adat : Adat
+        The source ADAT object.
+
+    Returns
+    -------
+    str
+        Hexadecimal MD5 digest string (32 characters).
+
+    Examples
+    --------
+    >>> md5 = _compute_adat_md5sum(adat)
+    >>> len(md5)
+    32
+    """
+    import hashlib
+
+    md5 = hashlib.md5()
+
+    # Hash header metadata (sorted for determinism)
+    hdr = getattr(adat, 'header_metadata', {})
+    for key in sorted(hdr.keys()):
+        val = str(hdr[key])
+        md5.update(key.encode('utf-8'))
+        md5.update(val.encode('utf-8'))
+
+    # Hash column structure
+    if hasattr(adat, 'columns'):
+        for name in adat.columns.names:
+            md5.update(str(name).encode('utf-8'))
+        # Sample a few column values for efficiency
+        for i in range(min(10, adat.columns.nlevels)):
+            vals = adat.columns.get_level_values(i)
+            for val in list(vals)[:10]:  # First 10 values per level
+                md5.update(str(val).encode('utf-8'))
+
+    # Hash row structure
+    if hasattr(adat, 'index'):
+        for name in adat.index.names:
+            md5.update(str(name).encode('utf-8'))
+        # Sample a few row values for efficiency
+        for i in range(min(10, adat.index.nlevels)):
+            vals = adat.index.get_level_values(i)
+            for val in list(vals)[:10]:  # First 10 values per level
+                md5.update(str(val).encode('utf-8'))
+
+    # Hash RFU matrix (sample for efficiency on large ADATs)
+    if hasattr(adat, 'values'):
+        values = adat.values
+        # Sample corners and center for large matrices
+        if values.size > 10000:
+            # Top-left corner (5x5)
+            md5.update(values[:5, :5].tobytes())
+            # Bottom-right corner (5x5)
+            md5.update(values[-5:, -5:].tobytes())
+            # Center (5x5)
+            mid_r, mid_c = values.shape[0] // 2, values.shape[1] // 2
+            md5.update(values[mid_r : mid_r + 5, mid_c : mid_c + 5].tobytes())
+        else:
+            md5.update(values.tobytes())
+
+    return md5.hexdigest()
+
+
 def strip_bang_prefix(key: str) -> str:
     """Strip a leading ``!`` from a header key.
 

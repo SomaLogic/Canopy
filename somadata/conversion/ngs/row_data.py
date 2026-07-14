@@ -47,18 +47,20 @@ _ROW_RENAMES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Fields to remove from the output MultiIndex
 # ---------------------------------------------------------------------------
-_FIELDS_TO_REMOVE: frozenset[str] = frozenset({
-    'ExtIdentifier',
-    'SsfExtId',
-    'SampleName',
-    'SampleDescription',
-    'TimePoint',
-    'SampleGroup',
-    'SiteId',
-    'SampleNotes',
-    'AliquotingNotes',
-    'AssayNotes',
-})
+_FIELDS_TO_REMOVE: frozenset[str] = frozenset(
+    {
+        'ExtIdentifier',
+        'SsfExtId',
+        'SampleName',
+        'SampleDescription',
+        'TimePoint',
+        'SampleGroup',
+        'SiteId',
+        'SampleNotes',
+        'AliquotingNotes',
+        'AssayNotes',
+    }
+)
 
 # ---------------------------------------------------------------------------
 # Array-only fields that must be present (blank) in NGS-only output
@@ -232,28 +234,34 @@ def convert_ngs_row_data(
     # MedNormIntStatus: derive from MedNormInt_*_ScaleFactor if not present
     if 'MedNormIntStatus' not in out_levels:
         med_norm_int_fields = [
-            name for name in out_levels if name.startswith('MedNormInt_') 
-            and name.endswith('_ScaleFactor')
+            name
+            for name in out_levels
+            if name.startswith('MedNormInt_') and name.endswith('_ScaleFactor')
         ]
         if med_norm_int_fields:
             out_levels['MedNormIntStatus'] = []
             for i in range(n_rows):
                 scale_factors = [out_levels[field][i] for field in med_norm_int_fields]
-                out_levels['MedNormIntStatus'].append(_derive_med_norm_status(scale_factors))
+                out_levels['MedNormIntStatus'].append(
+                    _derive_med_norm_status(scale_factors)
+                )
         else:
             out_levels['MedNormIntStatus'] = [''] * n_rows
 
     # MedNormExtStatus: derive from MedNormExt_*_ScaleFactor if not present
     if 'MedNormExtStatus' not in out_levels:
         med_norm_ext_fields = [
-            name for name in out_levels if name.startswith('MedNormExt_') 
-            and name.endswith('_ScaleFactor')
+            name
+            for name in out_levels
+            if name.startswith('MedNormExt_') and name.endswith('_ScaleFactor')
         ]
         if med_norm_ext_fields:
             out_levels['MedNormExtStatus'] = []
             for i in range(n_rows):
                 scale_factors = [out_levels[field][i] for field in med_norm_ext_fields]
-                out_levels['MedNormExtStatus'].append(_derive_med_norm_status(scale_factors))
+                out_levels['MedNormExtStatus'].append(
+                    _derive_med_norm_status(scale_factors)
+                )
         else:
             out_levels['MedNormExtStatus'] = [''] * n_rows
 

@@ -44,6 +44,9 @@ class NGSConversionContext:
         single-input conversions).
     source_file_id : str
         The JSON key assigned to the SourceFile JSON entry.
+    source_file_md5sum : str or None
+        MD5 checksum of the source ADAT file, if available. Used as a
+        fallback identifier when the source ADAT lacks an AdatId.
     """
 
     source_adat_id: str | None = None
@@ -58,15 +61,20 @@ class NGSConversionContext:
     process_steps: str = ''
     process_steps_id: str = '1'
     source_file_id: str = '1'
+    source_file_md5sum: str | None = None
 
     @classmethod
-    def from_adat(cls, adat: object) -> NGSConversionContext:
+    def from_adat(
+        cls, adat: object, source_file_md5sum: str | None = None
+    ) -> NGSConversionContext:
         """Build a context by extracting values from *adat.header_metadata*.
 
         Parameters
         ----------
         adat : Adat
             The source NGS ADAT.
+        source_file_md5sum : str or None, optional
+            MD5 checksum of the source ADAT file, if available.
 
         Returns
         -------
@@ -81,7 +89,7 @@ class NGSConversionContext:
         'RUN12345'
         """
         hdr = getattr(adat, 'header_metadata', {})
-        
+
         # Extract PlateIds from row metadata
         plate_ids = []
         if hasattr(adat, 'index'):
@@ -94,22 +102,22 @@ class NGSConversionContext:
                     plate_ids = sorted(set(adat.PlateId))
                 except (AttributeError, KeyError):
                     pass
-        
+
         # Parse integer/float fields with safe conversion
         def safe_int(val: str) -> int:
             try:
                 return int(val) if val else 0
             except (ValueError, TypeError):
                 return 0
-        
+
         def safe_float(val: str) -> float:
             try:
                 return float(val) if val else 0.0
             except (ValueError, TypeError):
                 return 0.0
-        
+
         adat_id = lookup_header(hdr, 'AdatId')
-        
+
         return cls(
             source_adat_id=adat_id if adat_id else None,
             dpq_version=lookup_header(hdr, 'Version'),
@@ -121,4 +129,5 @@ class NGSConversionContext:
             q30_weighted_mean=safe_float(lookup_header(hdr, 'Q30WeightedMean')),
             plate_ids=plate_ids,
             process_steps=lookup_header(hdr, 'ProcessSteps'),
+            source_file_md5sum=source_file_md5sum,
         )

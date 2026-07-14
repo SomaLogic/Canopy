@@ -78,12 +78,12 @@ def make_ngs_adat(
         ['Sample'] * n_samples,
         [plate_ids[i % n_plates] for i in range(n_samples)],
         [f'A{i+1:02d}' for i in range(n_samples)],
-        ['14250000', '13800000'][:n_samples],
-        ['13900000', '13500000'][:n_samples],
+        [str(14250000 - i * 100000) for i in range(n_samples)],
+        [str(13900000 - i * 100000) for i in range(n_samples)],
         ['Plasma'] * n_samples,
         ['Lot2B'] * n_samples,
-        ['1.024', '0.989'][:n_samples],
-        ['1.012', '0.995'][:n_samples],
+        [str(1.024 - i * 0.01) for i in range(n_samples)],
+        [str(1.012 - i * 0.01) for i in range(n_samples)],
     ]
     
     # Column metadata (NGS SOMAmer annotations)

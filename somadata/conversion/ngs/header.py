@@ -9,16 +9,14 @@ convert_ngs_header(adat, ctx, assay_type='NGS') -> dict
 from __future__ import annotations
 
 import datetime
+import json
 import logging
 import re
 from typing import TYPE_CHECKING
 
-from somadata.conversion._helpers import (
-    generate_guid,
-    lookup_header,
-    parse_process_steps,
-    strip_bang_prefix,
-)
+from somadata.conversion._helpers import (_compute_adat_md5sum, generate_guid,
+                                          lookup_header, parse_process_steps,
+                                          strip_bang_prefix)
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:
@@ -105,20 +103,20 @@ def convert_ngs_header(
             out[field] = val
 
     # ------------------------------------------------------------------
-    # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}}
-    #    If no AdatId, use md5sum or leave blank.
+    # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}
+    #    Priority: AdatId > file md5sum > object md5sum
     # ------------------------------------------------------------------
     old_adat_id = ctx.source_adat_id or lookup_header(hdr, 'AdatId')
     if old_adat_id:
         out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
+    else:
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': ctx.source_file_md5sum}}
 
     # ------------------------------------------------------------------
     # 4. ProcessSteps  →  {"1": ["step1", "step2", ...]}
     #    Required (True); convert from comma-separated to JSON.
     # ------------------------------------------------------------------
-    out['ProcessSteps'] = {
-        ctx.process_steps_id: parse_process_steps(ctx.process_steps)
-    }
+    out['ProcessSteps'] = {ctx.process_steps_id: parse_process_steps(ctx.process_steps)}
 
     # ------------------------------------------------------------------
     # 5. ReportConfig  →  blank for NGS (uses separate YAML file)

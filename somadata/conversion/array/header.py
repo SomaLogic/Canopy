@@ -112,12 +112,20 @@ def convert_array_header(
             out[field] = val
 
     # ------------------------------------------------------------------
-    # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}}
-    #    Optional in spec (False); source may legitimately have no AdatId.
+    # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}
+    #    Priority: AdatId > file md5sum > object md5sum
     # ------------------------------------------------------------------
     old_adat_id = ctx.source_adat_id or lookup_header(hdr, 'AdatId')
     if old_adat_id:
         out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
+    else:
+        # Use md5sum of source file if available, otherwise compute from object
+        md5sum = ctx.source_file_md5sum
+        if md5sum is None:
+            from somadata.conversion._helpers import _compute_adat_md5sum
+
+            md5sum = _compute_adat_md5sum(adat)
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': md5sum}}
 
     # ------------------------------------------------------------------
     # 4. SOMAmerReferenceSource  ← ProteinEffectiveDate

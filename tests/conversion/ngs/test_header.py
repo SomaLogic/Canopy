@@ -52,12 +52,40 @@ class TestConvertNGSHeader:
         assert '1' in result['SourceFile']
         assert result['SourceFile']['1']['AdatId'] == 'GID-old-ngs-id'
 
-    def test_source_file_blank_when_no_adat_id(self, minimal_ngs_adat):
+    def test_source_file_uses_md5sum_when_no_adat_id_and_md5_provided(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         del adat.header_metadata['!AdatId']
-        ctx = NGSConversionContext.from_adat(adat)
+        # Simulate loading from file with md5sum
+        ctx = NGSConversionContext.from_adat(adat, source_file_md5sum='d5d5c48070766aeb078b50b111897e25')
         result = convert_ngs_header(adat, ctx)
-        assert result['SourceFile'] == ''
+        assert result['SourceFile'] != ''
+        assert isinstance(result['SourceFile'], dict)
+        assert '1' in result['SourceFile']
+        assert 'md5sum' in result['SourceFile']['1']
+        assert result['SourceFile']['1']['md5sum'] == 'd5d5c48070766aeb078b50b111897e25'
+
+    def test_object_md5sum_deterministic(self, minimal_ngs_adat):
+        adat = minimal_ngs_adat
+        del adat.header_metadata['!AdatId']
+        # No file md5sum - will use object md5sum
+        ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=None)
+        
+        # Compute md5sum twice - should be identical
+        result1 = convert_ngs_header(adat, ctx)
+        result2 = convert_ngs_header(adat, ctx)
+        
+        assert result1['SourceFile']['1']['md5sum'] == result2['SourceFile']['1']['md5sum']
+
+    def test_file_md5sum_preferred_over_object_md5sum(self, minimal_ngs_adat):
+        adat = minimal_ngs_adat
+        del adat.header_metadata['!AdatId']
+        # File md5sum provided
+        file_md5 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1'
+        ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=file_md5)
+        result = convert_ngs_header(adat, ctx)
+        
+        # Should use file md5sum, not compute from object
+        assert result['SourceFile']['1']['md5sum'] == file_md5
 
     def test_converts_process_steps_to_json(self, minimal_ngs_adat):
         ctx = NGSConversionContext.from_adat(minimal_ngs_adat)

@@ -29,7 +29,7 @@ def validate_source_ngs_adat(adat: object) -> None:
     ConversionError: ADAT does not appear to be NGS format...
     """
     hdr = getattr(adat, 'header_metadata', {})
-    
+
     # Required header fields for NGS conversion
     required_fields = {
         'ProcessSteps': 'Comma-separated processing steps string',
@@ -42,18 +42,18 @@ def validate_source_ngs_adat(adat: object) -> None:
         'YieldQ30Demux': 'Q30 demultiplexed yield',
         'Q30WeightedMean': 'Weighted mean Q30 score',
     }
-    
+
     missing = []
     for field, description in required_fields.items():
         value = lookup_header(hdr, field)
         if not value:
             missing.append(f'{field} ({description})')
-    
+
     if missing:
         raise ConversionError(
             f'Missing required NGS header fields: {", ".join(missing)}'
         )
-    
+
     # Check for NGS platform marker: SOMAmerReads should exist as a ROW_DATA field
     # (or, rarely, as a COL_DATA level name / flat column label).
     if hasattr(adat, 'index') and hasattr(adat.index, 'names'):
