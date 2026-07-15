@@ -147,7 +147,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([ba, ngs])
-        mock.assert_called_once_with(ba, ngs, med_norm_ref=None)
+        mock.assert_called_once_with(ba, ngs, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_native_ngs_plus_bridged_array_routes_to_merge_order_independent(self):
         """Input order must not affect conversion selection."""
@@ -156,7 +156,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([ngs, ba])
-        mock.assert_called_once_with(ngs, ba, med_norm_ref=None)
+        mock.assert_called_once_with(ngs, ba, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_bridged_array_plus_v2_combined_routes_to_merge(self):
         ba, v2 = make_bridged_array_adat(), make_v2_combined_adat()
@@ -164,7 +164,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([ba, v2])
-        mock.assert_called_once_with(ba, v2, med_norm_ref=None)
+        mock.assert_called_once_with(ba, v2, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_v2_combined_plus_bridged_array_routes_to_merge_order_independent(self):
         v2, ba = make_v2_combined_adat(), make_bridged_array_adat()
@@ -172,7 +172,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([v2, ba])
-        mock.assert_called_once_with(v2, ba, med_norm_ref=None)
+        mock.assert_called_once_with(v2, ba, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_native_ngs_plus_v2_combined_routes_to_merge(self):
         ngs, v2 = make_ngs_adat(), make_v2_combined_adat()
@@ -180,7 +180,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([ngs, v2])
-        mock.assert_called_once_with(ngs, v2, med_norm_ref=None)
+        mock.assert_called_once_with(ngs, v2, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_v2_combined_plus_native_ngs_routes_to_merge_order_independent(self):
         v2, ngs = make_v2_combined_adat(), make_ngs_adat()
@@ -188,7 +188,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([v2, ngs])
-        mock.assert_called_once_with(v2, ngs, med_norm_ref=None)
+        mock.assert_called_once_with(v2, ngs, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_native_array_plus_native_array_routes_to_merge(self):
         na1, na2 = make_native_array_adat(), make_native_array_adat()
@@ -196,7 +196,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([na1, na2])
-        mock.assert_called_once_with(na1, na2, med_norm_ref=None)
+        mock.assert_called_once_with(na1, na2, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
     def test_v2_combined_plus_v2_combined_routes_to_merge(self):
         # Two v2_combined inputs — no single-input short-circuit; should merge.
@@ -205,7 +205,7 @@ class TestTwoInputRouting:
         mock = MagicMock(return_value=MagicMock())
         with patch.dict(converter_module._APPROVED_PAIR_CONVERSIONS, {key: mock}):
             to_v2_adat([v2a, v2b])
-        mock.assert_called_once_with(v2a, v2b, med_norm_ref=None)
+        mock.assert_called_once_with(v2a, v2b, md5sum_a=None, md5sum_b=None, med_norm_ref=None)
 
 
 # ---------------------------------------------------------------------------

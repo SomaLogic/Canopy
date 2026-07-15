@@ -14,12 +14,17 @@ import logging
 import re
 from typing import TYPE_CHECKING
 
-from somadata.conversion._helpers import (_compute_adat_md5sum, generate_guid,
-                                          lookup_header, parse_process_steps,
-                                          strip_bang_prefix)
+from somadata.conversion._helpers import (
+    _compute_adat_md5sum,
+    generate_guid,
+    lookup_header,
+    parse_process_steps,
+    strip_bang_prefix,
+)
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:
+    from somadata.adat import Adat
     from somadata.conversion.ngs import NGSConversionContext
 
 logger = logging.getLogger(__name__)
@@ -47,7 +52,7 @@ _NGS_ASSAY_VERSION_MAP = {
 
 
 def convert_ngs_header(
-    adat: object,
+    adat: Adat,
     ctx: NGSConversionContext,
     *,
     assay_type: str = 'NGS',

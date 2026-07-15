@@ -11,12 +11,14 @@ from typing import Dict, List, Tuple, Union
 
 from somadata import Adat
 from somadata.io.adat.errors import AdatReadError, AdatWriteError
-from somadata.io.adat.v2_fields import \
-    serialize_header_value_v2 as _serialize_header_value_v2
+from somadata.io.adat.v2_fields import (
+    serialize_header_value_v2 as _serialize_header_value_v2,
+)
 from somadata.io.adat.v2_fields import v2_col_field_type as _v2_col_field_type
 from somadata.io.adat.v2_fields import v2_row_field_type as _v2_row_field_type
-from somadata.io.adat.v2_fields import \
-    validate_v2_header_fields as _validate_v2_header_fields
+from somadata.io.adat.v2_fields import (
+    validate_v2_header_fields as _validate_v2_header_fields,
+)
 from somadata.tools.math import jround
 
 

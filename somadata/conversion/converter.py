@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from somadata.conversion._helpers import (_compute_adat_md5sum,
-                                          _compute_file_md5sum)
+from somadata.conversion._helpers import _compute_adat_md5sum, _compute_file_md5sum
 from somadata.conversion.array import ArrayConversionContext
 from somadata.conversion.array.col_data import convert_array_col_data
 from somadata.conversion.array.header import convert_array_header
@@ -14,6 +13,11 @@ from somadata.conversion.array.row_data import convert_array_row_data
 from somadata.conversion.array.validation import validate_source_array_adat
 from somadata.conversion.detection import InputType, detect_input_type
 from somadata.conversion.errors import UnsupportedCombinationError
+from somadata.conversion.merge import (
+    compute_seqid_union,
+    merge_mixed_headers,
+    validate_mednorm_compatibility,
+)
 from somadata.conversion.ngs import NGSConversionContext
 from somadata.conversion.ngs.col_data import convert_ngs_col_data
 from somadata.conversion.ngs.header import convert_ngs_header
@@ -115,7 +119,9 @@ def to_v2_adat(
         raise UnsupportedCombinationError(
             f'Unsupported input combination: {type_a.value} + {type_b.value}.'
         )
-    return handler(adat_a, adat_b, med_norm_ref=med_norm_ref)
+    return handler(
+        adat_a, adat_b, md5sum_a=md5_a, md5sum_b=md5_b, med_norm_ref=med_norm_ref
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -158,16 +164,102 @@ def _load(adat: str | Adat) -> tuple[Adat, str | None]:
 
 
 def _merge_bridged_array_and_ngs(
-    adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None
+    adat_a: Adat,
+    adat_b: Adat,
+    *,
+    md5sum_a: str | None,
+    md5sum_b: str | None,
+    med_norm_ref: str | None,
 ) -> Adat:
     """Merge a bridged array ADAT and a native NGS ADAT into a Mixed v2.0 output."""
-    raise NotImplementedError(
-        'Merging bridged_array + native_ngs is not yet implemented.'
+    from somadata.adat import Adat as AdatClass
+
+    # 1. Identify which input is array and which is NGS (order-independent)
+    type_a = detect_input_type(adat_a)
+    if type_a is InputType.BRIDGED_ARRAY:
+        raw_array, raw_ngs = adat_a, adat_b
+        md5_array, md5_ngs = md5sum_a, md5sum_b
+    else:
+        raw_array, raw_ngs = adat_b, adat_a
+        md5_array, md5_ngs = md5sum_b, md5sum_a
+
+    # 2. Validate MedNorm compatibility on raw (pre-conversion) inputs
+    validate_mednorm_compatibility(raw_array, raw_ngs, med_norm_ref=med_norm_ref)
+
+    # 3. Build conversion contexts; assign source IDs for Mixed output
+    array_ctx = ArrayConversionContext.from_adat(
+        raw_array, source_file_md5sum=md5_array
     )
+    array_ctx.source_file_id = '1'
+    array_ctx.process_steps_id = '1'
+    array_ctx.report_config_id = '1'
+
+    ngs_ctx = NGSConversionContext.from_adat(raw_ngs, source_file_md5sum=md5_ngs)
+    ngs_ctx.source_file_id = '2'
+    ngs_ctx.process_steps_id = '2'
+
+    # 4. Run per-source conversions with assay_type='Mixed'
+    validate_source_array_adat(raw_array)
+    array_header_v2 = convert_array_header(raw_array, array_ctx, assay_type='Mixed')
+    array_columns_v2 = convert_array_col_data(raw_array)
+    array_index_v2 = convert_array_row_data(raw_array, array_ctx)
+
+    validate_source_ngs_adat(raw_ngs)
+    ngs_header_v2 = convert_ngs_header(raw_ngs, ngs_ctx, assay_type='Mixed')
+    ngs_columns_v2 = convert_ngs_col_data(raw_ngs)
+    ngs_index_v2 = convert_ngs_row_data(raw_ngs, ngs_ctx)
+
+    # Assemble temporary intermediate Adats to pass into SeqId union
+    array_intermediate = AdatClass(
+        data=raw_array.values,
+        index=array_index_v2,
+        columns=array_columns_v2,
+        header_metadata=array_header_v2,
+    )
+    ngs_intermediate = AdatClass(
+        data=raw_ngs.values,
+        index=ngs_index_v2,
+        columns=ngs_columns_v2,
+        header_metadata=ngs_header_v2,
+    )
+
+    # 5. Compute SeqId union and merged COL_DATA
+    rfu_df, merged_columns = compute_seqid_union(array_intermediate, ngs_intermediate)
+
+    # 6. Merge headers into final Mixed header
+    mixed_header = merge_mixed_headers(
+        array_header_v2, ngs_header_v2, array_ctx, ngs_ctx
+    )
+
+    # 7. Assemble final Mixed Adat
+    # Row index: concatenate array rows first, then NGS rows
+    merged_index = array_index_v2.append(ngs_index_v2)
+
+    result = AdatClass(
+        data=rfu_df.values,
+        index=merged_index,
+        columns=merged_columns,
+        header_metadata=mixed_header,
+    )
+
+    if not validate_v2_header_fields(mixed_header):
+        from somadata.conversion.errors import ConversionError
+
+        raise ConversionError(
+            'Mixed header metadata is not compliant with the v2.0 closed field set. '
+            'See logged warnings above for details.'
+        )
+
+    return result
 
 
 def _merge_bridged_array_and_v2(
-    adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None
+    adat_a: Adat,
+    adat_b: Adat,
+    *,
+    md5sum_a: str | None,
+    md5sum_b: str | None,
+    med_norm_ref: str | None,
 ) -> Adat:
     """Merge a bridged array ADAT and an existing v2.0 ADAT into a Mixed v2.0 output."""
     raise NotImplementedError(
@@ -175,7 +267,14 @@ def _merge_bridged_array_and_v2(
     )
 
 
-def _merge_ngs_and_v2(adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None) -> Adat:
+def _merge_ngs_and_v2(
+    adat_a: Adat,
+    adat_b: Adat,
+    *,
+    md5sum_a: str | None,
+    md5sum_b: str | None,
+    med_norm_ref: str | None,
+) -> Adat:
     """Merge a native NGS ADAT and an existing v2.0 ADAT into a Mixed or NGS v2.0 output."""
     raise NotImplementedError(
         'Merging native_ngs + v2_combined is not yet implemented.'
@@ -183,7 +282,12 @@ def _merge_ngs_and_v2(adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None) -
 
 
 def _merge_native_arrays(
-    adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None
+    adat_a: Adat,
+    adat_b: Adat,
+    *,
+    md5sum_a: str | None,
+    md5sum_b: str | None,
+    med_norm_ref: str | None,
 ) -> Adat:
     """Merge two native array ADATs into an Array v2.0 output."""
     raise NotImplementedError(
@@ -192,7 +296,12 @@ def _merge_native_arrays(
 
 
 def _merge_v2_combined_adats(
-    adat_a: Adat, adat_b: Adat, *, med_norm_ref: str | None
+    adat_a: Adat,
+    adat_b: Adat,
+    *,
+    md5sum_a: str | None,
+    md5sum_b: str | None,
+    med_norm_ref: str | None,
 ) -> Adat:
     """Merge two existing v2.0 ADATs into a single v2.0 output."""
     raise NotImplementedError(

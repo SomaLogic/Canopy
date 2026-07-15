@@ -221,3 +221,237 @@ def make_full_legacy_array_adat() -> Adat:
         columns=columns,
         header_metadata=header,
     )
+
+
+# ---------------------------------------------------------------------------
+# Full legacy NGS factory for merge testing
+# ---------------------------------------------------------------------------
+
+# NGS ProcessSteps required for MedNorm merge validation
+NGS_BRIDGED_STEPS = (
+    'Raw, HybNorm, MedNormInt, PlatformSpecificPlateScale, '
+    'PlatformSpecificCalibrate, CrossPlatformPlateScale, CrossPlatformCalibrate, MedNormExt'
+)
+
+
+def make_full_legacy_ngs_adat(
+    shared_seqids: list[str] | None = None,
+    ngs_only_seqids: list[str] | None = None,
+    mednorm_ext_values: list[str] | None = None,
+) -> Adat:
+    """NGS Adat with ALL legacy header/col/row fields for merge testing.
+
+    Includes:
+    - Header: full NGS required fields (Version, RunId, InstrumentType, etc.)
+              and ProcessSteps matching the required NGS merge sequence.
+    - COL_DATA: SOMAmer annotation fields including Ref.MedNormExt.Plasma level
+      for MedNorm validation.
+    - ROW_DATA: SOMAmerReads, HybNorm scale factors, etc.
+
+    Parameters
+    ----------
+    shared_seqids : list[str] or None
+        SeqIds that overlap with the array source.  Defaults to ``['10000-28', '10001-7']``.
+    ngs_only_seqids : list[str] or None
+        SeqIds that are NGS-exclusive.  Defaults to ``['20000-01']``.
+    mednorm_ext_values : list[str] or None
+        ``Ref.MedNormExt.Plasma`` values for the shared SeqIds (one per SeqId).
+        Defaults to ``['REF-1', 'REF-2']`` to match the array defaults.
+    """
+    shared_seqids = shared_seqids or ['10000-28', '10001-7']
+    ngs_only_seqids = ngs_only_seqids or ['20000-01']
+    all_seqids = shared_seqids + ngs_only_seqids
+    n_cols = len(all_seqids)
+
+    if mednorm_ext_values is None:
+        mednorm_ext_values = ['REF-1', 'REF-2']
+    # Pad to full length (NGS-only SeqIds get a generic value)
+    mednorm_ext_all = list(mednorm_ext_values) + ['REF-NGS'] * len(ngs_only_seqids)
+
+    header = {
+        '!AdatId': 'SL-NGS-99999',
+        '!AssayVersion': 'v1',
+        '!SOMAmerReferenceSource': 'SomaSuite-NGS-4.0',
+        '!Version': '4.0.1',
+        '!RunId': 'RUN12345',
+        '!InstrumentType': 'NovaSeq6000',
+        '!Flowcell': 'H7LNMDRXY',
+        '!YieldDemux': '5000000000',
+        '!YieldQ30Demux': '4500000000',
+        '!Q30WeightedMean': '0.91',
+        '!ProcessSteps': NGS_BRIDGED_STEPS,
+        # Plate-keyed NGS fields
+        'PlatformSpecificPlateScale_ScaleFactor_NGSPLT1': '1.01',
+        'CrossPlatformPlateScale_ScaleFactor_NGSPLT1': '0.99',
+        'PlatformSpecificCalibrateTailPercent_NGSPLT1': '4.9',
+        'CrossPlatformCalibrateTailPercent_NGSPLT1': '5.1',
+        'PlatformSpecificCalibrateTailPercent_PassFlag_NGSPLT1': 'PASS',
+        'CrossPlatformCalibrateTailPercent_PassFlag_NGSPLT1': 'PASS',
+        'QCCheckTailPercent_NGSPLT1': '3.5',
+        'PlateSOMAmerNormReads_NGSPLT1_PassFlag': 'PASS',
+    }
+
+    row_names = [
+        'SampleId',
+        'SampleType',
+        'PlateId',
+        'SOMAmerReads',
+        'HybNorm_1_ScaleFactor',
+        'MedNormInt_0_4_ScaleFactor',
+        'MedNormExt_0_4_ScaleFactor',
+    ]
+
+    row_values = [
+        ['NS1', 'NS2'],  # SampleId
+        ['Sample', 'Sample'],  # SampleType
+        ['NGSPLT1', 'NGSPLT1'],  # PlateId
+        ['14250000', '13800000'],  # SOMAmerReads
+        ['1.05', '0.98'],  # HybNorm_1_ScaleFactor
+        ['1.02', '0.97'],  # MedNormInt_0_4_ScaleFactor
+        ['1.01', '0.99'],  # MedNormExt_0_4_ScaleFactor
+    ]
+
+    col_level_names = [
+        'SeqId',
+        'Target',
+        'Type',
+        'Entrez Gene ID',
+        'Ref.MedNormExt.Plasma',
+        'Ref.MedNorm.Id',
+        'DRC_Level',
+        'BlockList',
+    ]
+
+    col_values = [
+        all_seqids,  # SeqId
+        ['ProteinA', 'ProteinB', 'ProteinC'][:n_cols],  # Target
+        ['Protein'] * n_cols,  # Type
+        ['12345', '67890', '54321'][:n_cols],  # Entrez Gene ID
+        mednorm_ext_all,  # Ref.MedNormExt.Plasma
+        ['MEDNORM-REF-001'] * n_cols,  # Ref.MedNorm.Id
+        ['Below LOD', 'Above LOD', 'Below LOD'][:n_cols],  # DRC_Level
+        ['0', '0', '0'][:n_cols],  # BlockList
+    ]
+
+    index = pd.MultiIndex.from_arrays(row_values, names=row_names)
+    columns = pd.MultiIndex.from_arrays(col_values, names=col_level_names)
+    data = [[1000.0] * n_cols, [1200.0] * n_cols]
+
+    return Adat(
+        data=data,
+        index=index,
+        columns=columns,
+        header_metadata=header,
+    )
+
+
+def make_bridged_array_with_mednorm(
+    shared_seqids: list[str] | None = None,
+    array_only_seqids: list[str] | None = None,
+    mednorm_ext_values: list[str] | None = None,
+) -> Adat:
+    """Array Adat with Ref.MedNormExt.* COL_DATA columns for merge testing.
+
+    Uses the bridged ProcessSteps so it passes MedNorm merge validation.
+
+    Parameters
+    ----------
+    shared_seqids : list[str] or None
+        SeqIds that overlap with the NGS source.  Defaults to ``['10000-28', '10001-7']``.
+    array_only_seqids : list[str] or None
+        SeqIds that are array-exclusive.  Defaults to ``['30000-01']``.
+    mednorm_ext_values : list[str] or None
+        ``Ref.MedNormExt.Plasma`` values for the shared SeqIds (one per SeqId).
+        Defaults to ``['REF-1', 'REF-2']`` to match the NGS defaults.
+    """
+    shared_seqids = shared_seqids or ['10000-28', '10001-7']
+    array_only_seqids = array_only_seqids or ['30000-01']
+    all_seqids = shared_seqids + array_only_seqids
+    n_cols = len(all_seqids)
+
+    if mednorm_ext_values is None:
+        mednorm_ext_values = ['REF-1', 'REF-2']
+    mednorm_ext_all = list(mednorm_ext_values) + ['REF-ARRAY'] * len(array_only_seqids)
+
+    header = {
+        '!AdatId': 'SL-99888',
+        '!AssayVersion': 'V4',
+        '!Title': 'Test Study',
+        '!StudyOrganism': 'Human',
+        '!StudyMatrix': 'EDTA Plasma',
+        '!UseRestriction': 'Research Use Only',
+        '!GeneratedBy': 'SomaSuite 4.0.0',
+        '!ProteinEffectiveDate': '2020-08-07',
+        '!CreatedDate': '2021-01-15',
+        '!ProcessSteps': BRIDGED_STEPS,
+        '!ReportConfig': 'DefaultReport',
+        'PlateScale_Scalar_PLT1': '1.02',
+        'CalPlateTailPercent_PLT1': '5.2',
+        'CalPlateTailTest_PLT1': 'PASS',
+        'PlateScale_PassFlag_PLT1': 'PASS',
+        'PlateTailPercent_PLT1': '3.1',
+        'PlateTailTest_PLT1': 'PASS',
+    }
+
+    row_names = [
+        'SampleId',
+        'SampleType',
+        'PlateId',
+        'PlatePosition',
+        'SlideId',
+        'Subarray',
+        'HybControlNormScale',
+        'RowCheck',
+    ]
+
+    row_values = [
+        ['AS1', 'AS2'],  # SampleId
+        ['Sample', 'Sample'],  # SampleType
+        ['PLT1', 'PLT1'],  # PlateId
+        ['A1', 'A2'],  # PlatePosition
+        ['258740110837', '258740110837'],  # SlideId
+        ['3', '3'],  # Subarray
+        ['1.05', '0.98'],  # HybControlNormScale
+        ['PASS', 'PASS'],  # RowCheck
+    ]
+
+    col_level_names = [
+        'SeqId',
+        'Target',
+        'Type',
+        'EntrezGeneID',
+        'Cal_PLT1',
+        'PlateScale_Reference',
+        'CalReference',
+        'SeqIdVersion',
+        'SomaId',
+        'ColCheck',
+        'Ref.MedNormExt.Plasma',
+        'medNormRef_ReferenceRFU',
+    ]
+
+    col_values = [
+        all_seqids,  # SeqId
+        ['ProteinA', 'ProteinB', 'ProteinD'][:n_cols],  # Target
+        ['Protein'] * n_cols,  # Type
+        ['12345', '67890', '11111'][:n_cols],  # EntrezGeneID
+        ['1.01', '1.03', '1.00'][:n_cols],  # Cal_PLT1
+        ['SL-REF-1'] * n_cols,  # PlateScale_Reference
+        ['SL-CAL-1'] * n_cols,  # CalReference
+        ['4'] * n_cols,  # SeqIdVersion
+        ['SL-1', 'SL-2', 'SL-3'][:n_cols],  # SomaId
+        ['PASS'] * n_cols,  # ColCheck
+        mednorm_ext_all,  # Ref.MedNormExt.Plasma
+        ['MEDNORM-REF-001'] * n_cols,  # medNormRef_ReferenceRFU → renames to Ref.MedNorm.Id
+    ]
+
+    index = pd.MultiIndex.from_arrays(row_values, names=row_names)
+    columns = pd.MultiIndex.from_arrays(col_values, names=col_level_names)
+    data = [[1000.0] * n_cols, [1200.0] * n_cols]
+
+    return Adat(
+        data=data,
+        index=index,
+        columns=columns,
+        header_metadata=header,
+    )

@@ -12,12 +12,16 @@ import datetime
 import logging
 from typing import TYPE_CHECKING
 
-from somadata.conversion._helpers import (consolidate_plate_fields,
-                                          generate_guid, lookup_header,
-                                          parse_process_steps)
+from somadata.conversion._helpers import (
+    consolidate_plate_fields,
+    generate_guid,
+    lookup_header,
+    parse_process_steps,
+)
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:
+    from somadata.adat import Adat
     from somadata.conversion.array import ArrayConversionContext
 
 logger = logging.getLogger(__name__)
@@ -51,7 +55,7 @@ _PLATE_FIELD_SPECS: list[tuple[str, str, str | None]] = [
 
 
 def convert_array_header(
-    adat: object,
+    adat: Adat,
     ctx: ArrayConversionContext,
     *,
     assay_type: str = 'Array',

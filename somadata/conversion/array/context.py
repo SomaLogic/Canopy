@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import dataclasses
+from typing import TYPE_CHECKING
 
 from somadata.conversion._helpers import lookup_header
+
+if TYPE_CHECKING:
+    from somadata.adat import Adat
 
 
 @dataclasses.dataclass
@@ -43,7 +47,7 @@ class ArrayConversionContext:
 
     @classmethod
     def from_adat(
-        cls, adat: object, source_file_md5sum: str | None = None
+        cls, adat: Adat, source_file_md5sum: str | None = None
     ) -> ArrayConversionContext:
         """Build a context by extracting values from *adat.header_metadata*.
 

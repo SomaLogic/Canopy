@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from somadata.conversion._helpers import lookup_header
 from somadata.conversion.errors import ConversionError
 
+if TYPE_CHECKING:
+    from somadata.adat import Adat
 
-def validate_source_ngs_adat(adat: object) -> None:
+
+def validate_source_ngs_adat(adat: Adat) -> None:
     """Validate that *adat* meets NGS v1.x → v2.0 conversion requirements.
 
     Parameters
