@@ -41,22 +41,26 @@ plans/                 # Feature planning documents (ADAT v2.0 converter)
 ## Development Commands
 
 ```bash
-# Install in development mode
-pip install -e .
+# Install dependencies (creates .venv/ in the project root)
+poetry install
 
 # Run tests
-pytest
+poetry run pytest
 
 # Run tests with coverage
-pytest --cov=somadata
+poetry run pytest --cov=somadata
 
 # Format code
-black -S .
-isort --profile black --filter-files --skip=__init__.py .
+poetry run black -S .
+poetry run isort --profile black --filter-files --skip=__init__.py .
 
 # Spell check
-codespell --skip="*.ipynb"
+poetry run codespell --skip="*.ipynb"
 ```
+
+> **Note for agents:** Always prefix commands with `poetry run`. The project uses an in-project
+> virtualenv (`.venv/`) configured via `poetry.toml`, which ensures `poetry run` resolves
+> correctly even inside sandboxed environments. If `.venv/` is missing, run `poetry install` first.
 
 ## Code Style
 
@@ -100,7 +104,7 @@ codespell --skip="*.ipynb"
 - Test data files live in `tests/data/`.
 - Mix of `unittest.TestCase` classes and plain pytest functions — both are acceptable.
 - CI runs on Windows with Python 3.9 and 3.13.
-- Always run `pytest` before submitting changes to verify nothing is broken.
+- Always run `poetry run pytest` before submitting changes to verify nothing is broken.
 
 ## CI/CD
 
