@@ -10,7 +10,16 @@ if TYPE_CHECKING:
     from somadata.adat import Adat
 
 # The three terminal processing steps that identify a bridged array ADAT.
+# Both "CrossPlatformPlateScale" (real DPQ output) and the legacy test fixture
+# variant "CrossPlatformPlateScaling" are accepted.
 _BRIDGED_TERMINAL_STEPS = (
+    'CrossPlatformPlateScale',
+    'CrossPlatformCalibrate',
+    'MedNormExt',
+)
+
+# Legacy variant used in synthetic test fixtures and older pipeline outputs.
+_BRIDGED_TERMINAL_STEPS_LEGACY = (
     'CrossPlatformPlateScaling',
     'CrossPlatformCalibrate',
     'MedNormExt',
@@ -143,6 +152,10 @@ def _is_bridged_array(adat: Adat) -> bool:
     The ProcessSteps field may be a comma-separated string (pre-v2.0 array) or a
     JSON dict (v2.0). Only string form is expected here since v2.0 files are
     handled earlier in the decision tree.
+
+    Both the canonical terminal triple (``CrossPlatformPlateScale``) and the
+    legacy variant (``CrossPlatformPlateScaling``) are accepted so that real
+    DPQ pipeline outputs and older synthetic test fixtures are both recognised.
     """
     process_steps_raw = ''
     for key in ('!ProcessSteps', 'ProcessSteps'):
@@ -154,11 +167,10 @@ def _is_bridged_array(adat: Adat) -> bool:
         return False
 
     steps = [s.strip() for s in process_steps_raw.split(',') if s.strip()]
-    if len(steps) < len(_BRIDGED_TERMINAL_STEPS):
-        return False
-
-    tail = tuple(steps[-len(_BRIDGED_TERMINAL_STEPS) :])
-    return tail == _BRIDGED_TERMINAL_STEPS
+    for terminal in (_BRIDGED_TERMINAL_STEPS, _BRIDGED_TERMINAL_STEPS_LEGACY):
+        if len(steps) >= len(terminal) and tuple(steps[-len(terminal) :]) == terminal:
+            return True
+    return False
 
 
 def _has_ngs_row_metadata(adat: Adat) -> bool:

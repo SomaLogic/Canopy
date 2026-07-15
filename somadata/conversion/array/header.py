@@ -13,6 +13,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from somadata.conversion._helpers import (
+    _compute_adat_md5sum,
     consolidate_plate_fields,
     generate_guid,
     lookup_header,
@@ -117,13 +118,14 @@ def convert_array_header(
 
     # ------------------------------------------------------------------
     # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}
-    #    Priority: AdatId > file md5sum > object md5sum
+    #    Priority: AdatId > file md5sum > object md5sum (computed on demand)
     # ------------------------------------------------------------------
     old_adat_id = ctx.source_adat_id or lookup_header(hdr, 'AdatId')
     if old_adat_id:
         out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
     else:
-        out['SourceFile'] = {ctx.source_file_id: {'md5sum': ctx.source_file_md5sum}}
+        md5 = ctx.source_file_md5sum or _compute_adat_md5sum(adat)
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': md5}}
 
     # ------------------------------------------------------------------
     # 4. SOMAmerReferenceSource  ← ProteinEffectiveDate
@@ -143,10 +145,25 @@ def convert_array_header(
     # 6. ReportConfig  →  {"1": <value>}
     #    Required for Array-only; optional (blank) for NGS.  Keep
     #    conditional — not all array ADATs carry a ReportConfig value.
+    #    The source value may be a Python-repr dict string; parse it so the
+    #    writer emits a nested JSON object rather than a JSON-encoded string.
     # ------------------------------------------------------------------
     raw_rc = lookup_header(hdr, 'ReportConfig')
     if raw_rc:
-        out['ReportConfig'] = {ctx.report_config_id: raw_rc}
+        import ast
+        import json as _json
+
+        rc_value: str | dict = raw_rc
+        if raw_rc.strip().startswith('{') or raw_rc.strip().startswith('['):
+            # Try valid JSON first, then Python repr fallback
+            try:
+                rc_value = _json.loads(raw_rc)
+            except (ValueError, TypeError):
+                try:
+                    rc_value = ast.literal_eval(raw_rc)
+                except (ValueError, SyntaxError):
+                    pass
+        out['ReportConfig'] = {ctx.report_config_id: rc_value}
 
     # ------------------------------------------------------------------
     # 7. Plate-keyed field consolidation — all optional in spec

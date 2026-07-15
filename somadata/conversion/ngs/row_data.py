@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 _ROW_RENAMES: dict[str, str] = {
     'SampleID': 'SampleId',
     'SequencingRunID': 'SequencingRunId',
+    'ControlID': 'ControlId',
     'ControlD': 'ControlId',
     'BatchID': 'BatchId',
     'MatrixType': 'KitType',
@@ -41,6 +42,7 @@ _ROW_RENAMES: dict[str, str] = {
     'RowCheck_PassFlag': 'RowCheckStatus',
     'SOMAmerReads_PassFlag': 'SOMAmerReadsStatus',
     'SOMAmerNormReads_PassFlag': 'SOMAmerNormReadsStatus',
+    'EmpiricalHybTemp': 'EmpericalHybTemp',
     'EmpiricalHybTemp_PassFlag': 'EmpiricalHybTempStatus',
 }
 
@@ -285,7 +287,7 @@ def convert_ngs_row_data(
             out_levels[array_field] = [''] * n_rows
 
     # ------------------------------------------------------------------
-    # 6. Ensure EmpericalHybTemp exists (legacy spelling retained)
+    # 6. Ensure EmpericalHybTemp exists (blank stub for rows where absent)
     # ------------------------------------------------------------------
     if 'EmpericalHybTemp' not in out_levels:
         out_levels['EmpericalHybTemp'] = [''] * n_rows

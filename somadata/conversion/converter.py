@@ -262,7 +262,7 @@ def _merge_bridged_array_and_ngs(
     # 4. Run per-source conversions with assay_type='Mixed'
     validate_source_array_adat(raw_array)
     array_header_v2 = convert_array_header(raw_array, array_ctx, assay_type='Mixed')
-    array_columns_v2 = convert_array_col_data(raw_array)
+    array_columns_v2 = convert_array_col_data(raw_array, calibrator_id=array_ctx.calibrator_id)
     array_index_v2 = convert_array_row_data(raw_array, array_ctx)
 
     validate_source_ngs_adat(raw_ngs)
@@ -414,7 +414,7 @@ def _run_array_conversion(
     validate_source_array_adat(adat)
     ctx = ArrayConversionContext.from_adat(adat, source_file_md5sum=md5sum)
     new_header = convert_array_header(adat, ctx, assay_type=assay_type)
-    new_columns = convert_array_col_data(adat)
+    new_columns = convert_array_col_data(adat, calibrator_id=ctx.calibrator_id)
     new_index = convert_array_row_data(adat, ctx)
     return _assemble_v2_adat(adat, new_header, new_columns, new_index)
 

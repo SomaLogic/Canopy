@@ -21,6 +21,7 @@ from somadata.conversion._helpers import (
     parse_process_steps,
     strip_bang_prefix,
 )
+
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:
@@ -109,13 +110,14 @@ def convert_ngs_header(
 
     # ------------------------------------------------------------------
     # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}
-    #    Priority: AdatId > file md5sum > object md5sum
+    #    Priority: AdatId > file md5sum > object md5sum (computed on demand)
     # ------------------------------------------------------------------
     old_adat_id = ctx.source_adat_id or lookup_header(hdr, 'AdatId')
     if old_adat_id:
         out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
     else:
-        out['SourceFile'] = {ctx.source_file_id: {'md5sum': ctx.source_file_md5sum}}
+        md5 = ctx.source_file_md5sum or _compute_adat_md5sum(adat)
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': md5}}
 
     # ------------------------------------------------------------------
     # 4. ProcessSteps  →  {"1": ["step1", "step2", ...]}
@@ -169,21 +171,31 @@ def convert_ngs_header(
     if cal_tail_status:
         out['CalibrateTailPercentStatus'] = cal_tail_status
 
-    # QCCheckTailPercent: plate-keyed JSON
-    qc_tail_pct = _extract_plate_keyed_json(hdr, r'^QCCheckTailPercent[_\-](.+)$')
+    # QCCheckTailPercent: plate-keyed JSON.
+    # The bare 'QCCheckTailPercent' key holds a whole-dict value in NGS ADATs.
+    # Per-plate suffix style ('QCCheckTailPercent_<PlateId>') is also handled.
+    qc_tail_pct = _extract_whole_dict_or_per_plate(
+        hdr,
+        bare_key='QCCheckTailPercent',
+        per_plate_pattern=r'^QCCheckTailPercent[_\-](?!.*PassFlag)(.+)$',
+    )
     if qc_tail_pct:
         out['QCCheckTailPercent'] = qc_tail_pct
 
-    # QCCheckTailPercentStatus: plate-keyed JSON
-    qc_tail_status = _extract_plate_keyed_json(
-        hdr, r'^QCCheckTailPercent[_\-](.+)_PassFlag$'
+    # QCCheckTailPercentStatus: plate-keyed JSON.
+    qc_tail_status = _extract_whole_dict_or_per_plate(
+        hdr,
+        bare_key='QCCheckTailPercent_PassFlag',
+        per_plate_pattern=r'^QCCheckTailPercent[_\-](.+)_PassFlag$',
     )
     if qc_tail_status:
         out['QCCheckTailPercentStatus'] = qc_tail_status
 
     # PlateSOMAmerNormReadsStatus: plate-keyed JSON
-    plate_reads_status = _extract_plate_keyed_json(
-        hdr, r'^PlateSOMAmerNormReads[_\-](.+)_PassFlag$'
+    plate_reads_status = _extract_whole_dict_or_per_plate(
+        hdr,
+        bare_key='PlateSOMAmerNormReads_PassFlag',
+        per_plate_pattern=r'^PlateSOMAmerNormReads[_\-](.+)_PassFlag$',
     )
     if plate_reads_status:
         out['PlateSOMAmerNormReadsStatus'] = plate_reads_status
@@ -194,6 +206,81 @@ def convert_ngs_header(
     # PlateScaleStatus, etc. handled by the generic v2.0 dict init above.
 
     return out
+
+
+def _parse_python_dict_value(raw: str) -> dict:
+    """Safely parse a Python-repr dict string into a dict.
+
+    The NGS ADAT header stores some JSON-like values as Python ``repr``
+    strings (single-quoted keys/values).  This handles both valid JSON and
+    Python-repr format by falling back to ``ast.literal_eval``.
+
+    Parameters
+    ----------
+    raw : str
+        The raw header value string.
+
+    Returns
+    -------
+    dict
+        The parsed dict, or an empty dict on parse failure.
+    """
+    import ast
+    import json
+
+    if not raw or not raw.strip().startswith('{'):
+        return {}
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        pass
+    try:
+        result = ast.literal_eval(raw)
+        if isinstance(result, dict):
+            return result
+    except (ValueError, SyntaxError):
+        pass
+    return {}
+
+
+def _extract_whole_dict_or_per_plate(
+    header: dict,
+    bare_key: str,
+    per_plate_pattern: str,
+) -> dict:
+    """Extract plate-keyed values from either a whole-dict header value or per-plate keys.
+
+    Some NGS ADAT headers store a single key whose value is a Python-repr dict
+    (e.g. ``QCCheckTailPercent → "{'TS00000001': 1.855}"``).  Others use
+    per-plate suffixed keys.  This helper tries the bare-key approach first,
+    then falls back to the per-plate regex pattern.
+
+    Parameters
+    ----------
+    header : dict
+        The ADAT header_metadata dictionary.
+    bare_key : str
+        The canonical key name (no ``!`` prefix) that may hold a whole-dict value.
+    per_plate_pattern : str
+        Regex pattern with a capture group for PlateId, used as a fallback.
+
+    Returns
+    -------
+    dict
+        Flat dict: ``{"PlateId": value}``.
+    """
+    # Try bare key first
+    for candidate in (bare_key, f'!{bare_key}'):
+        raw_val = header.get(candidate, '')
+        if raw_val:
+            parsed = _parse_python_dict_value(str(raw_val))
+            if parsed:
+                return {str(k): str(v) for k, v in parsed.items()}
+            # Non-dict bare value — treat entire value as a single entry (unusual)
+            break
+
+    # Fall back to per-plate suffix pattern
+    return _extract_plate_keyed_json(header, per_plate_pattern)
 
 
 def _consolidate_dual_platform_fields(
@@ -264,6 +351,24 @@ def _consolidate_dual_platform_fields(
             if cross_val:
                 result[plate_id]['CrossPlatform'] = cross_val
 
+    if result:
+        return result
+
+    # Fallback: the NGS ADAT may store these as whole-dict values keyed by the
+    # bare prefix (without per-plate suffix).  Parse PlatformSpecific and
+    # CrossPlatform dicts and merge them per plate.
+    platform_raw = lookup_header(header, platform_prefix)
+    cross_raw = lookup_header(header, cross_prefix)
+    platform_dict = _parse_python_dict_value(platform_raw)
+    cross_dict = _parse_python_dict_value(cross_raw)
+    all_plate_ids = set(platform_dict) | set(cross_dict)
+    for pid in sorted(all_plate_ids):
+        result[str(pid)] = {}
+        if pid in platform_dict:
+            result[str(pid)]['PlatformSpecific'] = str(platform_dict[pid])
+        if pid in cross_dict:
+            result[str(pid)]['CrossPlatform'] = str(cross_dict[pid])
+
     return result
 
 
@@ -294,11 +399,24 @@ def _extract_plate_keyed_json(header: dict, pattern: str) -> dict:
     for raw_key, value in header.items():
         clean_key = strip_bang_prefix(raw_key)
         match = regex.match(clean_key)
-        if match:
-            plate_id = match.group(1)
-            # Remove trailing '_PassFlag' from PlateId if present
-            plate_id = plate_id.replace('_PassFlag', '').replace('-PassFlag', '')
-            if plate_id and value:
-                result[plate_id] = value
+        if not match:
+            continue
+
+        plate_id = match.group(1)
+        # Remove trailing '_PassFlag' from PlateId if present
+        plate_id = plate_id.replace('_PassFlag', '').replace('-PassFlag', '')
+        if not plate_id or not value:
+            continue
+
+        # The captured PlateId may itself be a Python-repr/JSON dict string
+        # (NGS ADATs store whole-dict values on bare keys like
+        # 'QCCheckTailPercent' → "{'TS00000001': 1.855}").
+        parsed = _parse_python_dict_value(str(value))
+        if parsed:
+            # Expand the inner dict into per-plate entries
+            for inner_plate, inner_val in parsed.items():
+                result[str(inner_plate)] = str(inner_val)
+        else:
+            result[plate_id] = value
 
     return result

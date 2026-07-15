@@ -27,9 +27,12 @@ logger = logging.getLogger(__name__)
 # Static field renames (legacy → v2.0)
 # ---------------------------------------------------------------------------
 _ROW_RENAMES: dict[str, str] = {
+    'SampleID': 'SampleId',
     'PlatePosition': 'WellPosition',
     'HybControlNormScale': 'HybNormScaleFactor',
     'RowCheck': 'RowCheckStatus',
+    'RowCheck_PassFlag': 'RowCheckStatus',
+    'MedNormExt_PassFlag': 'MedNormExtStatus',
     'StudyId': 'Project',
     'SubjectID': 'SubjectId',
     'Barcode2d': 'MatrixTubeBarcode',
@@ -187,12 +190,24 @@ def convert_array_row_data(
     # 1. Apply renames and build working dict of output levels
     # ------------------------------------------------------------------
     out_levels: dict[str, list] = {}
+    rma_values: list[str] | None = None
 
     for old_name, values in level_arrays.items():
         if old_name in _FIELDS_TO_REMOVE:
             continue
+        if old_name == 'RMA':
+            # Spec §3.2.3: move RMA value into Project; do not emit as own field
+            rma_values = list(values)
+            continue
         new_name = _ROW_RENAMES.get(old_name, old_name)
         out_levels[new_name] = list(values)
+
+    # Merge RMA values into Project: use RMA where Project is blank
+    if rma_values is not None and 'Project' in out_levels:
+        out_levels['Project'] = [
+            rma if (not proj) and rma else proj
+            for proj, rma in zip(out_levels['Project'], rma_values)
+        ]
 
     # ------------------------------------------------------------------
     # 2. Identify NormScale_* levels (needed for MedNormIntStatus)
