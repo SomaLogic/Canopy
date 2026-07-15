@@ -155,6 +155,64 @@ def _load(adat: str | Adat) -> tuple[Adat, str | None]:
 
 
 # ---------------------------------------------------------------------------
+# Row-index alignment helper
+# ---------------------------------------------------------------------------
+
+
+def _align_row_indexes(
+    index_a: pd.MultiIndex,
+    index_b: pd.MultiIndex,
+) -> tuple[pd.MultiIndex, pd.MultiIndex]:
+    """Return both MultiIndexes reordered to a shared, canonical level set.
+
+    Array and NGS row converters build their output MultiIndexes via
+    insertion-order dicts, so the level ordering can differ even when both
+    indexes carry stubs for the other platform's fields.  This function
+    computes the canonical union of all level names (``index_a`` order first,
+    then any ``index_b``-exclusive names appended), then reindexes each
+    MultiIndex to that canonical set — inserting blank (empty-string) levels
+    for any fields that a source does not have.
+
+    Parameters
+    ----------
+    index_a : pd.MultiIndex
+        Row index from the array intermediate (already converted to v2.0).
+    index_b : pd.MultiIndex
+        Row index from the NGS intermediate (already converted to v2.0).
+
+    Returns
+    -------
+    tuple[pd.MultiIndex, pd.MultiIndex]
+        ``(index_a_aligned, index_b_aligned)`` — both share the same level
+        names in the same order and can be safely passed to
+        ``pd.MultiIndex.append``.
+    """
+    names_a = list(index_a.names)
+    names_b = list(index_b.names)
+
+    # Canonical order: index_a names first, then index_b-exclusive names
+    seen: set[str] = set(names_a)
+    canonical: list[str] = list(names_a)
+    for name in names_b:
+        if name not in seen:
+            canonical.append(name)
+            seen.add(name)
+
+    def _reorder(idx: pd.MultiIndex, ordered_names: list[str]) -> pd.MultiIndex:
+        existing = set(idx.names)
+        n = len(idx)
+        arrays: list[list] = []
+        for name in ordered_names:
+            if name in existing:
+                arrays.append(list(idx.get_level_values(name)))
+            else:
+                arrays.append([''] * n)
+        return pd.MultiIndex.from_arrays(arrays, names=ordered_names)
+
+    return _reorder(index_a, canonical), _reorder(index_b, canonical)
+
+
+# ---------------------------------------------------------------------------
 # Conversion handlers
 #
 # Each handler will be fully implemented in later tickets.
@@ -183,8 +241,11 @@ def _merge_bridged_array_and_ngs(
         raw_array, raw_ngs = adat_b, adat_a
         md5_array, md5_ngs = md5sum_b, md5sum_a
 
-    # 2. Validate MedNorm compatibility on raw (pre-conversion) inputs
-    validate_mednorm_compatibility(raw_array, raw_ngs, med_norm_ref=med_norm_ref)
+    # 2. Validate MedNorm compatibility on raw (pre-conversion) inputs;
+    # returns which source's Ref.MedNormExt.* values to use if overridden
+    mednorm_ref_source = validate_mednorm_compatibility(
+        raw_array, raw_ngs, med_norm_ref=med_norm_ref
+    )
 
     # 3. Build conversion contexts; assign source IDs for Mixed output
     array_ctx = ArrayConversionContext.from_adat(
@@ -224,7 +285,9 @@ def _merge_bridged_array_and_ngs(
     )
 
     # 5. Compute SeqId union and merged COL_DATA
-    rfu_df, merged_columns = compute_seqid_union(array_intermediate, ngs_intermediate)
+    rfu_df, merged_columns = compute_seqid_union(
+        array_intermediate, ngs_intermediate, mednorm_ref_source=mednorm_ref_source
+    )
 
     # 6. Merge headers into final Mixed header
     mixed_header = merge_mixed_headers(
@@ -232,7 +295,11 @@ def _merge_bridged_array_and_ngs(
     )
 
     # 7. Assemble final Mixed Adat
-    # Row index: concatenate array rows first, then NGS rows
+    # Row index: align both indexes to a shared ordered level set, then concatenate.
+    # Array and NGS row converters build their MultiIndexes by insertion order, so
+    # the level ordering can differ even though both add stubs for the other
+    # platform's fields.  Aligning first prevents silent metadata misalignment.
+    array_index_v2, ngs_index_v2 = _align_row_indexes(array_index_v2, ngs_index_v2)
     merged_index = array_index_v2.append(ngs_index_v2)
 
     result = AdatClass(

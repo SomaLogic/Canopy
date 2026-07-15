@@ -173,6 +173,58 @@ class TestComputeSeqidUnion:
         with pytest.raises(ValueError, match='SeqId'):
             compute_seqid_union(bad, good)
 
+    def test_mednorm_ref_source_ngs_uses_ngs_values_for_shared_seqids(self):
+        """When mednorm_ref_source='ngs', NGS Ref.MedNormExt.* values win for shared SeqIds."""
+        shared = ['A', 'B']
+        array_adat = _make_converted_adat(
+            shared + ['C'],  # C is array-only
+            extra_levels={
+                'Ref.MedNormExt.Plasma': ['ARRAY-VAL-A', 'ARRAY-VAL-B', 'ARRAY-VAL-C'],
+            },
+        )
+        ngs_adat = _make_converted_adat(
+            shared + ['D'],  # D is NGS-only
+            extra_levels={
+                'Ref.MedNormExt.Plasma': ['NGS-VAL-A', 'NGS-VAL-B', 'NGS-VAL-D'],
+            },
+        )
+
+        _, merged_cols = compute_seqid_union(array_adat, ngs_adat, mednorm_ref_source='ngs')
+
+        union_seqids = list(merged_cols.get_level_values('SeqId'))
+        ref_vals = dict(zip(union_seqids, merged_cols.get_level_values('Ref.MedNormExt.Plasma')))
+
+        # Shared SeqIds: NGS value wins
+        assert ref_vals['A'] == 'NGS-VAL-A'
+        assert ref_vals['B'] == 'NGS-VAL-B'
+        # Array-only SeqId: array value preserved
+        assert ref_vals['C'] == 'ARRAY-VAL-C'
+        # NGS-only SeqId: NGS value preserved
+        assert ref_vals['D'] == 'NGS-VAL-D'
+
+    def test_mednorm_ref_source_array_uses_array_values(self):
+        """When mednorm_ref_source='array' (or None), array values win for shared SeqIds."""
+        shared = ['A', 'B']
+        array_adat = _make_converted_adat(
+            shared,
+            extra_levels={'Ref.MedNormExt.Plasma': ['ARRAY-VAL-A', 'ARRAY-VAL-B']},
+        )
+        ngs_adat = _make_converted_adat(
+            shared,
+            extra_levels={'Ref.MedNormExt.Plasma': ['NGS-VAL-A', 'NGS-VAL-B']},
+        )
+
+        for source in ('array', None):
+            _, merged_cols = compute_seqid_union(
+                array_adat, ngs_adat, mednorm_ref_source=source
+            )
+            union_seqids = list(merged_cols.get_level_values('SeqId'))
+            ref_vals = dict(
+                zip(union_seqids, merged_cols.get_level_values('Ref.MedNormExt.Plasma'))
+            )
+            assert ref_vals['A'] == 'ARRAY-VAL-A'
+            assert ref_vals['B'] == 'ARRAY-VAL-B'
+
 
 # ===========================================================================
 # Task 1.8: MedNorm Reference Validation
@@ -230,6 +282,73 @@ class TestValidateMednormCompatibility:
         validate_mednorm_compatibility(
             array_adat, ngs_adat, med_norm_ref='MEDNORM-REF-001'
         )
+
+    def test_med_norm_ref_returns_none_when_vectors_identical(self):
+        """validate_mednorm_compatibility returns None when no mismatch exists."""
+        array_adat = make_bridged_array_with_mednorm()
+        ngs_adat = make_full_legacy_ngs_adat()
+        result = validate_mednorm_compatibility(array_adat, ngs_adat)
+        assert result is None
+
+    def test_med_norm_ref_returns_array_when_override_matches_array(self):
+        """Returns 'array' when med_norm_ref matches the array source's Ref.MedNorm.Id."""
+        import pandas as pd
+        from somadata.adat import Adat
+        from tests.conversion.conftest import BRIDGED_STEPS, NGS_BRIDGED_STEPS
+
+        # Array source with Ref.MedNorm.Id = 'ARRAY-REF'
+        array_cols = pd.MultiIndex.from_arrays(
+            [['10000-28', '10001-7'], ['1.0', '2.0'], ['ARRAY-REF', 'ARRAY-REF']],
+            names=['SeqId', 'Ref.MedNormExt.Plasma', 'Ref.MedNorm.Id'],
+        )
+        array_adat = Adat(
+            data=[[1.0, 1.0]],
+            index=pd.MultiIndex.from_arrays([['S1'], ['Sample']], names=['SampleId', 'SampleType']),
+            columns=array_cols,
+            header_metadata={'!ProcessSteps': BRIDGED_STEPS},
+        )
+        # NGS source with Ref.MedNorm.Id = 'NGS-REF' and different values
+        ngs_cols = pd.MultiIndex.from_arrays(
+            [['10000-28', '10001-7'], ['1.0', '99.0'], ['NGS-REF', 'NGS-REF']],
+            names=['SeqId', 'Ref.MedNormExt.Plasma', 'Ref.MedNorm.Id'],
+        )
+        ngs_adat = Adat(
+            data=[[1.0, 1.0]],
+            index=pd.MultiIndex.from_arrays([['N1'], ['Sample']], names=['SampleId', 'SampleType']),
+            columns=ngs_cols,
+            header_metadata={'!ProcessSteps': NGS_BRIDGED_STEPS},
+        )
+        result = validate_mednorm_compatibility(array_adat, ngs_adat, med_norm_ref='ARRAY-REF')
+        assert result == 'array'
+
+    def test_med_norm_ref_returns_ngs_when_override_matches_ngs(self):
+        """Returns 'ngs' when med_norm_ref matches only the NGS source's Ref.MedNorm.Id."""
+        import pandas as pd
+        from somadata.adat import Adat
+        from tests.conversion.conftest import BRIDGED_STEPS, NGS_BRIDGED_STEPS
+
+        array_cols = pd.MultiIndex.from_arrays(
+            [['10000-28', '10001-7'], ['1.0', '2.0'], ['ARRAY-REF', 'ARRAY-REF']],
+            names=['SeqId', 'Ref.MedNormExt.Plasma', 'Ref.MedNorm.Id'],
+        )
+        array_adat = Adat(
+            data=[[1.0, 1.0]],
+            index=pd.MultiIndex.from_arrays([['S1'], ['Sample']], names=['SampleId', 'SampleType']),
+            columns=array_cols,
+            header_metadata={'!ProcessSteps': BRIDGED_STEPS},
+        )
+        ngs_cols = pd.MultiIndex.from_arrays(
+            [['10000-28', '10001-7'], ['1.0', '99.0'], ['NGS-REF', 'NGS-REF']],
+            names=['SeqId', 'Ref.MedNormExt.Plasma', 'Ref.MedNorm.Id'],
+        )
+        ngs_adat = Adat(
+            data=[[1.0, 1.0]],
+            index=pd.MultiIndex.from_arrays([['N1'], ['Sample']], names=['SampleId', 'SampleType']),
+            columns=ngs_cols,
+            header_metadata={'!ProcessSteps': NGS_BRIDGED_STEPS},
+        )
+        result = validate_mednorm_compatibility(array_adat, ngs_adat, med_norm_ref='NGS-REF')
+        assert result == 'ngs'
 
     def test_bad_med_norm_ref_raises(self):
         """A med_norm_ref that matches neither source should raise."""
