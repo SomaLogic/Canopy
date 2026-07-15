@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from somadata.adat import Adat
 
 
 def generate_guid() -> str:
@@ -39,7 +42,7 @@ def _compute_file_md5sum(file_path: str) -> str:
     return md5.hexdigest()
 
 
-def _compute_adat_md5sum(adat: object) -> str:
+def _compute_adat_md5sum(adat: Adat) -> str:
     """Compute MD5 checksum of an Adat's structure and data.
 
     Computes a deterministic hash of the Adat's header metadata, column
@@ -231,6 +234,101 @@ def consolidate_plate_fields(
             if plate_id:
                 result[plate_id] = {stage: value} if stage is not None else value
     return result
+
+
+# ---------------------------------------------------------------------------
+# Merge utilities (used by merge.py for Mixed conversions)
+# ---------------------------------------------------------------------------
+
+
+def merge_pipe_delimited(val_a: str, val_b: str) -> str:
+    """Merge two strings by combining unique, non-empty pipe-delimited values.
+
+    Values already pipe-delimited inside each argument are split and
+    deduplicated before rejoining.  Insertion order is preserved (``val_a``
+    tokens first).
+
+    Parameters
+    ----------
+    val_a : str
+        First string value (may itself be pipe-delimited).
+    val_b : str
+        Second string value (may itself be pipe-delimited).
+
+    Returns
+    -------
+    str
+        A single pipe-delimited string of unique non-empty tokens, or ``''``
+        if both inputs are blank.
+
+    Examples
+    --------
+    >>> merge_pipe_delimited('Human', 'Human')
+    'Human'
+    >>> merge_pipe_delimited('Human', 'Mouse')
+    'Human|Mouse'
+    >>> merge_pipe_delimited('A|B', 'B|C')
+    'A|B|C'
+    >>> merge_pipe_delimited('', 'EDTA Plasma')
+    'EDTA Plasma'
+    """
+    seen: set[str] = set()
+    tokens: list[str] = []
+    for raw in (val_a, val_b):
+        if not raw:
+            continue
+        for part in raw.split('|'):
+            part = part.strip()
+            if part and part not in seen:
+                seen.add(part)
+                tokens.append(part)
+    return '|'.join(tokens)
+
+
+def merge_plate_json(
+    dict_a: dict,
+    dict_b: dict,
+    field_name: str = '',
+) -> dict:
+    """Combine two plate-keyed JSON dicts, raising on duplicate PlateId.
+
+    Parameters
+    ----------
+    dict_a : dict
+        First plate-keyed dict (e.g. ``{"PLT1": {"PlatformSpecific": "1.02"}}``).
+    dict_b : dict
+        Second plate-keyed dict.
+    field_name : str, optional
+        Field name used in the error message when a duplicate is found.
+
+    Returns
+    -------
+    dict
+        Merged dict containing all PlateId keys from both inputs.
+
+    Raises
+    ------
+    ValueError
+        If the same PlateId key appears in both ``dict_a`` and ``dict_b``.
+
+    Examples
+    --------
+    >>> merge_plate_json({'PLT1': '1.02'}, {'PLT2': '0.98'})
+    {'PLT1': '1.02', 'PLT2': '0.98'}
+    >>> merge_plate_json({'PLT1': '1.02'}, {'PLT1': '0.98'})
+    Traceback (most recent call last):
+        ...
+    ValueError: Duplicate PlateId 'PLT1' in field ...
+    """
+    duplicates = set(dict_a) & set(dict_b)
+    if duplicates:
+        dup_list = ', '.join(repr(k) for k in sorted(duplicates))
+        field_info = f' for field {field_name!r}' if field_name else ''
+        raise ValueError(
+            f'Duplicate PlateId {dup_list} found when merging plate-keyed JSON'
+            f'{field_info}. Each PlateId must appear in only one source ADAT.'
+        )
+    return {**dict_a, **dict_b}
 
 
 # ---------------------------------------------------------------------------
