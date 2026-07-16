@@ -15,7 +15,11 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from somadata.conversion._helpers import generate_guid
+from somadata.conversion._helpers import (
+    derive_hyb_norm_status_vectorized,
+    generate_guid,
+    try_float,
+)
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -106,29 +110,9 @@ def _normalize_dilution_suffix(name: str) -> str:
     m = _MED_NORM_INT_RE.match(name)
     if m:
         prefix, dilution, suffix = m.groups()
-        # Replace hyphens with underscores, and dots with underscores
         dilution_normalized = dilution.replace('-', '_').replace('.', '_')
         return f'{prefix}{dilution_normalized}{suffix}'
     return name
-
-
-def _try_float(value: str) -> float | None:
-    """Return *value* as float, or ``None`` on failure."""
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _derive_hyb_norm_status(scale_factor: str) -> str:
-    """Return ``'PASS'`` if 0.4 <= float(scale_factor) <= 2.5, else ``'FLAG'``.
-
-    Returns ``''`` for missing / non-numeric values.
-    """
-    f = _try_float(scale_factor)
-    if f is None:
-        return ''
-    return 'PASS' if 0.4 <= f <= 2.5 else 'FLAG'
 
 
 def _derive_med_norm_status(scale_factors: list[str]) -> str:
@@ -136,12 +120,52 @@ def _derive_med_norm_status(scale_factors: list[str]) -> str:
 
     Returns ``''`` if all values are blank or non-numeric.
     """
-    floats = [_try_float(v) for v in scale_factors if v]
+    floats = [try_float(v) for v in scale_factors if v]
     if not floats:
         return ''
     if any(f is None for f in floats):
         return ''
     return 'PASS' if all(0.4 <= f <= 2.5 for f in floats) else 'FLAG'  # type: ignore[operator]
+
+
+def _derive_med_norm_status_vectorized(
+    field_names: list[str],
+    out_levels: dict[str, list],
+    n_rows: int
+) -> list[str]:
+    """Vectorized MedNorm status derivation for all rows.
+    
+    All scale factors for a row must be numeric and in [0.4, 2.5] for PASS.
+    """
+    result = [''] * n_rows
+    
+    if not field_names:
+        return result
+    
+    # Build matrix of scale factor values (rows × fields)
+    scale_matrix = []
+    for field_name in field_names:
+        scale_matrix.append(out_levels[field_name])
+    
+    # Process each row
+    for i in range(n_rows):
+        values = [scale_matrix[j][i] for j in range(len(field_names))]
+        # Filter out empty strings
+        values = [v for v in values if v]
+        if not values:
+            continue
+        
+        try:
+            floats = [float(v) for v in values]
+        except (ValueError, TypeError):
+            continue
+        
+        if all(0.4 <= f <= 2.5 for f in floats):
+            result[i] = 'PASS'
+        else:
+            result[i] = 'FLAG'
+    
+    return result
 
 
 def convert_ngs_row_data(
@@ -177,8 +201,9 @@ def convert_ngs_row_data(
     n_rows = len(src_index)
 
     level_names: list[str] = list(src_index.names)
-    level_arrays: dict[str, list] = {
-        name: list(src_index.get_level_values(name)) for name in level_names
+    # Extract level values once without creating intermediate lists
+    level_arrays: dict[str, pd.Index] = {
+        name: src_index.get_level_values(name) for name in level_names
     }
 
     # ------------------------------------------------------------------
@@ -193,13 +218,24 @@ def convert_ngs_row_data(
         new_name = _ROW_RENAMES.get(old_name, old_name)
         # Apply dilution suffix normalization
         new_name = _normalize_dilution_suffix(new_name)
+        # Convert to list only once per field
         out_levels[new_name] = list(values)
 
     # ------------------------------------------------------------------
     # 2. New generated fields (one value per row)
     # ------------------------------------------------------------------
     out_levels['SampleReadout'] = ['NGS'] * n_rows
-    out_levels['UniqueSampleKey'] = [generate_guid() for _ in range(n_rows)]
+    
+    # GUID generation optimization: only generate for missing/blank keys
+    if 'UniqueSampleKey' in out_levels:
+        existing_keys = out_levels['UniqueSampleKey']
+        out_levels['UniqueSampleKey'] = [
+            (key if key and str(key).strip() else generate_guid())
+            for key in existing_keys
+        ]
+    else:
+        out_levels['UniqueSampleKey'] = [generate_guid() for _ in range(n_rows)]
+    
     out_levels['SourceFileId'] = [ctx.source_file_id] * n_rows
     out_levels['ProcessStepsId'] = [ctx.process_steps_id] * n_rows
 
@@ -225,15 +261,15 @@ def convert_ngs_row_data(
     out_levels['Q30WeightedMean'] = [str(ctx.q30_weighted_mean)] * n_rows
 
     # ------------------------------------------------------------------
-    # 4. Derive Status fields from PassFlag if not already present
+    # 4. Derive Status fields from PassFlag if not already present (VECTORIZED)
     # ------------------------------------------------------------------
     # HybNormStatus: derive from HybNormScaleFactor if PassFlag not present
     if 'HybNormStatus' not in out_levels and 'HybNormScaleFactor' in out_levels:
-        out_levels['HybNormStatus'] = [
-            _derive_hyb_norm_status(v) for v in out_levels['HybNormScaleFactor']
-        ]
+        out_levels['HybNormStatus'] = derive_hyb_norm_status_vectorized(
+            out_levels['HybNormScaleFactor']
+        )
 
-    # MedNormIntStatus: derive from MedNormInt_*_ScaleFactor if not present
+    # MedNormIntStatus: derive from MedNormInt_*_ScaleFactor if not present (VECTORIZED)
     if 'MedNormIntStatus' not in out_levels:
         med_norm_int_fields = [
             name
@@ -241,16 +277,13 @@ def convert_ngs_row_data(
             if name.startswith('MedNormInt_') and name.endswith('_ScaleFactor')
         ]
         if med_norm_int_fields:
-            out_levels['MedNormIntStatus'] = []
-            for i in range(n_rows):
-                scale_factors = [out_levels[field][i] for field in med_norm_int_fields]
-                out_levels['MedNormIntStatus'].append(
-                    _derive_med_norm_status(scale_factors)
-                )
+            out_levels['MedNormIntStatus'] = _derive_med_norm_status_vectorized(
+                med_norm_int_fields, out_levels, n_rows
+            )
         else:
             out_levels['MedNormIntStatus'] = [''] * n_rows
 
-    # MedNormExtStatus: derive from MedNormExt_*_ScaleFactor if not present
+    # MedNormExtStatus: derive from MedNormExt_*_ScaleFactor if not present (VECTORIZED)
     if 'MedNormExtStatus' not in out_levels:
         med_norm_ext_fields = [
             name
@@ -258,12 +291,9 @@ def convert_ngs_row_data(
             if name.startswith('MedNormExt_') and name.endswith('_ScaleFactor')
         ]
         if med_norm_ext_fields:
-            out_levels['MedNormExtStatus'] = []
-            for i in range(n_rows):
-                scale_factors = [out_levels[field][i] for field in med_norm_ext_fields]
-                out_levels['MedNormExtStatus'].append(
-                    _derive_med_norm_status(scale_factors)
-                )
+            out_levels['MedNormExtStatus'] = _derive_med_norm_status_vectorized(
+                med_norm_ext_fields, out_levels, n_rows
+            )
         else:
             out_levels['MedNormExtStatus'] = [''] * n_rows
 

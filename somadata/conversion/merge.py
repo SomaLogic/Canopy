@@ -446,12 +446,16 @@ def _merge_col_data(
 def _build_seqid_lookup(columns: pd.MultiIndex) -> dict[str, dict[str, str]]:
     """Return ``{seq_id: {level_name: value}}`` for a COL_DATA MultiIndex."""
     seq_ids = columns.get_level_values('SeqId')
+    
+    # Extract all level values upfront
+    level_arrays = [columns.get_level_values(name) for name in columns.names]
+    
+    # Build lookup dict: iterate once over SeqIds, once over levels
     result: dict[str, dict[str, str]] = {}
     for i, seq_id in enumerate(seq_ids):
         row: dict[str, str] = {}
         for j, name in enumerate(columns.names):
-            # Use positional index to avoid ambiguity when level names repeat
-            row[name] = str(columns.get_level_values(j)[i])
+            row[name] = str(level_arrays[j][i])
         result[str(seq_id)] = row
     return result
 
