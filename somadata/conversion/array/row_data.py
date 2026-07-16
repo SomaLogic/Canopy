@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from somadata.conversion._helpers import generate_guid
+from somadata.conversion._helpers import generate_guid, lookup_header
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -35,6 +35,10 @@ _ROW_RENAMES: dict[str, str] = {
     'MedNormExt_PassFlag': 'MedNormExtStatus',
     'StudyId': 'Project',
     'SubjectID': 'SubjectId',
+    # Barcode2d → MatrixTubeBarcode: Per spec §3.2.3, array Barcode2d values
+    # are moved to MatrixTubeBarcode even though the field is classified as
+    # "NGS-only" in the field table (§2.6.2). This preserves the barcode data
+    # for array samples in the v2.0 format.
     'Barcode2d': 'MatrixTubeBarcode',
 }
 
@@ -202,22 +206,50 @@ def convert_array_row_data(
         new_name = _ROW_RENAMES.get(old_name, old_name)
         out_levels[new_name] = list(values)
 
-    # Merge RMA values into Project: use RMA where Project is blank
-    if rma_values is not None and 'Project' in out_levels:
-        out_levels['Project'] = [
-            rma if (not proj) and rma else proj
-            for proj, rma in zip(out_levels['Project'], rma_values)
-        ]
-
     # ------------------------------------------------------------------
-    # 2. Identify NormScale_* levels (needed for MedNormIntStatus)
+    # 2. Project field population logic
+    #    Priority: StudyId > RMA > Title (header) > blank
+    #    For array study samples (SampleType == "Sample"), populate Project:
+    #    - Use StudyId values if StudyId field exists (already renamed to Project)
+    #    - Otherwise, use RMA values if RMA field was present
+    #    - Otherwise, use Title from header for all sample rows
+    #    - Otherwise, leave blank
+    # ------------------------------------------------------------------
+    sample_type_vals = out_levels.get('SampleType', [''] * n_rows)
+    
+    # Ensure Project field exists
+    if 'Project' not in out_levels:
+        out_levels['Project'] = [''] * n_rows
+    
+    # Get Title from header once (used for fallback)
+    title_from_header = lookup_header(getattr(adat, 'header_metadata', {}), 'Title')
+    
+    # Apply fallback logic for study samples
+    for i in range(n_rows):
+        stype = sample_type_vals[i] if i < len(sample_type_vals) else ''
+        # Only apply to study samples
+        if stype == 'Sample':
+            current_value = out_levels['Project'][i]
+            # If Project (from StudyId) is already populated, keep it
+            if current_value:
+                continue
+            # Try RMA fallback
+            if rma_values is not None and i < len(rma_values) and rma_values[i]:
+                out_levels['Project'][i] = rma_values[i]
+                continue
+            # Try Title fallback from header
+            if title_from_header:
+                out_levels['Project'][i] = title_from_header
+    
+    # ------------------------------------------------------------------
+    # 3. Identify NormScale_* levels (needed for MedNormIntStatus)
     # ------------------------------------------------------------------
     norm_scale_level_names: list[str] = [
         n for n in out_levels if _NORM_SCALE_RE.match(n)
     ]
 
     # ------------------------------------------------------------------
-    # 3. PlateRunDate fallback from ctx.created_date
+    # 4. PlateRunDate fallback from ctx.created_date
     # ------------------------------------------------------------------
     if 'PlateRunDate' in out_levels and ctx.created_date:
         out_levels['PlateRunDate'] = [
@@ -225,7 +257,7 @@ def convert_array_row_data(
         ]
 
     # ------------------------------------------------------------------
-    # 4. ControlId population for QC/Buffer/Calibrator rows
+    # 5. ControlId population for QC/Buffer/Calibrator rows
     # ------------------------------------------------------------------
     sample_type_vals = out_levels.get('SampleType', [''] * n_rows)
     sample_id_vals = out_levels.get('SampleId', [''] * n_rows)
@@ -239,7 +271,7 @@ def convert_array_row_data(
     ]
 
     # ------------------------------------------------------------------
-    # 5. HybNormStatus — derived from (renamed) HybNormScaleFactor
+    # 6. HybNormStatus — derived from (renamed) HybNormScaleFactor
     # ------------------------------------------------------------------
     hyb_norm_scale_vals = out_levels.get('HybNormScaleFactor', [''] * n_rows)
     out_levels['HybNormStatus'] = [
@@ -247,7 +279,7 @@ def convert_array_row_data(
     ]
 
     # ------------------------------------------------------------------
-    # 6. MedNormIntStatus — derived per-row from NormScale_* levels
+    # 7. MedNormIntStatus — derived per-row from NormScale_* levels
     # ------------------------------------------------------------------
     out_levels['MedNormIntStatus'] = []
     for i in range(n_rows):
@@ -258,7 +290,7 @@ def convert_array_row_data(
         )
 
     # ------------------------------------------------------------------
-    # 7. New generated fields (one value per row)
+    # 8. New generated fields (one value per row)
     # ------------------------------------------------------------------
     out_levels['SampleReadout'] = ['Array'] * n_rows
     out_levels['UniqueSampleKey'] = [generate_guid() for _ in range(n_rows)]
@@ -268,16 +300,16 @@ def convert_array_row_data(
     out_levels['SoftwareVersion'] = [ctx.generated_by] * n_rows
 
     # ------------------------------------------------------------------
-    # 8. NGS-only blank fields
-    #    Only add if not already present (MatrixTubeBarcode may have come
-    #    from the renamed Barcode2d).
+    # 9. NGS-only blank fields
+    #    MatrixTubeBarcode may have already been populated from Barcode2d
+    #    via the _ROW_RENAMES mapping, so only add it if not present.
     # ------------------------------------------------------------------
     for ngs_field in _NGS_ONLY_FIELDS:
         if ngs_field not in out_levels:
             out_levels[ngs_field] = [''] * n_rows
 
     # ------------------------------------------------------------------
-    # 9. Reconstruct MultiIndex
+    # 10. Reconstruct MultiIndex
     # ------------------------------------------------------------------
     names = list(out_levels.keys())
     arrays = list(out_levels.values())

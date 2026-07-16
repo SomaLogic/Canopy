@@ -237,3 +237,139 @@ def test_ngs_only_fields_blank(result):
     for field in ['SequencingRunId', 'InputType', 'KitType']:
         values = list(result.get_level_values(field))
         assert all(v == '' for v in values), f'{field!r} has non-blank values'
+
+
+# ---------------------------------------------------------------------------
+# Project field population logic
+# ---------------------------------------------------------------------------
+# The make_full_legacy_array_adat fixture has:
+#   StudyId values: ['ST-001', 'ST-001', 'ST-001']
+#   SampleTypes: ['Sample', 'Calibrator', 'QC']
+# Expected behavior:
+#   - StudyId is renamed to Project via _ROW_RENAMES
+#   - All three rows should have 'ST-001' in Project (from StudyId)
+
+
+def test_project_from_study_id(result):
+    """Project populated from StudyId for all sample types."""
+    values = list(result.get_level_values('Project'))
+    assert values[0] == 'ST-001'  # Sample
+    assert values[1] == 'ST-001'  # Calibrator
+    assert values[2] == 'ST-001'  # QC
+
+
+def test_project_rma_fallback():
+    """When StudyId is absent, RMA values populate Project for study samples."""
+    from somadata.conversion.array import ArrayConversionContext
+    from somadata.conversion.array.row_data import convert_array_row_data
+    from tests.conversion.conftest import make_adat
+
+    adat = make_adat(
+        header={'!Title': 'Fallback Study'},
+        row_names=['SampleId', 'SampleType', 'RMA'],
+        row_values=[
+            ['S1', 'S2', 'S3'],
+            ['Sample', 'Sample', 'QC'],
+            ['RMA-001', 'RMA-002', 'RMA-003'],
+        ],
+    )
+    ctx = ArrayConversionContext.from_adat(adat)
+    result = convert_array_row_data(adat, ctx)
+    
+    values = list(result.get_level_values('Project'))
+    assert values[0] == 'RMA-001'  # Sample → use RMA
+    assert values[1] == 'RMA-002'  # Sample → use RMA
+    assert values[2] == ''  # QC → not a Sample, no Project logic applies
+
+
+def test_project_title_fallback():
+    """When StudyId and RMA are absent, Title populates Project for study samples."""
+    from somadata.conversion.array import ArrayConversionContext
+    from somadata.conversion.array.row_data import convert_array_row_data
+    from tests.conversion.conftest import make_adat
+
+    adat = make_adat(
+        header={'!Title': 'Fallback Study'},
+        row_names=['SampleId', 'SampleType'],
+        row_values=[
+            ['S1', 'S2', 'S3'],
+            ['Sample', 'Sample', 'Calibrator'],
+        ],
+    )
+    ctx = ArrayConversionContext.from_adat(adat)
+    result = convert_array_row_data(adat, ctx)
+    
+    values = list(result.get_level_values('Project'))
+    assert values[0] == 'Fallback Study'  # Sample → use Title
+    assert values[1] == 'Fallback Study'  # Sample → use Title
+    assert values[2] == ''  # Calibrator → not a Sample, no Project logic applies
+
+
+def test_project_blank_when_all_absent():
+    """When StudyId, RMA, and Title are all absent, Project is blank."""
+    from somadata.conversion.array import ArrayConversionContext
+    from somadata.conversion.array.row_data import convert_array_row_data
+    from tests.conversion.conftest import make_adat
+
+    adat = make_adat(
+        header={},
+        row_names=['SampleId', 'SampleType'],
+        row_values=[
+            ['S1', 'S2'],
+            ['Sample', 'Sample'],
+        ],
+    )
+    ctx = ArrayConversionContext.from_adat(adat)
+    result = convert_array_row_data(adat, ctx)
+    
+    values = list(result.get_level_values('Project'))
+    assert all(v == '' for v in values)
+
+
+def test_project_studyid_priority_over_rma():
+    """When both StudyId and RMA are present, StudyId takes priority."""
+    from somadata.conversion.array import ArrayConversionContext
+    from somadata.conversion.array.row_data import convert_array_row_data
+    from tests.conversion.conftest import make_adat
+
+    adat = make_adat(
+        header={'!Title': 'Fallback Study'},
+        row_names=['SampleId', 'SampleType', 'StudyId', 'RMA'],
+        row_values=[
+            ['S1', 'S2'],
+            ['Sample', 'Sample'],
+            ['STUDY-001', 'STUDY-002'],
+            ['RMA-001', 'RMA-002'],
+        ],
+    )
+    ctx = ArrayConversionContext.from_adat(adat)
+    result = convert_array_row_data(adat, ctx)
+    
+    values = list(result.get_level_values('Project'))
+    assert values[0] == 'STUDY-001'  # StudyId wins
+    assert values[1] == 'STUDY-002'  # StudyId wins
+
+
+def test_project_only_samples_get_fallback():
+    """Only SampleType=='Sample' rows get Title/RMA fallback."""
+    from somadata.conversion.array import ArrayConversionContext
+    from somadata.conversion.array.row_data import convert_array_row_data
+    from tests.conversion.conftest import make_adat
+
+    adat = make_adat(
+        header={'!Title': 'Study Title'},
+        row_names=['SampleId', 'SampleType', 'RMA'],
+        row_values=[
+            ['S1', 'S2', 'S3'],
+            ['Sample', 'Calibrator', 'QC'],
+            ['RMA-001', 'RMA-002', 'RMA-003'],
+        ],
+    )
+    ctx = ArrayConversionContext.from_adat(adat)
+    result = convert_array_row_data(adat, ctx)
+    
+    values = list(result.get_level_values('Project'))
+    assert values[0] == 'RMA-001'  # Sample → RMA fallback applies
+    assert values[1] == ''  # Calibrator → no fallback
+    assert values[2] == ''  # QC → no fallback
+
