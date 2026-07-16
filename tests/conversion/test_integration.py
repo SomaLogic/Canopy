@@ -16,19 +16,15 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
-
-pytestmark = pytest.mark.integration
-
 import numpy as np
 import pytest
 
-import somadata
 from somadata.adat import Adat
 from somadata.conversion.converter import to_v2_adat
 from somadata.io.adat.file import read_adat, write_adat
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES, validate_v2_header_fields
 
+pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 # Paths to real sample ADAT files bundled with tests
 # ---------------------------------------------------------------------------

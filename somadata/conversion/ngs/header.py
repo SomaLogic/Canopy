@@ -276,7 +276,7 @@ def _extract_whole_dict_or_per_plate(
             parsed = _parse_python_dict_value(str(raw_val))
             if parsed:
                 return {str(k): str(v) for k, v in parsed.items()}
-            # Non-dict bare value — treat entire value as a single entry (unusual)
+            # Non-dict bare value — no PlateId key available; ignore and fall back to per-plate scan
             break
 
     # Fall back to per-plate suffix pattern
@@ -408,7 +408,7 @@ def _extract_plate_keyed_json(header: dict, pattern: str) -> dict:
         if not plate_id or not value:
             continue
 
-        # The captured PlateId may itself be a Python-repr/JSON dict string
+        # The matched *value* may itself be a Python-repr/JSON dict string
         # (NGS ADATs store whole-dict values on bare keys like
         # 'QCCheckTailPercent' → "{'TS00000001': 1.855}").
         parsed = _parse_python_dict_value(str(value))
