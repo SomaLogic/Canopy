@@ -28,7 +28,6 @@ _COL_RENAMES: dict[str, str] = {
     'UniProt ID': 'UniProt',
     'Entrez Gene ID': 'EntrezGeneId',
     'Entrez Gene Symbol': 'EntrezGeneSymbol',
-    'DRC_Level': 'DRCLevelNGS',
     'BlockList': 'BlockListNGS',
 }
 
@@ -37,6 +36,7 @@ _COL_RENAMES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 _FIELDS_TO_REMOVE: frozenset[str] = frozenset(
     {
+        'SeqIdVersion',
         'SomaId',
         'Units',
         'LoD.Plasma',
@@ -49,6 +49,7 @@ _FIELDS_TO_REMOVE: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 _QC_CHECK_RE = re.compile(r'^QCCheck_(.+?)_ScaleFactor$')
 _QC_CHECK_PASSFLAG_RE = re.compile(r'^QCCheck_(.+?)_PassFlag$')
+_DRC_LEVEL_RE = re.compile(r'^DRC_Level')
 
 
 def _rename_col_field(name: str) -> str | None:
@@ -70,6 +71,8 @@ def _rename_col_field(name: str) -> str | None:
     'TargetFullName'
     >>> _rename_col_field('DRC_Level')
     'DRCLevelNGS'
+    >>> _rename_col_field('DRC_Level.W4')
+    'DRCLevelNGS'
     >>> _rename_col_field('QCCheck_PLT123_ScaleFactor')
     'QCRatio_PLT123'
     >>> _rename_col_field('SomaId')
@@ -81,6 +84,10 @@ def _rename_col_field(name: str) -> str | None:
     # Static renames
     if name in _COL_RENAMES:
         return _COL_RENAMES[name]
+
+    # DRC_Level* → DRCLevelNGS (handles DRC_Level, DRC_Level.W4, etc.)
+    if _DRC_LEVEL_RE.match(name):
+        return 'DRCLevelNGS'
 
     # QCCheck_<PlateId>_ScaleFactor → QCRatio_<PlateId>
     m = _QC_CHECK_RE.match(name)
@@ -189,26 +196,28 @@ def convert_ngs_col_data(adat: Adat) -> pd.MultiIndex:
         new_arrays.append(values)
 
     # ------------------------------------------------------------------
-    # 3. Derive HybControl level if Type exists
-    #    Value = 'True' where Type == 'Hybridization Control', else 'False'.
+    # 3. HybControl level
+    #    If the source already has a HybControl field, it has been passed
+    #    through in step 2 above (it is not in _FIELDS_TO_REMOVE and is not
+    #    renamed).  Only synthesise it when it is absent — deriving from
+    #    Type == 'Hybridization Control' as a fallback.
     # ------------------------------------------------------------------
-    if 'Type' in level_names:
-        type_idx = level_names.index('Type')
-        type_values = level_arrays[type_idx]
-        hyb_control_values = [
-            'True' if t == 'Hybridization Control' else 'False' for t in type_values
-        ]
+    if 'HybControl' not in new_names:
+        if 'Type' in level_names:
+            type_idx = level_names.index('Type')
+            type_values = level_arrays[type_idx]
+            hyb_control_values = [
+                'True' if t == 'Hybridization Control' else 'False' for t in type_values
+            ]
+        else:
+            n_cols = len(level_arrays[0]) if level_arrays else 0
+            hyb_control_values = ['False'] * n_cols
+            logger.warning(
+                'COL_DATA conversion: no "Type" or "HybControl" level found; '
+                'HybControl defaulted to False.'
+            )
         new_names.append('HybControl')
         new_arrays.append(hyb_control_values)
-    else:
-        # If Type level absent, default all to 'False'.
-        n_cols = len(level_arrays[0]) if level_arrays else 0
-        hyb_control_values = ['False'] * n_cols
-        new_names.append('HybControl')
-        new_arrays.append(hyb_control_values)
-        logger.warning(
-            'COL_DATA conversion: no "Type" level found; HybControl defaulted to False.'
-        )
 
     # ------------------------------------------------------------------
     # 4. Reconstruct MultiIndex

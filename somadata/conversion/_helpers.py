@@ -356,3 +356,105 @@ def match_qc_reference(name: str) -> str | None:
     """Return the QCSampleId if *name* matches ``QcReference_<QCSampleId>``, else ``None``."""
     m = _QC_REFERENCE_RE.match(name)
     return m.group(1) if m else None
+
+
+# ---------------------------------------------------------------------------
+# Row data conversion helpers (shared by array/row_data and ngs/row_data)
+# ---------------------------------------------------------------------------
+
+
+def try_float(value: str) -> float | None:
+    """Return *value* as float, or ``None`` on failure.
+    
+    Parameters
+    ----------
+    value : str
+        String value to convert to float.
+    
+    Returns
+    -------
+    float or None
+        Float value if conversion succeeds, None otherwise.
+    
+    Examples
+    --------
+    >>> try_float('1.23')
+    1.23
+    >>> try_float('invalid') is None
+    True
+    """
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def derive_hyb_norm_status(scale_factor: str) -> str:
+    """Return ``'PASS'`` if 0.4 <= float(scale_factor) <= 2.5, else ``'FLAG'``.
+
+    Returns ``''`` for missing / non-numeric values.
+    
+    Parameters
+    ----------
+    scale_factor : str
+        HybNormScaleFactor value to check.
+    
+    Returns
+    -------
+    str
+        'PASS', 'FLAG', or '' (empty for non-numeric).
+    
+    Examples
+    --------
+    >>> derive_hyb_norm_status('1.0')
+    'PASS'
+    >>> derive_hyb_norm_status('3.0')
+    'FLAG'
+    >>> derive_hyb_norm_status('')
+    ''
+    """
+    f = try_float(scale_factor)
+    if f is None:
+        return ''
+    return 'PASS' if 0.4 <= f <= 2.5 else 'FLAG'
+
+
+def derive_hyb_norm_status_vectorized(scale_factors: list[str]) -> list[str]:
+    """Vectorized version of HybNormStatus derivation.
+    
+    Returns 'PASS' if 0.4 <= float(value) <= 2.5, else 'FLAG', or '' for non-numeric.
+    
+    Parameters
+    ----------
+    scale_factors : list[str]
+        HybNormScaleFactor values for all rows.
+    
+    Returns
+    -------
+    list[str]
+        Status values ('PASS', 'FLAG', or '') for each row.
+    
+    Examples
+    --------
+    >>> derive_hyb_norm_status_vectorized(['1.0', '3.0', 'invalid'])
+    ['PASS', 'FLAG', '']
+    """
+    import numpy as np
+    import pandas as pd
+    
+    arr = np.array(scale_factors, dtype=object)
+    result = np.full(len(arr), '', dtype=object)
+    
+    try:
+        numeric = pd.to_numeric(arr, errors='coerce')
+        valid_mask = ~np.isnan(numeric)
+        
+        pass_mask = valid_mask & (numeric >= 0.4) & (numeric <= 2.5)
+        flag_mask = valid_mask & ~pass_mask
+        
+        result[pass_mask] = 'PASS'
+        result[flag_mask] = 'FLAG'
+    except Exception:
+        return [derive_hyb_norm_status(v) for v in scale_factors]
+    
+    return result.tolist()

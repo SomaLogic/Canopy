@@ -44,6 +44,7 @@ class ArrayConversionContext:
     source_file_id: str = '1'
     created_date: str = ''
     source_file_md5sum: str | None = None
+    calibrator_id: str = ''
 
     @classmethod
     def from_adat(
@@ -67,5 +68,6 @@ class ArrayConversionContext:
             source_adat_id=lookup_header(hdr, 'AdatId'),
             generated_by=lookup_header(hdr, 'GeneratedBy'),
             created_date=lookup_header(hdr, 'CreatedDate'),
+            calibrator_id=lookup_header(hdr, 'CalibratorId'),
             source_file_md5sum=source_file_md5sum,
         )

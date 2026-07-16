@@ -43,8 +43,15 @@ logger = logging.getLogger(__name__)
 # Expected ProcessSteps for merge validation (Section 3.4)
 # ---------------------------------------------------------------------------
 
-# Array bridged terminal triple (last 3 steps must match exactly)
+# Array bridged terminal triple (last 3 steps must match exactly).
+# The canonical name in real DPQ pipeline output is "CrossPlatformPlateScale";
+# older synthetic fixtures used "CrossPlatformPlateScaling".  Both are accepted.
 _ARRAY_TERMINAL_TRIPLE = [
+    'CrossPlatformPlateScale',
+    'CrossPlatformCalibrate',
+    'MedNormExt',
+]
+_ARRAY_TERMINAL_TRIPLE_LEGACY = [
     'CrossPlatformPlateScaling',
     'CrossPlatformCalibrate',
     'MedNormExt',
@@ -119,7 +126,7 @@ def _validate_array_process_steps(adat: Adat) -> None:
     hdr = getattr(adat, 'header_metadata', {})
     raw = lookup_header(hdr, 'ProcessSteps')
     steps = parse_process_steps(raw)
-    if steps[-3:] != _ARRAY_TERMINAL_TRIPLE:
+    if steps[-3:] not in (_ARRAY_TERMINAL_TRIPLE, _ARRAY_TERMINAL_TRIPLE_LEGACY):
         raise ProcessStepsMismatchError(
             f'Array ADAT ProcessSteps do not end with the required bridged '
             f'terminal triple {_ARRAY_TERMINAL_TRIPLE!r}. '
@@ -407,8 +414,14 @@ def _merge_col_data(
         is_shared = bool(array_row) and bool(ngs_row)
 
         for name in all_level_names:
+            # HybControl: NGS is always authoritative for shared SeqIds.
+            # The array converter synthesises HybControl as all-False (array ADATs
+            # carry no hybridisation control analytes), so array wins would
+            # incorrectly erase any True values coming from the NGS source.
+            if is_shared and name == 'HybControl' and name in ngs_row:
+                level_arrays[name].append(ngs_row[name])
             # For Ref.MedNormExt.* on shared SeqIds, use the authoritative source
-            if (
+            elif (
                 ngs_wins_mednorm
                 and is_shared
                 and name.startswith('Ref.MedNormExt.')
@@ -433,12 +446,16 @@ def _merge_col_data(
 def _build_seqid_lookup(columns: pd.MultiIndex) -> dict[str, dict[str, str]]:
     """Return ``{seq_id: {level_name: value}}`` for a COL_DATA MultiIndex."""
     seq_ids = columns.get_level_values('SeqId')
+    
+    # Extract all level values upfront
+    level_arrays = [columns.get_level_values(name) for name in columns.names]
+    
+    # Build lookup dict: iterate once over SeqIds, once over levels
     result: dict[str, dict[str, str]] = {}
     for i, seq_id in enumerate(seq_ids):
         row: dict[str, str] = {}
         for j, name in enumerate(columns.names):
-            # Use positional index to avoid ambiguity when level names repeat
-            row[name] = str(columns.get_level_values(j)[i])
+            row[name] = str(level_arrays[j][i])
         result[str(seq_id)] = row
     return result
 

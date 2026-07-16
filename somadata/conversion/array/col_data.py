@@ -98,6 +98,13 @@ def _rename_col_field(
     if _MED_NORM_RFU_RE.match(name):
         return 'Ref.MedNorm.Id'
 
+    # Other Ref.* fields from the array source are bridging/NGS references:
+    # apply Ref.NGS.* prefix unless already correctly prefixed.
+    if name.startswith('Ref.'):
+        if name.startswith('Ref.NGS.') or name.startswith('Ref.MedNorm.'):
+            return name
+        return name.replace('Ref.', 'Ref.NGS.', 1)
+
     return name  # pass through unchanged
 
 

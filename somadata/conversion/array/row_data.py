@@ -15,7 +15,13 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from somadata.conversion._helpers import generate_guid
+from somadata.conversion._helpers import (
+    derive_hyb_norm_status,
+    derive_hyb_norm_status_vectorized,
+    generate_guid,
+    lookup_header,
+    try_float,
+)
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -27,11 +33,18 @@ logger = logging.getLogger(__name__)
 # Static field renames (legacy → v2.0)
 # ---------------------------------------------------------------------------
 _ROW_RENAMES: dict[str, str] = {
+    'SampleID': 'SampleId',
     'PlatePosition': 'WellPosition',
     'HybControlNormScale': 'HybNormScaleFactor',
     'RowCheck': 'RowCheckStatus',
+    'RowCheck_PassFlag': 'RowCheckStatus',
+    'MedNormExt_PassFlag': 'MedNormExtStatus',
     'StudyId': 'Project',
     'SubjectID': 'SubjectId',
+    # Barcode2d → MatrixTubeBarcode: Per spec §3.2.3, array Barcode2d values
+    # are moved to MatrixTubeBarcode even though the field is classified as
+    # "NGS-only" in the field table (§2.6.2). This preserves the barcode data
+    # for array samples in the v2.0 format.
     'Barcode2d': 'MatrixTubeBarcode',
 }
 
@@ -95,25 +108,6 @@ _NORM_SCALE_RE = re.compile(r'^NormScale_')
 # ---------------------------------------------------------------------------
 
 
-def _try_float(value: str) -> float | None:
-    """Return *value* as float, or ``None`` on failure."""
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _derive_hyb_norm_status(scale_factor: str) -> str:
-    """Return ``'PASS'`` if 0.4 <= float(scale_factor) <= 2.5, else ``'FLAG'``.
-
-    Returns ``''`` for missing / non-numeric values.
-    """
-    f = _try_float(scale_factor)
-    if f is None:
-        return ''
-    return 'PASS' if 0.4 <= f <= 2.5 else 'FLAG'
-
-
 def _derive_med_norm_int_status(
     sample_type: str,
     norm_scale_values: dict[str, str],
@@ -140,7 +134,7 @@ def _derive_med_norm_int_status(
         return ''
     if not norm_scale_values:
         return ''
-    floats = [_try_float(v) for v in norm_scale_values.values()]
+    floats = [try_float(v) for v in norm_scale_values.values()]
     if any(f is None for f in floats):
         return ''
     return (
@@ -148,6 +142,68 @@ def _derive_med_norm_int_status(
         if all(0.4 <= f <= 2.5 for f in floats)  # type: ignore[operator]
         else 'FLAG'
     )
+
+
+def _derive_med_norm_int_status_vectorized(
+    sample_types: list[str],
+    norm_scale_level_names: list[str],
+    out_levels: dict[str, list],
+) -> list[str]:
+    """Vectorized MedNormIntStatus derivation for all rows.
+    
+    Only applies to Calibrator and Buffer sample types. All NormScale_* values
+    for a row must be numeric and in range [0.4, 2.5] for PASS.
+    
+    Parameters
+    ----------
+    sample_types : list[str]
+        SampleType value for each row.
+    norm_scale_level_names : list[str]
+        Names of all NormScale_* fields present.
+    out_levels : dict[str, list]
+        The output levels dict containing NormScale_* arrays.
+    
+    Returns
+    -------
+    list[str]
+        Status values for each row.
+    """
+    n_rows = len(sample_types)
+    result = [''] * n_rows
+    
+    if not norm_scale_level_names:
+        return result
+    
+    # Build matrix of all NormScale values (rows × norm_scale_fields)
+    norm_matrix = []
+    for field_name in norm_scale_level_names:
+        norm_matrix.append(out_levels[field_name])
+    
+    # Process only eligible sample types
+    for i in range(n_rows):
+        stype = sample_types[i]
+        if stype not in _MED_NORM_INT_ELIGIBLE:
+            continue
+        
+        # Collect all NormScale values for this row
+        values = [norm_matrix[j][i] for j in range(len(norm_scale_level_names))]
+        if not values:
+            continue
+        
+        # Try converting all to float
+        try:
+            floats = [float(v) if v else None for v in values]
+        except (ValueError, TypeError):
+            continue
+        
+        # Check if all are valid and in range
+        if all(f is not None for f in floats):
+            if all(0.4 <= f <= 2.5 for f in floats):  # type: ignore[operator]
+                result[i] = 'PASS'
+            else:
+                result[i] = 'FLAG'
+    
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -179,30 +235,72 @@ def convert_array_row_data(
     n_rows = len(src_index)
 
     level_names: list[str] = list(src_index.names)
-    level_arrays: dict[str, list] = {
-        name: list(src_index.get_level_values(name)) for name in level_names
+    # Extract level values once without creating intermediate lists
+    level_arrays: dict[str, pd.Index] = {
+        name: src_index.get_level_values(name) for name in level_names
     }
 
     # ------------------------------------------------------------------
     # 1. Apply renames and build working dict of output levels
     # ------------------------------------------------------------------
     out_levels: dict[str, list] = {}
+    rma_values: pd.Index | None = None
 
     for old_name, values in level_arrays.items():
         if old_name in _FIELDS_TO_REMOVE:
             continue
+        if old_name == 'RMA':
+            # Spec §3.2.3: move RMA value into Project; do not emit as own field
+            rma_values = values
+            continue
         new_name = _ROW_RENAMES.get(old_name, old_name)
+        # Convert to list only once per field
         out_levels[new_name] = list(values)
 
     # ------------------------------------------------------------------
-    # 2. Identify NormScale_* levels (needed for MedNormIntStatus)
+    # 2. Project field population logic
+    #    Priority: StudyId > RMA > Title (header) > blank
+    #    For array study samples (SampleType == "Sample"), populate Project:
+    #    - Use StudyId values if StudyId field exists (already renamed to Project)
+    #    - Otherwise, use RMA values if RMA field was present
+    #    - Otherwise, use Title from header for all sample rows
+    #    - Otherwise, leave blank
+    # ------------------------------------------------------------------
+    sample_type_vals = out_levels.get('SampleType', [''] * n_rows)
+    
+    # Ensure Project field exists
+    if 'Project' not in out_levels:
+        out_levels['Project'] = [''] * n_rows
+    
+    # Get Title from header once (used for fallback)
+    title_from_header = lookup_header(getattr(adat, 'header_metadata', {}), 'Title')
+    
+    # Apply fallback logic for study samples
+    for i in range(n_rows):
+        stype = sample_type_vals[i] if i < len(sample_type_vals) else ''
+        # Only apply to study samples
+        if stype == 'Sample':
+            current_value = out_levels['Project'][i]
+            # If Project (from StudyId) is already populated, keep it
+            if current_value:
+                continue
+            # Try RMA fallback
+            if rma_values is not None and i < len(rma_values) and rma_values[i]:
+                out_levels['Project'][i] = rma_values[i]
+                continue
+            # Try Title fallback from header
+            if title_from_header:
+                out_levels['Project'][i] = title_from_header
+    
+    # ------------------------------------------------------------------
+    # 3. Identify NormScale_* levels (needed for MedNormIntStatus)
     # ------------------------------------------------------------------
     norm_scale_level_names: list[str] = [
         n for n in out_levels if _NORM_SCALE_RE.match(n)
     ]
 
     # ------------------------------------------------------------------
-    # 3. PlateRunDate fallback from ctx.created_date
+    # 4. PlateRunDate fallback from ctx.created_date
     # ------------------------------------------------------------------
     if 'PlateRunDate' in out_levels and ctx.created_date:
         out_levels['PlateRunDate'] = [
@@ -210,7 +308,7 @@ def convert_array_row_data(
         ]
 
     # ------------------------------------------------------------------
-    # 4. ControlId population for QC/Buffer/Calibrator rows
+    # 5. ControlId population for QC/Buffer/Calibrator rows
     # ------------------------------------------------------------------
     sample_type_vals = out_levels.get('SampleType', [''] * n_rows)
     sample_id_vals = out_levels.get('SampleId', [''] * n_rows)
@@ -224,45 +322,51 @@ def convert_array_row_data(
     ]
 
     # ------------------------------------------------------------------
-    # 5. HybNormStatus — derived from (renamed) HybNormScaleFactor
+    # 6. HybNormStatus — derived from (renamed) HybNormScaleFactor (VECTORIZED)
     # ------------------------------------------------------------------
     hyb_norm_scale_vals = out_levels.get('HybNormScaleFactor', [''] * n_rows)
-    out_levels['HybNormStatus'] = [
-        _derive_hyb_norm_status(v) for v in hyb_norm_scale_vals
-    ]
+    out_levels['HybNormStatus'] = derive_hyb_norm_status_vectorized(hyb_norm_scale_vals)
 
     # ------------------------------------------------------------------
-    # 6. MedNormIntStatus — derived per-row from NormScale_* levels
+    # 7. MedNormIntStatus — derived per-row from NormScale_* levels (VECTORIZED)
     # ------------------------------------------------------------------
-    out_levels['MedNormIntStatus'] = []
-    for i in range(n_rows):
-        stype = sample_type_vals[i] if i < len(sample_type_vals) else ''
-        norm_vals = {ns: out_levels[ns][i] for ns in norm_scale_level_names}
-        out_levels['MedNormIntStatus'].append(
-            _derive_med_norm_int_status(stype, norm_vals)
-        )
+    out_levels['MedNormIntStatus'] = _derive_med_norm_int_status_vectorized(
+        sample_type_vals, norm_scale_level_names, out_levels
+    )
 
     # ------------------------------------------------------------------
-    # 7. New generated fields (one value per row)
+    # 8. New generated fields (one value per row)
     # ------------------------------------------------------------------
     out_levels['SampleReadout'] = ['Array'] * n_rows
-    out_levels['UniqueSampleKey'] = [generate_guid() for _ in range(n_rows)]
+    
+    # Only generate for missing/blank keys
+    if 'UniqueSampleKey' in out_levels:
+        # Some keys may already exist; only generate for missing/blank
+        existing_keys = out_levels['UniqueSampleKey']
+        out_levels['UniqueSampleKey'] = [
+            (key if key and str(key).strip() else generate_guid())
+            for key in existing_keys
+        ]
+    else:
+        # No existing keys; generate all
+        out_levels['UniqueSampleKey'] = [generate_guid() for _ in range(n_rows)]
+    
     out_levels['SourceFileId'] = [ctx.source_file_id] * n_rows
     out_levels['ProcessStepsId'] = [ctx.process_steps_id] * n_rows
     out_levels['ReportConfigId'] = [ctx.report_config_id] * n_rows
     out_levels['SoftwareVersion'] = [ctx.generated_by] * n_rows
 
     # ------------------------------------------------------------------
-    # 8. NGS-only blank fields
-    #    Only add if not already present (MatrixTubeBarcode may have come
-    #    from the renamed Barcode2d).
+    # 9. NGS-only blank fields
+    #    MatrixTubeBarcode may have already been populated from Barcode2d
+    #    via the _ROW_RENAMES mapping, so only add it if not present.
     # ------------------------------------------------------------------
     for ngs_field in _NGS_ONLY_FIELDS:
         if ngs_field not in out_levels:
             out_levels[ngs_field] = [''] * n_rows
 
     # ------------------------------------------------------------------
-    # 9. Reconstruct MultiIndex
+    # 10. Reconstruct MultiIndex
     # ------------------------------------------------------------------
     names = list(out_levels.keys())
     arrays = list(out_levels.values())
