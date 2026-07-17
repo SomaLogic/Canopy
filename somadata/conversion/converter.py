@@ -18,6 +18,7 @@ from somadata.conversion.merge import (
     compute_seqid_union,
     merge_mixed_headers,
     validate_mednorm_compatibility,
+    _merge_col_data,
 )
 from somadata.conversion.ngs import NGSConversionContext
 from somadata.conversion.ngs.col_data import convert_ngs_col_data
@@ -29,6 +30,7 @@ from somadata.conversion.utils import (
     MedNormValidator,
     V2SourceContext,
     align_row_indexes,
+    remap_row_index_ids,
     validate_v2_ngs_process_steps,
 )
 from somadata.io.adat.v2_fields import validate_v2_header_fields
@@ -129,36 +131,6 @@ def to_v2_adat(
         )
     return handler(
         adat_a, adat_b, md5sum_a=md5_a, md5sum_b=md5_b, med_norm_ref=med_norm_ref
-    )
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _load(adat: str | Adat) -> tuple[Adat, str | None]:
-    """Return an Adat and optional md5sum, reading from disk if a path string was supplied.
-
-    Returns
-    -------
-    tuple[Adat, str | None]
-        The loaded Adat and the md5sum of the source file (if loaded from file).
-        Returns None for the md5sum when an in-memory Adat object is passed.
-    """
-    from somadata.adat import Adat as AdatClass
-    from somadata.io.adat.file import read_adat
-
-    if isinstance(adat, str):
-        # Compute md5sum of file before reading
-        md5sum = _compute_file_md5sum(adat)
-        loaded_adat = read_adat(adat)
-        return loaded_adat, md5sum
-    if isinstance(adat, AdatClass):
-        return adat, None
-    raise TypeError(
-        f'Each element of adats must be a file path (str) or an Adat object; '
-        f'got {type(adat).__name__!r}.'
     )
 
 
@@ -347,14 +319,101 @@ def _merge_bridged_array_and_v2(
         header_metadata=array_header_v2,
     )
     
-    # 5. Compute SeqId union
-    rfu_df, merged_columns = compute_seqid_union(
-        array_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
-    )
-    
-    # 6. Merge headers
+    # 5. Remap v2 ADAT row index *Id levels to match assigned context IDs
+    # The v2 input's row index stores SourceFileId/ProcessStepsId/ReportConfigId
+    # from its original header keys. We assign it new IDs ('2', '2', '2') in v2_ctx,
+    # so we must remap the index levels to match.
     v2_ctx = V2SourceContext(source_file_id='2', process_steps_id='2', report_config_id='2')
     
+    # Build mapping from v2's original keys to the new IDs we're assigning
+    v2_original_sf_keys = list((v2_adat.header_metadata.get('SourceFile') or {}).keys())
+    v2_original_ps_keys = list((v2_adat.header_metadata.get('ProcessSteps') or {}).keys())
+    v2_original_rc_keys = list((v2_adat.header_metadata.get('ReportConfig') or {}).keys())
+    
+    id_mapping: dict[str, str] = {}
+    for old_key in v2_original_sf_keys:
+        id_mapping[old_key] = v2_ctx.source_file_id
+    for old_key in v2_original_ps_keys:
+        id_mapping[old_key] = v2_ctx.process_steps_id
+    for old_key in v2_original_rc_keys:
+        id_mapping[old_key] = v2_ctx.report_config_id
+    
+    v2_index_remapped = remap_row_index_ids(v2_adat.index, id_mapping)
+    
+    # 6. Compute SeqId union with correct argument ordering
+    # compute_seqid_union expects array-first + ngs-second and applies array-prefers
+    # COL_DATA rules. When v2_adat contains Array rows, we need to ensure array rows
+    # come first in both arguments and final output.
+    
+    v2_readouts = set(v2_adat.index.get_level_values('SampleReadout'))
+    
+    if output_assay_type == 'Array' or v2_readouts == {'NGS'}:
+        # Simple case: array_intermediate is array, v2_adat is NGS (or both array)
+        # Order is correct: array first, NGS second
+        rfu_df, merged_columns = compute_seqid_union(
+            array_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+        )
+    else:
+        # v2_adat is Mixed: contains both Array and NGS rows
+        # We need to split v2 by SampleReadout, merge the array parts first,
+        # then merge with NGS parts to maintain array-first order
+        
+        v2_array_mask = v2_adat.index.get_level_values('SampleReadout') == 'Array'
+        v2_ngs_mask = ~v2_array_mask
+        
+        v2_array_part = v2_adat[v2_array_mask]
+        v2_ngs_part = v2_adat[v2_ngs_mask]
+        
+        v2_array_index = v2_index_remapped[v2_array_mask]
+        v2_ngs_index = v2_index_remapped[v2_ngs_mask]
+        
+        # Merge array parts: array_intermediate + v2_array_part
+        # Use simple concatenation since both are array data
+        array_seqids = list(array_intermediate.columns.get_level_values('SeqId'))
+        v2_array_seqids = list(v2_array_part.columns.get_level_values('SeqId'))
+        union_array_seqids = sorted(set(array_seqids) | set(v2_array_seqids))
+        
+        array_df = pd.DataFrame(
+            array_intermediate.values,
+            index=array_intermediate.index,
+            columns=array_seqids,
+        ).reindex(columns=union_array_seqids)
+        
+        v2_array_df = pd.DataFrame(
+            v2_array_part.values,
+            index=v2_array_part.index,
+            columns=v2_array_seqids,
+        ).reindex(columns=union_array_seqids)
+        
+        combined_array_df = pd.concat([array_df, v2_array_df], axis=0)
+        
+        # For COL_DATA, prefer array_intermediate values for shared SeqIds
+        # (similar to compute_seqid_union's array-prefers logic)
+        combined_array_columns = _merge_col_data(
+            array_intermediate.columns,
+            v2_array_part.columns,
+            union_array_seqids,
+            mednorm_ref_source=None,
+        )
+        
+        # Build combined array Adat
+        combined_array = AdatClass(
+            data=combined_array_df.values,
+            index=combined_array_df.index,
+            columns=combined_array_columns,
+            header_metadata={},
+        )
+        
+        # Now merge combined array with NGS part using compute_seqid_union
+        rfu_df, merged_columns = compute_seqid_union(
+            combined_array, v2_ngs_part, mednorm_ref_source=mednorm_ref_source
+        )
+        
+        # Update row indexes to reflect the split
+        array_index_v2 = combined_array.index
+        v2_index_remapped = v2_ngs_index
+    
+    # 7. Merge headers
     if output_assay_type == 'Array':
         merged_header = HeaderMerger.merge_array_headers(array_header_v2, v2_adat.header_metadata, array_ctx, v2_ctx)
     else:
@@ -362,11 +421,11 @@ def _merge_bridged_array_and_v2(
             array_header_v2, v2_adat.header_metadata, array_ctx, v2_ctx
         )
     
-    # 7. Align row indexes and concatenate
-    array_index_v2, v2_index = align_row_indexes(array_index_v2, v2_adat.index)
-    merged_index = array_index_v2.append(v2_index)
+    # 8. Align row indexes and concatenate
+    array_index_v2, v2_index_remapped = align_row_indexes(array_index_v2, v2_index_remapped)
+    merged_index = array_index_v2.append(v2_index_remapped)
     
-    # 8. Assemble result
+    # 9. Assemble result
     result = AdatClass(
         data=rfu_df.values,
         index=merged_index,
@@ -441,14 +500,122 @@ def _merge_ngs_and_v2(
         header_metadata=ngs_header_v2,
     )
     
-    # 5. Compute SeqId union
-    rfu_df, merged_columns = compute_seqid_union(
-        ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
-    )
-    
-    # 6. Merge headers
+    # 5. Remap v2 ADAT row index *Id levels to match assigned context IDs
+    # The v2 input's row index stores SourceFileId/ProcessStepsId/ReportConfigId
+    # from its original header keys. We assign it new IDs ('2', '2', '2') in v2_ctx,
+    # so we must remap the index levels to match.
     v2_ctx = V2SourceContext(source_file_id='2', process_steps_id='2', report_config_id='2')
     
+    # Build mapping from v2's original keys to the new IDs we're assigning
+    v2_original_sf_keys = list((v2_adat.header_metadata.get('SourceFile') or {}).keys())
+    v2_original_ps_keys = list((v2_adat.header_metadata.get('ProcessSteps') or {}).keys())
+    v2_original_rc_keys = list((v2_adat.header_metadata.get('ReportConfig') or {}).keys())
+    
+    id_mapping: dict[str, str] = {}
+    for old_key in v2_original_sf_keys:
+        id_mapping[old_key] = v2_ctx.source_file_id
+    for old_key in v2_original_ps_keys:
+        id_mapping[old_key] = v2_ctx.process_steps_id
+    for old_key in v2_original_rc_keys:
+        id_mapping[old_key] = v2_ctx.report_config_id
+    
+    v2_index_remapped = remap_row_index_ids(v2_adat.index, id_mapping)
+    
+    # 6. Compute SeqId union with correct argument ordering
+    # compute_seqid_union expects array-first + ngs-second. When v2_adat contains
+    # Array rows, we need to split it and ensure array rows come first.
+    
+    v2_readouts = set(v2_adat.index.get_level_values('SampleReadout'))
+    
+    if output_assay_type == 'NGS':
+        # Both inputs are NGS-only: use compute_seqid_union normally
+        # (parameter names are misleading but function works for same-type merges)
+        rfu_df, merged_columns = compute_seqid_union(
+            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+        )
+    elif v2_readouts == {'NGS'}:
+        # v2 is NGS-only, output is Mixed: ngs_intermediate + v2_adat (both NGS)
+        # We have no array data, so use compute_seqid_union with ngs first
+        rfu_df, merged_columns = compute_seqid_union(
+            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+        )
+    elif 'Array' in v2_readouts:
+        # v2 contains Array rows (could be Array-only or Mixed)
+        # compute_seqid_union needs array-first ordering, so we must split v2
+        # and call it with array rows first, NGS rows second
+        
+        v2_array_mask = v2_adat.index.get_level_values('SampleReadout') == 'Array'
+        v2_ngs_mask = ~v2_array_mask
+        
+        v2_array_part = v2_adat[v2_array_mask]
+        v2_ngs_part = v2_adat[v2_ngs_mask] if v2_ngs_mask.any() else None
+        
+        v2_array_index = v2_index_remapped[v2_array_mask]
+        v2_ngs_index = v2_index_remapped[v2_ngs_mask] if v2_ngs_mask.any() else None
+        
+        if v2_ngs_part is not None and len(v2_ngs_part) > 0:
+            # v2 is Mixed: has both Array and NGS rows
+            # Merge NGS parts first (ngs_intermediate + v2_ngs_part)
+            ngs_seqids = list(ngs_intermediate.columns.get_level_values('SeqId'))
+            v2_ngs_seqids = list(v2_ngs_part.columns.get_level_values('SeqId'))
+            union_ngs_seqids = sorted(set(ngs_seqids) | set(v2_ngs_seqids))
+            
+            ngs_df = pd.DataFrame(
+                ngs_intermediate.values,
+                index=ngs_intermediate.index,
+                columns=ngs_seqids,
+            ).reindex(columns=union_ngs_seqids)
+            
+            v2_ngs_df = pd.DataFrame(
+                v2_ngs_part.values,
+                index=v2_ngs_part.index,
+                columns=v2_ngs_seqids,
+            ).reindex(columns=union_ngs_seqids)
+            
+            combined_ngs_df = pd.concat([ngs_df, v2_ngs_df], axis=0)
+            
+            # For COL_DATA, prefer ngs_intermediate values for shared SeqIds
+            combined_ngs_columns = _merge_col_data(
+                ngs_intermediate.columns,
+                v2_ngs_part.columns,
+                union_ngs_seqids,
+                mednorm_ref_source=None,
+            )
+            
+            combined_ngs = AdatClass(
+                data=combined_ngs_df.values,
+                index=combined_ngs_df.index,
+                columns=combined_ngs_columns,
+                header_metadata={},
+            )
+            
+            # Now merge v2_array_part with combined_ngs using compute_seqid_union
+            # (array first, NGS second)
+            rfu_df, merged_columns = compute_seqid_union(
+                v2_array_part, combined_ngs, mednorm_ref_source=mednorm_ref_source
+            )
+            
+            # Update row indexes: array first (v2_array_index), then NGS (combined_ngs.index)
+            ngs_index_v2 = combined_ngs.index
+            v2_index_remapped = v2_array_index
+            # Swap order for final concatenation since we put array first above
+            ngs_index_v2, v2_index_remapped = v2_index_remapped, ngs_index_v2
+        else:
+            # v2 is Array-only: call compute_seqid_union(v2_array_part, ngs_intermediate)
+            rfu_df, merged_columns = compute_seqid_union(
+                v2_array_part, ngs_intermediate, mednorm_ref_source=mednorm_ref_source
+            )
+            # Update row indexes: array first, NGS second
+            v2_index_remapped = v2_array_index
+            # Swap for final concatenation
+            ngs_index_v2, v2_index_remapped = v2_index_remapped, ngs_index_v2
+    else:
+        # Shouldn't reach here, but handle gracefully
+        rfu_df, merged_columns = compute_seqid_union(
+            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+        )
+    
+    # 7. Merge headers
     if output_assay_type == 'Mixed':
         merged_header = merge_mixed_headers(
             ngs_header_v2, v2_adat.header_metadata, ngs_ctx, v2_ctx
@@ -458,11 +625,11 @@ def _merge_ngs_and_v2(
             ngs_header_v2, v2_adat.header_metadata, 'NGS'
         )
     
-    # 7. Align row indexes and concatenate
-    ngs_index_v2, v2_index = align_row_indexes(ngs_index_v2, v2_adat.index)
-    merged_index = ngs_index_v2.append(v2_index)
+    # 8. Align row indexes and concatenate
+    ngs_index_v2, v2_index_remapped = align_row_indexes(ngs_index_v2, v2_index_remapped)
+    merged_index = ngs_index_v2.append(v2_index_remapped)
     
-    # 8. Assemble result
+    # 9. Assemble result
     result = AdatClass(
         data=rfu_df.values,
         index=merged_index,
@@ -612,15 +779,63 @@ def _merge_v2_combined_adats(
     # 4. Compute SeqId union and merged COL_DATA
     rfu_df, merged_columns = compute_seqid_union(adat_a, adat_b, mednorm_ref_source=mednorm_ref_source)
     
-    # 4. Merge headers
+    # 4. Merge headers - this renumbers SourceFile/ProcessSteps/ReportConfig keys
     merged_header = HeaderMerger.merge_v2_headers(
         adat_a.header_metadata,
         adat_b.header_metadata,
         output_assay_type,
     )
     
-    # 5. Align row indexes and concatenate
-    aligned_index_a, aligned_index_b = align_row_indexes(adat_a.index, adat_b.index)
+    # 5. Remap row index *Id levels to match the renumbered header keys
+    # HeaderMerger.merge_v2_headers renumbers keys sequentially (1, 2, 3, ...)
+    # We need to build a mapping from original keys to new keys for both inputs
+    
+    # Extract original keys from both inputs
+    sf_a_keys = list((adat_a.header_metadata.get('SourceFile') or {}).keys())
+    sf_b_keys = list((adat_b.header_metadata.get('SourceFile') or {}).keys())
+    ps_a_keys = list((adat_a.header_metadata.get('ProcessSteps') or {}).keys())
+    ps_b_keys = list((adat_b.header_metadata.get('ProcessSteps') or {}).keys())
+    rc_a_keys = list((adat_a.header_metadata.get('ReportConfig') or {}).keys())
+    rc_b_keys = list((adat_b.header_metadata.get('ReportConfig') or {}).keys())
+    
+    # Build mappings following HeaderMerger.merge_v2_headers logic (lines 571-612 in utils.py)
+    # SourceFile keys are renumbered: a's keys → 1, 2, ...; b's keys → next, next+1, ...
+    id_mapping_a: dict[str, str] = {}
+    id_mapping_b: dict[str, str] = {}
+    
+    # SourceFile mapping
+    next_id = 1
+    for old_key in sorted(sf_a_keys):
+        id_mapping_a[old_key] = str(next_id)
+        next_id += 1
+    for old_key in sorted(sf_b_keys):
+        id_mapping_b[old_key] = str(next_id)
+        next_id += 1
+    
+    # ProcessSteps mapping
+    next_id = 1
+    for old_key in sorted(ps_a_keys):
+        id_mapping_a[old_key] = str(next_id)
+        next_id += 1
+    for old_key in sorted(ps_b_keys):
+        id_mapping_b[old_key] = str(next_id)
+        next_id += 1
+    
+    # ReportConfig mapping
+    next_id = 1
+    for old_key in sorted(rc_a_keys):
+        id_mapping_a[old_key] = str(next_id)
+        next_id += 1
+    for old_key in sorted(rc_b_keys):
+        id_mapping_b[old_key] = str(next_id)
+        next_id += 1
+    
+    # Remap both row indexes
+    index_a_remapped = remap_row_index_ids(adat_a.index, id_mapping_a)
+    index_b_remapped = remap_row_index_ids(adat_b.index, id_mapping_b)
+    
+    # 6. Align row indexes and concatenate
+    aligned_index_a, aligned_index_b = align_row_indexes(index_a_remapped, index_b_remapped)
     merged_index = aligned_index_a.append(aligned_index_b)
     
     # 6. Assemble result

@@ -662,6 +662,36 @@ class HeaderMerger:
 # ---------------------------------------------------------------------------
 
 
+def _split_by_sample_readout(adat: Adat) -> tuple[Adat | None, Adat | None]:
+    """Split a v2.0 ADAT into Array and NGS parts by SampleReadout.
+    
+    Parameters
+    ----------
+    adat : Adat
+        v2.0 ADAT to split (may be Array-only, NGS-only, or Mixed).
+    
+    Returns
+    -------
+    tuple[Adat | None, Adat | None]
+        (array_part, ngs_part) where each is None if that readout type is absent.
+    """
+    if 'SampleReadout' not in adat.index.names:
+        return adat, None
+    
+    readouts = set(adat.index.get_level_values('SampleReadout'))
+    
+    if readouts == {'Array'}:
+        return adat, None
+    elif readouts == {'NGS'}:
+        return None, adat
+    elif readouts == {'Array', 'NGS'}:
+        array_mask = adat.index.get_level_values('SampleReadout') == 'Array'
+        ngs_mask = adat.index.get_level_values('SampleReadout') == 'NGS'
+        return adat[array_mask], adat[ngs_mask]
+    else:
+        return adat, None
+
+
 def align_row_indexes(
     index_a: pd.MultiIndex,
     index_b: pd.MultiIndex,
@@ -712,3 +742,50 @@ def align_row_indexes(
         return pd.MultiIndex.from_arrays(arrays, names=ordered_names)
     
     return _reorder(index_a, canonical), _reorder(index_b, canonical)
+
+
+def remap_row_index_ids(
+    index: pd.MultiIndex,
+    old_to_new_mapping: dict[str, str],
+) -> pd.MultiIndex:
+    """Remap SourceFileId, ProcessStepsId, and ReportConfigId levels to new header keys.
+    
+    When merging headers, SourceFile/ProcessSteps/ReportConfig keys are renumbered.
+    This function updates the corresponding *Id levels in the row index to match
+    the new header structure.
+    
+    Parameters
+    ----------
+    index : pd.MultiIndex
+        Row index with SourceFileId, ProcessStepsId, and/or ReportConfigId levels.
+    old_to_new_mapping : dict[str, str]
+        Mapping from old header keys to new header keys for each JSON field.
+        Example: {'1': '2', '2': '3'} when renumbering IDs during merge.
+    
+    Returns
+    -------
+    pd.MultiIndex
+        A new MultiIndex with *Id levels remapped according to the mapping.
+    
+    Examples
+    --------
+    >>> # After merge_v2_headers renumbers SourceFile keys from '1' to '1', '2' to '2'
+    >>> # but v2 input had SourceFileId='1', we need to remap it to '2'
+    >>> remapped = remap_row_index_ids(v2_index, {'1': '2'})
+    """
+    id_levels = {'SourceFileId', 'ProcessStepsId', 'ReportConfigId'}
+    remap_needed = id_levels & set(index.names)
+    
+    if not remap_needed:
+        return index
+    
+    arrays: list[list] = []
+    for name in index.names:
+        level_values = list(index.get_level_values(name))
+        if name in remap_needed:
+            level_values = [
+                old_to_new_mapping.get(str(val), str(val)) for val in level_values
+            ]
+        arrays.append(level_values)
+    
+    return pd.MultiIndex.from_arrays(arrays, names=index.names)
