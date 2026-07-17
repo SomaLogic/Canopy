@@ -30,7 +30,7 @@ pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 
 _DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
-BRIDGED_ARRAY_PATH = os.path.join(_DATA_DIR, 'sample-bridged-array.adat')
+BRIDGED_ARRAY_PATH = os.path.join(_DATA_DIR, 'Plasma-bridged-array.adat')
 NATIVE_NGS_PATH = os.path.join(_DATA_DIR, 'sample-native-ngs.adat')
 
 
@@ -459,3 +459,409 @@ class TestRoundTrip:
         orig_readouts = list(mixed_v2_adat.index.get_level_values('SampleReadout'))
         reread_readouts = list(round_trip_adat.index.get_level_values('SampleReadout'))
         assert orig_readouts == reread_readouts
+
+
+# ===========================================================================
+# Phase 3: Two-Input Merge Paths (CAN-46 through CAN-49)
+# ===========================================================================
+
+
+class TestBridgedArrayPlusV2Combined:
+    """Path 2: bridged_array + v2_combined merge"""
+
+    def test_bridged_array_plus_v2_array_produces_array_output(self):
+        """Merging bridged array with v2.0 Array produces Array output."""
+        from tests.conversion.conftest import make_bridged_array_with_mednorm, make_v2_combined_adat
+        
+        array_adat = make_bridged_array_with_mednorm()
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'Array'
+        
+        # Add SampleReadout to v2.0 (required for v2.0 format)
+        import pandas as pd
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['Array'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([array_adat, v2_adat])
+        
+        assert result.header_metadata['AssayType'] == 'Array'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_bridged_array_plus_v2_mixed_produces_mixed_output(self):
+        """Merging bridged array with v2.0 Mixed produces Mixed output."""
+        from tests.conversion.conftest import make_bridged_array_with_mednorm, make_v2_combined_adat
+        
+        array_adat = make_bridged_array_with_mednorm()
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'Mixed'
+        v2_adat.header_metadata['ProcessSteps'] = {
+            '1': 'Raw, HybNorm, MedNormInt, PlatformSpecificPlateScale, PlatformSpecificCalibrate, CrossPlatformPlateScale, CrossPlatformCalibrate, MedNormExt'
+        }
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['NGS'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([array_adat, v2_adat])
+        
+        assert result.header_metadata['AssayType'] == 'Mixed'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_order_independence(self):
+        """Path 2 is order-independent."""
+        from tests.conversion.conftest import make_bridged_array_with_mednorm, make_v2_combined_adat
+        
+        array_adat = make_bridged_array_with_mednorm()
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'Array'
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['Array'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result_ab = to_v2_adat([array_adat, v2_adat])
+        result_ba = to_v2_adat([v2_adat, array_adat])
+        
+        seqids_ab = set(result_ab.columns.get_level_values('SeqId'))
+        seqids_ba = set(result_ba.columns.get_level_values('SeqId'))
+        assert seqids_ab == seqids_ba
+
+    def test_mednorm_validation_with_mismatch(self):
+        """MedNorm validation raises error when Ref.MedNormExt vectors differ."""
+        from tests.conversion.conftest import make_bridged_array_with_mednorm, make_v2_combined_adat
+        from somadata.conversion.errors import MedNormMismatchError
+        import pandas as pd
+        
+        # Create array with MedNormExt
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28'],
+            mednorm_ext_values=['REF-ARRAY']
+        )
+        
+        # Create v2.0 ADAT with different MedNormExt values
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'NGS'
+        v2_adat.header_metadata['ProcessSteps'] = {
+            '1': 'Raw, HybNorm, MedNormInt, PlatformSpecificPlateScale, PlatformSpecificCalibrate, CrossPlatformPlateScale, CrossPlatformCalibrate, MedNormExt'
+        }
+        
+        # Add v2.0 fields with different MedNormExt value
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['NGS'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        # Change SeqIds to match
+        col_arrays = [list(v2_adat.columns.get_level_values(name)) for name in v2_adat.columns.names]
+        col_arrays[v2_adat.columns.names.index('SeqId')] = ['10000-28', '10001-02']
+        # Add Ref.MedNormExt.Plasma with different value
+        col_arrays.append(['REF-V2', 'REF-V2'])
+        col_names = list(v2_adat.columns.names) + ['Ref.MedNormExt.Plasma']
+        v2_adat.columns = pd.MultiIndex.from_arrays(col_arrays, names=col_names)
+        
+        # Should raise MedNormMismatchError
+        with pytest.raises(MedNormMismatchError, match='not identical'):
+            to_v2_adat([array_adat, v2_adat])
+
+
+class TestNativeNGSPlusV2Combined:
+    """Path 3: native_ngs + v2_combined merge"""
+
+    def test_ngs_plus_v2_ngs_produces_ngs_output(self):
+        """Merging NGS with v2.0 NGS produces NGS output."""
+        from tests.conversion.conftest import make_full_legacy_ngs_adat, make_v2_combined_adat
+        
+        ngs_adat = make_full_legacy_ngs_adat()
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'NGS'
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['NGS'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([ngs_adat, v2_adat])
+        
+        assert result.header_metadata['AssayType'] == 'NGS'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_ngs_plus_v2_mixed_produces_mixed_output(self):
+        """Merging NGS with v2.0 Mixed produces Mixed output."""
+        from tests.conversion.conftest import make_full_legacy_ngs_adat, make_v2_combined_adat
+        
+        ngs_adat = make_full_legacy_ngs_adat()
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'Mixed'
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['Array'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([ngs_adat, v2_adat])
+        
+        assert result.header_metadata['AssayType'] == 'Mixed'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_order_independence(self):
+        """Path 3 is order-independent."""
+        from tests.conversion.conftest import make_full_legacy_ngs_adat, make_v2_combined_adat
+        
+        ngs_adat = make_full_legacy_ngs_adat()
+        v2_adat = make_v2_combined_adat()
+        v2_adat.header_metadata['AssayType'] = 'NGS'
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+        v2_index_arrays.append(['NGS'] * len(v2_adat))
+        v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+        v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result_ab = to_v2_adat([ngs_adat, v2_adat])
+        result_ba = to_v2_adat([v2_adat, ngs_adat])
+        
+        seqids_ab = set(result_ab.columns.get_level_values('SeqId'))
+        seqids_ba = set(result_ba.columns.get_level_values('SeqId'))
+        assert seqids_ab == seqids_ba
+
+
+class TestNativeArrayPair:
+    """Path 4: native_array + native_array merge"""
+
+    def test_array_pair_produces_array_output(self):
+        """Merging two native arrays produces Array v2.0 output."""
+        from tests.conversion.conftest import make_full_legacy_array_adat
+        import pandas as pd
+        
+        array_a = make_full_legacy_array_adat()
+        array_b = make_full_legacy_array_adat()
+        
+        # Change PlateId in both row metadata and header for array_b
+        array_b_index_arrays = [list(array_b.index.get_level_values(name)) for name in array_b.index.names]
+        plate_idx = array_b.index.names.index('PlateId')
+        array_b_index_arrays[plate_idx] = ['PLTB1', 'PLTB1', 'PLTB1']
+        array_b.index = pd.MultiIndex.from_arrays(array_b_index_arrays, names=array_b.index.names)
+        
+        # Update header PlateId keys
+        for key in list(array_b.header_metadata.keys()):
+            if '_PLT1' in key:
+                new_key = key.replace('_PLT1', '_PLTB1')
+                array_b.header_metadata[new_key] = array_b.header_metadata.pop(key)
+            elif '_PLT2' in key:
+                new_key = key.replace('_PLT2', '_PLTB2')
+                array_b.header_metadata[new_key] = array_b.header_metadata.pop(key)
+        
+        result = to_v2_adat([array_a, array_b])
+        
+        assert result.header_metadata['AssayType'] == 'Array'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_assay_version_validation(self):
+        """Mismatched AssayVersion raises error."""
+        from tests.conversion.conftest import make_full_legacy_array_adat
+        from somadata.conversion.errors import AssayVersionError
+        
+        array_a = make_full_legacy_array_adat()
+        array_b = make_full_legacy_array_adat()
+        array_b.header_metadata['!AssayVersion'] = 'V5'
+        
+        with pytest.raises(AssayVersionError, match='same AssayVersion'):
+            to_v2_adat([array_a, array_b])
+
+    def test_seqid_union_computed(self):
+        """SeqId union is computed correctly."""
+        from tests.conversion.conftest import make_full_legacy_array_adat
+        import pandas as pd
+        
+        # Use full arrays but with different SeqIds
+        array_a = make_full_legacy_array_adat()
+        array_b = make_full_legacy_array_adat()
+        
+        # Modify array_b to have different SeqIds
+        col_values_b = [list(array_b.columns.get_level_values(name)) for name in array_b.columns.names]
+        seqid_idx = array_b.columns.names.index('SeqId')
+        col_values_b[seqid_idx] = ['10001-7', '10002-66', '10003-99']
+        array_b.columns = pd.MultiIndex.from_arrays(col_values_b, names=array_b.columns.names)
+        
+        # Change PlateId in both row metadata and header for array_b
+        array_b_index_arrays = [list(array_b.index.get_level_values(name)) for name in array_b.index.names]
+        plate_idx = array_b.index.names.index('PlateId')
+        array_b_index_arrays[plate_idx] = ['PLTB1', 'PLTB1', 'PLTB1']
+        array_b.index = pd.MultiIndex.from_arrays(array_b_index_arrays, names=array_b.index.names)
+        
+        # Update header PlateId keys
+        for key in list(array_b.header_metadata.keys()):
+            if '_PLT1' in key:
+                new_key = key.replace('_PLT1', '_PLTB1')
+                array_b.header_metadata[new_key] = array_b.header_metadata.pop(key)
+            elif '_PLT2' in key:
+                new_key = key.replace('_PLT2', '_PLTB2')
+                array_b.header_metadata[new_key] = array_b.header_metadata.pop(key)
+        
+        result = to_v2_adat([array_a, array_b])
+        
+        result_seqids = set(result.columns.get_level_values('SeqId'))
+        # array_a has ['10000-28', '10001-7', '10002-66']
+        # array_b has ['10001-7', '10002-66', '10003-99']
+        # Union should be all 4
+        expected_seqids = {'10000-28', '10001-7', '10002-66', '10003-99'}
+        assert result_seqids == expected_seqids
+
+
+class TestV2CombinedPair:
+    """Path 5: v2_combined + v2_combined merge"""
+
+    def test_array_plus_array_produces_array_output(self):
+        """Merging two v2.0 Array ADATs produces Array output."""
+        from tests.conversion.conftest import make_v2_combined_adat
+        
+        v2_a = make_v2_combined_adat()
+        v2_a.header_metadata['AssayType'] = 'Array'
+        v2_b = make_v2_combined_adat()
+        v2_b.header_metadata['AssayType'] = 'Array'
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        for v2_adat in [v2_a, v2_b]:
+            v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+            v2_index_arrays.append(['Array'] * len(v2_adat))
+            v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+            v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([v2_a, v2_b])
+        
+        assert result.header_metadata['AssayType'] == 'Array'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_ngs_plus_ngs_produces_ngs_output(self):
+        """Merging two v2.0 NGS ADATs produces NGS output."""
+        from tests.conversion.conftest import make_v2_combined_adat
+        
+        v2_a = make_v2_combined_adat()
+        v2_a.header_metadata['AssayType'] = 'NGS'
+        v2_a.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
+        v2_b = make_v2_combined_adat()
+        v2_b.header_metadata['AssayType'] = 'NGS'
+        v2_b.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        for v2_adat in [v2_a, v2_b]:
+            v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+            v2_index_arrays.append(['NGS'] * len(v2_adat))
+            v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+            v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([v2_a, v2_b])
+        
+        assert result.header_metadata['AssayType'] == 'NGS'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_mixed_combination_produces_mixed_output(self):
+        """Merging v2.0 Array + v2.0 NGS produces Mixed output."""
+        from tests.conversion.conftest import make_v2_combined_adat
+        
+        v2_a = make_v2_combined_adat()
+        v2_a.header_metadata['AssayType'] = 'Array'
+        v2_b = make_v2_combined_adat()
+        v2_b.header_metadata['AssayType'] = 'NGS'
+        v2_b.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        v2_a_index_arrays = [list(v2_a.index.get_level_values(name)) for name in v2_a.index.names]
+        v2_a_index_arrays.append(['Array'] * len(v2_a))
+        v2_a_index_names = list(v2_a.index.names) + ['SampleReadout']
+        v2_a.index = pd.MultiIndex.from_arrays(v2_a_index_arrays, names=v2_a_index_names)
+        
+        v2_b_index_arrays = [list(v2_b.index.get_level_values(name)) for name in v2_b.index.names]
+        v2_b_index_arrays.append(['NGS'] * len(v2_b))
+        v2_b_index_names = list(v2_b.index.names) + ['SampleReadout']
+        v2_b.index = pd.MultiIndex.from_arrays(v2_b_index_arrays, names=v2_b_index_names)
+        
+        result = to_v2_adat([v2_a, v2_b])
+        
+        assert result.header_metadata['AssayType'] == 'Mixed'
+        assert result.header_metadata['FileVersion'] == '2.0'
+
+    def test_round_trip_write_read(self):
+        """v2+v2 merge output can be written and re-read."""
+        from tests.conversion.conftest import make_v2_combined_adat
+        import tempfile
+        import os
+        
+        v2_a = make_v2_combined_adat()
+        v2_a.header_metadata['AssayType'] = 'Array'
+        v2_b = make_v2_combined_adat()
+        v2_b.header_metadata['AssayType'] = 'Array'
+        
+        # Add required v2.0 fields
+        import pandas as pd
+        for v2_adat in [v2_a, v2_b]:
+            v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+            v2_index_arrays.append(['Array'] * len(v2_adat))
+            v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+            v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        result = to_v2_adat([v2_a, v2_b])
+        
+        # Write and re-read
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.adat', delete=False) as f:
+            tmppath = f.name
+            write_adat(result, f)
+        
+        try:
+            reread = read_adat(tmppath)
+            assert reread.shape == result.shape
+            assert reread.header_metadata['AssayType'] == 'Array'
+        finally:
+            os.unlink(tmppath)
+
+    def test_mednorm_validation_with_mismatch(self):
+        """MedNorm validation raises error when Ref.MedNormExt vectors differ."""
+        from tests.conversion.conftest import make_v2_combined_adat
+        from somadata.conversion.errors import MedNormMismatchError
+        import pandas as pd
+        
+        # Create two v2.0 ADATs with MedNormExt in ProcessSteps
+        v2_a = make_v2_combined_adat()
+        v2_a.header_metadata['AssayType'] = 'Array'
+        v2_a.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
+        
+        v2_b = make_v2_combined_adat()
+        v2_b.header_metadata['AssayType'] = 'Array'
+        v2_b.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
+        
+        # Add v2.0 fields
+        for v2_adat in [v2_a, v2_b]:
+            v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
+            v2_index_arrays.append(['Array'] * len(v2_adat))
+            v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
+            v2_adat.index = pd.MultiIndex.from_arrays(v2_index_arrays, names=v2_index_names)
+        
+        # Add matching SeqIds but different Ref.MedNormExt values
+        for i, v2_adat in enumerate([v2_a, v2_b]):
+            col_arrays = [list(v2_adat.columns.get_level_values(name)) for name in v2_adat.columns.names]
+            # Add Ref.MedNormExt.Plasma with different values
+            mednorm_val = f'REF-{i+1}'
+            col_arrays.append([mednorm_val, mednorm_val])
+            col_names = list(v2_adat.columns.names) + ['Ref.MedNormExt.Plasma']
+            v2_adat.columns = pd.MultiIndex.from_arrays(col_arrays, names=col_names)
+        
+        # Should raise MedNormMismatchError
+        with pytest.raises(MedNormMismatchError, match='not identical'):
+            to_v2_adat([v2_a, v2_b])
+
