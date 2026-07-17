@@ -44,18 +44,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Array bridged terminal triple (last 3 steps must match exactly).
-# The canonical name in real DPQ pipeline output is "CrossPlatformPlateScale";
-# older synthetic fixtures used "CrossPlatformPlateScaling".  Both are accepted.
 _ARRAY_TERMINAL_TRIPLE = [
     'CrossPlatformPlateScale',
     'CrossPlatformCalibrate',
     'MedNormExt',
 ]
-_ARRAY_TERMINAL_TRIPLE_LEGACY = [
-    'CrossPlatformPlateScaling',
-    'CrossPlatformCalibrate',
-    'MedNormExt',
-]
+
 
 # NGS exact ProcessSteps sequence
 _NGS_REQUIRED_STEPS = [
@@ -126,7 +120,7 @@ def _validate_array_process_steps(adat: Adat) -> None:
     hdr = getattr(adat, 'header_metadata', {})
     raw = lookup_header(hdr, 'ProcessSteps')
     steps = parse_process_steps(raw)
-    if steps[-3:] not in (_ARRAY_TERMINAL_TRIPLE, _ARRAY_TERMINAL_TRIPLE_LEGACY):
+    if steps[-3:] != _ARRAY_TERMINAL_TRIPLE:
         raise ProcessStepsMismatchError(
             f'Array ADAT ProcessSteps do not end with the required bridged '
             f'terminal triple {_ARRAY_TERMINAL_TRIPLE!r}. '

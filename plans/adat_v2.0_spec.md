@@ -608,7 +608,7 @@ These rules apply when producing a `Mixed` AssayType ADAT by combining an array 
 - **Header QC fields:** Plate-keyed JSON fields (`PlateScaleScalar`, `CalibrateTailPercent`, etc.) are merged by combining all PlateId keys from both sources into a single JSON object.
 - **MedNorm compatibility checks (pre-conditions for merge):** Before merging source ADATs into a `Mixed` output, the converter must validate normalization compatibility. The specific checks depend on the combination type:
   - *Combining NGS + Array data:* All three of the following must be satisfied; raise an exception if any check fails:
-    1. Array `ProcessSteps` must end with `"CrossPlatformPlateScaling"`, `"CrossPlatformCalibrate"`, `"MedNormExt"` as the last three steps.
+    1. Array `ProcessSteps` must end with `"CrossPlatformPlateScale"`, `"CrossPlatformCalibrate"`, `"MedNormExt"` as the last three steps.
     2. NGS `ProcessSteps` must be: `"Raw"`, `"HybNorm"`, `"MedNormInt"`, `"PlatformSpecificPlateScale"`, `"PlatformSpecificCalibrate"`, `"CrossPlatformPlateScale"`, `"CrossPlatformCalibrate"`, `"MedNormExt"`.
     3. `Ref.MedNormExt.<Matrix>` RFU reference values must be identical across the array and NGS source files.
   - *Combining NGS-only data:* `ProcessSteps` must be identical across all source ADATs. If external MedNorm has been performed, `Ref.MedNormExt.<Matrix>` RFU reference values must match across all source files. Raise an exception if `CrossPlateMedNormInt`-only normalization is detected without a corresponding `MedNormExt` step.

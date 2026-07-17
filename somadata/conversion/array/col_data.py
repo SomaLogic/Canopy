@@ -41,7 +41,7 @@ _FIELDS_TO_REMOVE: frozenset[str] = frozenset(
 # Dynamic rename patterns
 # ---------------------------------------------------------------------------
 _CAL_PLATE_RE = re.compile(r'^Cal_(.+)$')
-_CAL_QC_RATIO_RE = re.compile(r'^CalQcRatio_(.+?)_(.+)$')
+_CAL_QC_RATIO_RE = re.compile(r'^CalQcRatio_(.+)_([^_]+)$')
 _PLATE_SCALE_REF_RE = re.compile(r'^PlateScale_Reference$')
 _CAL_REFERENCE_RE = re.compile(r'^CalReference$')
 _QC_REFERENCE_RE = re.compile(r'^QcReference_(.+)$')

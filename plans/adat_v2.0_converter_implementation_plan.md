@@ -29,7 +29,7 @@ Prerequisite work that unblocks all subsequent phases.
   1. `FileVersion == "2.0"` → `v2_combined`
   2. SlideId + Subarray non-empty → array branch:
      - AssayVersion < v4 → raise error (Section 5.3)
-     - ProcessSteps ends with `[CrossPlatformPlateScaling, CrossPlatformCalibrate, MedNormExt]` → `bridged_array`
+     - ProcessSteps ends with `[CrossPlatformPlateScale, CrossPlatformCalibrate, MedNormExt]` → `bridged_array`
      - Otherwise → `native_array`
   3. SOMAmerReads column present and non-empty → `native_ngs`
   4. Otherwise → raise error (unrecognized format)

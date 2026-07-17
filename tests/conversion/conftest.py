@@ -13,7 +13,7 @@ from somadata.adat import Adat
 
 BRIDGED_STEPS = (
     'Raw RFU, Hyb Normalization, medNormInt, plateScale, Calibration, '
-    'CrossPlatformPlateScaling, CrossPlatformCalibrate, MedNormExt'
+    'CrossPlatformPlateScale, CrossPlatformCalibrate, MedNormExt'
 )
 
 NATIVE_STEPS = 'Raw RFU, Hyb Normalization, medNormInt, plateScale, Calibration'

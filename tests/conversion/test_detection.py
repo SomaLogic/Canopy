@@ -61,19 +61,19 @@ class TestDetectBridgedArray:
     def test_bridged_exact_three_step_sequence(self):
         """Only the three terminal steps — still bridged."""
         adat = make_array_adat(
-            process_steps='CrossPlatformPlateScaling, CrossPlatformCalibrate, MedNormExt'
+            process_steps='CrossPlatformPlateScale, CrossPlatformCalibrate, MedNormExt'
         )
         assert detect_input_type(adat) == InputType.BRIDGED_ARRAY
 
     def test_wrong_terminal_step_not_bridged(self):
         adat = make_array_adat(
-            process_steps='Raw RFU, CrossPlatformPlateScaling, CrossPlatformCalibrate, plateScale'
+            process_steps='Raw RFU, CrossPlatformPlateScale, CrossPlatformCalibrate, plateScale'
         )
         assert detect_input_type(adat) == InputType.NATIVE_ARRAY
 
     def test_missing_last_medNormExt_not_bridged(self):
         adat = make_array_adat(
-            process_steps='CrossPlatformPlateScaling, CrossPlatformCalibrate'
+            process_steps='CrossPlatformPlateScale, CrossPlatformCalibrate'
         )
         assert detect_input_type(adat) == InputType.NATIVE_ARRAY
 
@@ -279,7 +279,7 @@ class TestIsBridgedArray:
             header={
                 'ProcessSteps': {
                     '1': [
-                        'CrossPlatformPlateScaling',
+                        'CrossPlatformPlateScale',
                         'CrossPlatformCalibrate',
                         'MedNormExt',
                     ]

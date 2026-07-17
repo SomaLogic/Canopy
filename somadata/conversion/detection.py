@@ -9,21 +9,12 @@ from somadata.conversion.errors import AssayVersionError, UnrecognizedFormatErro
 if TYPE_CHECKING:
     from somadata.adat import Adat
 
-# The three terminal processing steps that identify a bridged array ADAT.
-# Both "CrossPlatformPlateScale" (real DPQ output) and the legacy test fixture
-# variant "CrossPlatformPlateScaling" are accepted.
+# Valid terminal triples that identify a bridged array ADAT.
+# Each inner tuple is a sequence of the last 3 ProcessSteps that qualifies.
 _BRIDGED_TERMINAL_STEPS = (
-    'CrossPlatformPlateScale',
-    'CrossPlatformCalibrate',
-    'MedNormExt',
+    ('CrossPlatformPlateScale', 'CrossPlatformCalibrate', 'MedNormExt'),
 )
 
-# Legacy variant used in synthetic test fixtures and older pipeline outputs.
-_BRIDGED_TERMINAL_STEPS_LEGACY = (
-    'CrossPlatformPlateScaling',
-    'CrossPlatformCalibrate',
-    'MedNormExt',
-)
 
 # Header keys for AssayVersion — stored with or without the '!' prefix in legacy files.
 _ASSAY_VERSION_KEYS = ('!AssayVersion', 'AssayVersion')
@@ -152,10 +143,6 @@ def _is_bridged_array(adat: Adat) -> bool:
     The ProcessSteps field may be a comma-separated string (pre-v2.0 array) or a
     JSON dict (v2.0). Only string form is expected here since v2.0 files are
     handled earlier in the decision tree.
-
-    Both the canonical terminal triple (``CrossPlatformPlateScale``) and the
-    legacy variant (``CrossPlatformPlateScaling``) are accepted so that real
-    DPQ pipeline outputs and older synthetic test fixtures are both recognised.
     """
     process_steps_raw = ''
     for key in ('!ProcessSteps', 'ProcessSteps'):
@@ -167,7 +154,7 @@ def _is_bridged_array(adat: Adat) -> bool:
         return False
 
     steps = [s.strip() for s in process_steps_raw.split(',') if s.strip()]
-    for terminal in (_BRIDGED_TERMINAL_STEPS, _BRIDGED_TERMINAL_STEPS_LEGACY):
+    for terminal in _BRIDGED_TERMINAL_STEPS:
         if len(steps) >= len(terminal) and tuple(steps[-len(terminal) :]) == terminal:
             return True
     return False
