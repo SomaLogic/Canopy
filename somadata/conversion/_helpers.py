@@ -1,14 +1,18 @@
 """Shared utility functions for ADAT v2.0 conversion.
 
-These helpers are used by both the ``array/`` and (future) ``ngs/``
-conversion sub-packages.
+These helpers are used by both the ``array/`` and ``ngs/`` conversion
+sub-packages.
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 import uuid
 from typing import TYPE_CHECKING, Any
+
+import numpy as np
+import pandas as pd
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -32,11 +36,8 @@ def _compute_file_md5sum(file_path: str) -> str:
     str
         Hexadecimal MD5 digest (32 characters).
     """
-    import hashlib
-
     md5 = hashlib.md5()
     with open(file_path, 'rb') as f:
-        # Read in chunks for memory efficiency
         for chunk in iter(lambda: f.read(8192), b''):
             md5.update(chunk)
     return md5.hexdigest()
@@ -65,47 +66,35 @@ def _compute_adat_md5sum(adat: Adat) -> str:
     >>> len(md5)
     32
     """
-    import hashlib
-
     md5 = hashlib.md5()
 
-    # Hash header metadata (sorted for determinism)
     hdr = getattr(adat, 'header_metadata', {})
     for key in sorted(hdr.keys()):
         val = str(hdr[key])
         md5.update(key.encode('utf-8'))
         md5.update(val.encode('utf-8'))
 
-    # Hash column structure
     if hasattr(adat, 'columns'):
         for name in adat.columns.names:
             md5.update(str(name).encode('utf-8'))
-        # Sample a few column values for efficiency
         for i in range(min(10, adat.columns.nlevels)):
             vals = adat.columns.get_level_values(i)
-            for val in list(vals)[:10]:  # First 10 values per level
+            for val in list(vals)[:10]:
                 md5.update(str(val).encode('utf-8'))
 
-    # Hash row structure
     if hasattr(adat, 'index'):
         for name in adat.index.names:
             md5.update(str(name).encode('utf-8'))
-        # Sample a few row values for efficiency
         for i in range(min(10, adat.index.nlevels)):
             vals = adat.index.get_level_values(i)
-            for val in list(vals)[:10]:  # First 10 values per level
+            for val in list(vals)[:10]:
                 md5.update(str(val).encode('utf-8'))
 
-    # Hash RFU matrix (sample for efficiency on large ADATs)
     if hasattr(adat, 'values'):
         values = adat.values
-        # Sample corners and center for large matrices
         if values.size > 10000:
-            # Top-left corner (5x5)
             md5.update(values[:5, :5].tobytes())
-            # Bottom-right corner (5x5)
             md5.update(values[-5:, -5:].tobytes())
-            # Center (5x5)
             mid_r, mid_c = values.shape[0] // 2, values.shape[1] // 2
             md5.update(values[mid_r : mid_r + 5, mid_c : mid_c + 5].tobytes())
         else:
@@ -439,9 +428,6 @@ def derive_hyb_norm_status_vectorized(scale_factors: list[str]) -> list[str]:
     >>> derive_hyb_norm_status_vectorized(['1.0', '3.0', 'invalid'])
     ['PASS', 'FLAG', '']
     """
-    import numpy as np
-    import pandas as pd
-    
     arr = np.array(scale_factors, dtype=object)
     result = np.full(len(arr), '', dtype=object)
     

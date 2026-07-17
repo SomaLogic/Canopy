@@ -688,3 +688,165 @@ class TestEndToEndMerge:
         seqids_ab = set(result_ab.columns.get_level_values('SeqId'))
         seqids_ba = set(result_ba.columns.get_level_values('SeqId'))
         assert seqids_ab == seqids_ba
+
+
+# ===========================================================================
+# Phase 3: Helper Functions Unit Tests
+# ===========================================================================
+
+
+class TestMergeV2Headers:
+    """Unit tests for _merge_v2_headers helper (Path 5)."""
+
+    def test_derives_assay_type_from_parameter(self):
+        """Output AssayType matches the assay_type parameter."""
+        from somadata.conversion.utils import HeaderMerger
+        
+        header_a = {'FileVersion': '2.0', 'AssayType': 'Array', 'SourceFile': {'1': {}}}
+        header_b = {'FileVersion': '2.0', 'AssayType': 'Array', 'SourceFile': {'1': {}}}
+        
+        result = HeaderMerger.merge_v2_headers(header_a, header_b, 'Mixed')
+        assert result['AssayType'] == 'Mixed'
+        
+        result = HeaderMerger.merge_v2_headers(header_a, header_b, 'Array')
+        assert result['AssayType'] == 'Array'
+
+    def test_generates_new_adat_id(self):
+        """Output has a new GUID-format AdatId."""
+        from somadata.conversion.utils import HeaderMerger
+        
+        header_a = {'AdatId': 'GID-old-1', 'SourceFile': {}, 'ProcessSteps': {}}
+        header_b = {'AdatId': 'GID-old-2', 'SourceFile': {}, 'ProcessSteps': {}}
+        
+        result = HeaderMerger.merge_v2_headers(header_a, header_b, 'Array')
+        assert result['AdatId'].startswith('GID-')
+        assert result['AdatId'] != 'GID-old-1'
+        assert result['AdatId'] != 'GID-old-2'
+
+    def test_merges_source_file_dicts(self):
+        """SourceFile entries are renumbered sequentially."""
+        from somadata.conversion.utils import HeaderMerger
+        
+        header_a = {'SourceFile': {'1': {'AdatId': 'A'}, '2': {'AdatId': 'B'}}}
+        header_b = {'SourceFile': {'1': {'AdatId': 'C'}}}
+        
+        result = HeaderMerger.merge_v2_headers(header_a, header_b, 'Array')
+        assert '1' in result['SourceFile']
+        assert '2' in result['SourceFile']
+        assert '3' in result['SourceFile']
+        assert result['SourceFile']['1']['AdatId'] == 'A'
+        assert result['SourceFile']['2']['AdatId'] == 'B'
+        assert result['SourceFile']['3']['AdatId'] == 'C'
+
+    def test_merges_process_steps_dicts(self):
+        """ProcessSteps entries are renumbered sequentially."""
+        from somadata.conversion.utils import HeaderMerger
+        
+        header_a = {'ProcessSteps': {'1': 'Raw, HybNorm'}}
+        header_b = {'ProcessSteps': {'1': 'Raw, MedNorm'}}
+        
+        result = HeaderMerger.merge_v2_headers(header_a, header_b, 'NGS')
+        assert '1' in result['ProcessSteps']
+        assert '2' in result['ProcessSteps']
+        assert result['ProcessSteps']['1'] == 'Raw, HybNorm'
+        assert result['ProcessSteps']['2'] == 'Raw, MedNorm'
+
+    def test_pipe_delimited_fields_merged(self):
+        """Study-level fields are pipe-merged."""
+        from somadata.conversion.utils import HeaderMerger
+        
+        header_a = {'Title': 'Study A', 'StudyOrganism': 'Human'}
+        header_b = {'Title': 'Study B', 'StudyOrganism': 'Human'}
+        
+        result = HeaderMerger.merge_v2_headers(header_a, header_b, 'Array')
+        assert result['Title'] == 'Study A|Study B'
+        assert result['StudyOrganism'] == 'Human'
+
+
+class TestMergeArrayHeaders:
+    """Unit tests for _merge_array_headers helper (Path 4)."""
+
+    def test_assay_type_is_array(self):
+        """Output AssayType is always 'Array'."""
+        from somadata.conversion.utils import HeaderMerger
+        from somadata.conversion.array import ArrayConversionContext
+        
+        header_a = {'AssayType': 'Array', 'SourceFile': {}, 'ProcessSteps': {}, 'ReportConfig': {}}
+        header_b = {'AssayType': 'Array', 'SourceFile': {}, 'ProcessSteps': {}, 'ReportConfig': {}}
+        
+        ctx_a = ArrayConversionContext.from_adat(None, source_file_md5sum=None)
+        ctx_a.source_file_id = '1'
+        ctx_a.process_steps_id = '1'
+        ctx_a.report_config_id = '1'
+        
+        ctx_b = ArrayConversionContext.from_adat(None, source_file_md5sum=None)
+        ctx_b.source_file_id = '2'
+        ctx_b.process_steps_id = '2'
+        ctx_b.report_config_id = '2'
+        
+        result = HeaderMerger.merge_array_headers(header_a, header_b, ctx_a, ctx_b)
+        assert result['AssayType'] == 'Array'
+
+    def test_merges_report_config(self):
+        """ReportConfig entries from both sources are merged."""
+        from somadata.conversion.utils import HeaderMerger
+        from somadata.conversion.array import ArrayConversionContext
+        
+        header_a = {'ReportConfig': {'1': 'ConfigA'}, 'SourceFile': {}, 'ProcessSteps': {}}
+        header_b = {'ReportConfig': {'1': 'ConfigB'}, 'SourceFile': {}, 'ProcessSteps': {}}
+        
+        ctx_a = ArrayConversionContext.from_adat(None, source_file_md5sum=None)
+        ctx_a.source_file_id = '1'
+        ctx_a.process_steps_id = '1'
+        ctx_a.report_config_id = '1'
+        
+        ctx_b = ArrayConversionContext.from_adat(None, source_file_md5sum=None)
+        ctx_b.source_file_id = '2'
+        ctx_b.process_steps_id = '2'
+        ctx_b.report_config_id = '2'
+        
+        result = HeaderMerger.merge_array_headers(header_a, header_b, ctx_a, ctx_b)
+        assert '1' in result['ReportConfig']
+        assert '2' in result['ReportConfig']
+        assert result['ReportConfig']['1'] == 'ConfigA'
+        assert result['ReportConfig']['2'] == 'ConfigB'
+
+
+class TestValidateV2NGSProcessSteps:
+    """Unit tests for _validate_v2_ngs_process_steps (Path 5)."""
+
+    def test_identical_process_steps_pass(self):
+        """NGS-only pair with identical ProcessSteps passes."""
+        from somadata.conversion.utils import validate_v2_ngs_process_steps
+        
+        adat_a = Adat(
+            data=[[1.0]], index=pd.MultiIndex.from_arrays([['S1']], names=['SampleId']),
+            columns=pd.MultiIndex.from_arrays([['10000-01']], names=['SeqId']),
+            header_metadata={'ProcessSteps': {'1': 'Raw, HybNorm, MedNorm'}}
+        )
+        adat_b = Adat(
+            data=[[1.0]], index=pd.MultiIndex.from_arrays([['S2']], names=['SampleId']),
+            columns=pd.MultiIndex.from_arrays([['10000-01']], names=['SeqId']),
+            header_metadata={'ProcessSteps': {'1': 'Raw, HybNorm, MedNorm'}}
+        )
+        
+        validate_v2_ngs_process_steps(adat_a, adat_b)
+
+    def test_mismatched_process_steps_raise(self):
+        """NGS-only pair with different ProcessSteps raises error."""
+        from somadata.conversion.utils import validate_v2_ngs_process_steps
+        
+        adat_a = Adat(
+            data=[[1.0]], index=pd.MultiIndex.from_arrays([['S1']], names=['SampleId']),
+            columns=pd.MultiIndex.from_arrays([['10000-01']], names=['SeqId']),
+            header_metadata={'ProcessSteps': {'1': 'Raw, HybNorm'}}
+        )
+        adat_b = Adat(
+            data=[[1.0]], index=pd.MultiIndex.from_arrays([['S2']], names=['SampleId']),
+            columns=pd.MultiIndex.from_arrays([['10000-01']], names=['SeqId']),
+            header_metadata={'ProcessSteps': {'1': 'Raw, MedNorm'}}
+        )
+        
+        with pytest.raises(ProcessStepsMismatchError, match='identical ProcessSteps'):
+            validate_v2_ngs_process_steps(adat_a, adat_b)
+

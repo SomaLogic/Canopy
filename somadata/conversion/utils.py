@@ -1,0 +1,714 @@
+"""Utility classes and helpers for ADAT v2.0 conversion.
+
+This module provides reusable utility classes for conversion operations
+including source context management, MedNorm validation, and header merging.
+"""
+
+from __future__ import annotations
+
+import datetime
+import logging
+from typing import TYPE_CHECKING, Literal
+
+import pandas as pd
+
+if TYPE_CHECKING:
+    from somadata.adat import Adat
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Source Context Classes
+# ---------------------------------------------------------------------------
+
+
+class V2SourceContext:
+    """Lightweight context for v2.0 ADAT sources in merge operations.
+    
+    Used when merging a pre-conversion ADAT with an existing v2.0 ADAT to
+    provide consistent source identifiers for header merging.
+    
+    Attributes
+    ----------
+    source_file_id : str
+        Source file identifier (e.g. '1', '2').
+    process_steps_id : str
+        ProcessSteps identifier.
+    report_config_id : str
+        ReportConfig identifier.
+    """
+    
+    def __init__(
+        self,
+        source_file_id: str = '1',
+        process_steps_id: str = '1',
+        report_config_id: str = '1',
+    ):
+        self.source_file_id = source_file_id
+        self.process_steps_id = process_steps_id
+        self.report_config_id = report_config_id
+
+
+# ---------------------------------------------------------------------------
+# MedNorm Validation Utilities
+# ---------------------------------------------------------------------------
+
+
+class MedNormValidator:
+    """Utilities for validating MedNorm compatibility between ADATs."""
+    
+    @staticmethod
+    def get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, str]]:
+        """Extract Ref.MedNormExt.* column values keyed by (field, SeqId).
+        
+        Parameters
+        ----------
+        adat : Adat
+            Source ADAT.
+        
+        Returns
+        -------
+        dict
+            ``{field_name: {seq_id: value}}`` for all ``Ref.MedNormExt.*`` levels.
+        """
+        columns = getattr(adat, 'columns', None)
+        if columns is None or not hasattr(columns, 'names'):
+            return {}
+        
+        result: dict[str, dict[str, str]] = {}
+        seq_id_level = None
+        if 'SeqId' in columns.names:
+            seq_id_level = columns.get_level_values('SeqId')
+        
+        for name in columns.names:
+            if name.startswith('Ref.MedNormExt.'):
+                values = columns.get_level_values(name)
+                if seq_id_level is not None:
+                    result[name] = {
+                        str(sid): str(val) for sid, val in zip(seq_id_level, values)
+                    }
+                else:
+                    result[name] = {}
+        
+        return result
+    
+    @staticmethod
+    def get_mednorm_id_set(adat: Adat) -> set[str]:
+        """Return the set of Ref.MedNorm.Id values present in COL_DATA.
+        
+        Parameters
+        ----------
+        adat : Adat
+            Source ADAT.
+        
+        Returns
+        -------
+        set[str]
+            Set of Ref.MedNorm.Id values.
+        """
+        columns = getattr(adat, 'columns', None)
+        if columns is None or 'Ref.MedNorm.Id' not in columns.names:
+            return set()
+        return set(str(v) for v in columns.get_level_values('Ref.MedNorm.Id') if v)
+    
+    @staticmethod
+    def has_mednorm_ext(header: dict) -> bool:
+        """Check if ProcessSteps contains MedNormExt (pre-conversion format).
+        
+        Parameters
+        ----------
+        header : dict
+            Pre-conversion header metadata (ProcessSteps is a string).
+        
+        Returns
+        -------
+        bool
+            True if ProcessSteps contains 'MedNormExt'.
+        """
+        from somadata.conversion._helpers import lookup_header, parse_process_steps
+        
+        raw = lookup_header(header, 'ProcessSteps')
+        if not raw:
+            return False
+        steps = parse_process_steps(raw)
+        return 'MedNormExt' in steps
+    
+    @staticmethod
+    def has_mednorm_ext_v2(header: dict) -> bool:
+        """Check if ProcessSteps contains MedNormExt (v2.0 format).
+        
+        Parameters
+        ----------
+        header : dict
+            v2.0 header metadata (ProcessSteps is a dict).
+        
+        Returns
+        -------
+        bool
+            True if any ProcessSteps entry contains 'MedNormExt'.
+        """
+        ps = header.get('ProcessSteps')
+        if not ps or not isinstance(ps, dict):
+            return False
+        for steps_str in ps.values():
+            if 'MedNormExt' in steps_str:
+                return True
+        return False
+    
+    @staticmethod
+    def validate_with_v2(
+        raw_adat: Adat,
+        v2_adat: Adat,
+        med_norm_ref: str | None,
+    ) -> Literal['array', 'ngs'] | None:
+        """Validate MedNorm compatibility between a pre-conversion and v2.0 ADAT.
+        
+        Parameters
+        ----------
+        raw_adat : Adat
+            Pre-conversion ADAT (array or NGS).
+        v2_adat : Adat
+            v2.0 ADAT.
+        med_norm_ref : str or None
+            MedNorm reference override identifier.
+        
+        Returns
+        -------
+        Literal['array', 'ngs'] or None
+            Which source's Ref.MedNormExt values to use, or None if identical.
+        
+        Raises
+        ------
+        MedNormMismatchError
+            If Ref.MedNormExt vectors are incompatible.
+        """
+        from somadata.conversion.detection import InputType, detect_input_type
+        from somadata.conversion.errors import MedNormMismatchError
+        
+        raw_vecs = MedNormValidator.get_mednorm_ext_vectors(raw_adat)
+        v2_vecs = MedNormValidator.get_mednorm_ext_vectors(v2_adat)
+        
+        shared_fields = set(raw_vecs) & set(v2_vecs)
+        if not shared_fields:
+            return None
+        
+        raw_cols = getattr(raw_adat, 'columns', None)
+        v2_cols = getattr(v2_adat, 'columns', None)
+        if raw_cols is None or v2_cols is None:
+            return None
+        
+        if 'SeqId' in raw_cols.names and 'SeqId' in v2_cols.names:
+            raw_seqids = set(raw_cols.get_level_values('SeqId'))
+            v2_seqids = set(v2_cols.get_level_values('SeqId'))
+            shared_seqids = raw_seqids & v2_seqids
+        else:
+            return None
+        
+        if not shared_seqids:
+            return None
+        
+        mismatches: list[str] = []
+        for field in sorted(shared_fields):
+            for seq_id in sorted(shared_seqids):
+                raw_val = raw_vecs[field].get(seq_id, '')
+                v2_val = v2_vecs[field].get(seq_id, '')
+                if raw_val != v2_val:
+                    mismatches.append(
+                        f'{field}[{seq_id}]: raw={raw_val!r} vs v2={v2_val!r}'
+                    )
+        
+        if not mismatches:
+            return None
+        
+        if med_norm_ref is not None:
+            raw_ids = MedNormValidator.get_mednorm_id_set(raw_adat)
+            v2_ids = MedNormValidator.get_mednorm_id_set(v2_adat)
+            
+            raw_type = detect_input_type(raw_adat)
+            
+            if med_norm_ref in raw_ids:
+                source_name = 'array' if raw_type in (InputType.BRIDGED_ARRAY, InputType.NATIVE_ARRAY) else 'ngs'
+                logger.info(
+                    'Ref.MedNormExt mismatch resolved by med_norm_ref=%r (%s source)',
+                    med_norm_ref, source_name
+                )
+                return source_name
+            if med_norm_ref in v2_ids:
+                source_name = 'ngs' if raw_type in (InputType.BRIDGED_ARRAY, InputType.NATIVE_ARRAY) else 'array'
+                logger.info(
+                    'Ref.MedNormExt mismatch resolved by med_norm_ref=%r (v2 source as %s)',
+                    med_norm_ref, source_name
+                )
+                return source_name
+            
+            raise MedNormMismatchError(
+                f'med_norm_ref={med_norm_ref!r} does not match any Ref.MedNorm.Id '
+                f'value in either source. '
+                f'Raw IDs: {sorted(raw_ids)!r}. v2.0 IDs: {sorted(v2_ids)!r}.'
+            )
+        
+        detail = '\n  '.join(mismatches[:10])
+        if len(mismatches) > 10:
+            detail += f'\n  ... and {len(mismatches) - 10} more'
+        raise MedNormMismatchError(
+            f'Ref.MedNormExt reference vectors are not identical for shared SeqIds. '
+            f'Mismatches ({len(mismatches)} total):\n  {detail}\n'
+            f'Provide med_norm_ref to override.'
+        )
+    
+    @staticmethod
+    def validate_v2_pair(
+        adat_a: Adat,
+        adat_b: Adat,
+        med_norm_ref: str | None,
+    ) -> Literal['array', 'ngs'] | None:
+        """Validate MedNorm compatibility between two v2.0 ADATs.
+        
+        Parameters
+        ----------
+        adat_a : Adat
+            First v2.0 ADAT.
+        adat_b : Adat
+            Second v2.0 ADAT.
+        med_norm_ref : str or None
+            MedNorm reference override identifier.
+        
+        Returns
+        -------
+        Literal['array', 'ngs'] or None
+            Which source's Ref.MedNormExt values to use, or None if identical.
+        
+        Raises
+        ------
+        MedNormMismatchError
+            If Ref.MedNormExt vectors are incompatible.
+        """
+        from somadata.conversion.errors import MedNormMismatchError
+        
+        vecs_a = MedNormValidator.get_mednorm_ext_vectors(adat_a)
+        vecs_b = MedNormValidator.get_mednorm_ext_vectors(adat_b)
+        
+        shared_fields = set(vecs_a) & set(vecs_b)
+        if not shared_fields:
+            return None
+        
+        cols_a = getattr(adat_a, 'columns', None)
+        cols_b = getattr(adat_b, 'columns', None)
+        if cols_a is None or cols_b is None:
+            return None
+        
+        if 'SeqId' in cols_a.names and 'SeqId' in cols_b.names:
+            seqids_a = set(cols_a.get_level_values('SeqId'))
+            seqids_b = set(cols_b.get_level_values('SeqId'))
+            shared_seqids = seqids_a & seqids_b
+        else:
+            return None
+        
+        if not shared_seqids:
+            return None
+        
+        mismatches: list[str] = []
+        for field in sorted(shared_fields):
+            for seq_id in sorted(shared_seqids):
+                val_a = vecs_a[field].get(seq_id, '')
+                val_b = vecs_b[field].get(seq_id, '')
+                if val_a != val_b:
+                    mismatches.append(
+                        f'{field}[{seq_id}]: source_a={val_a!r} vs source_b={val_b!r}'
+                    )
+        
+        if not mismatches:
+            return None
+        
+        if med_norm_ref is not None:
+            ids_a = MedNormValidator.get_mednorm_id_set(adat_a)
+            ids_b = MedNormValidator.get_mednorm_id_set(adat_b)
+            
+            if med_norm_ref in ids_a:
+                logger.info(
+                    'Ref.MedNormExt mismatch resolved by med_norm_ref=%r (first source)',
+                    med_norm_ref,
+                )
+                return 'array'
+            if med_norm_ref in ids_b:
+                logger.info(
+                    'Ref.MedNormExt mismatch resolved by med_norm_ref=%r (second source)',
+                    med_norm_ref,
+                )
+                return 'ngs'
+            
+            raise MedNormMismatchError(
+                f'med_norm_ref={med_norm_ref!r} does not match any Ref.MedNorm.Id '
+                f'value in either source. '
+                f'Source A IDs: {sorted(ids_a)!r}. Source B IDs: {sorted(ids_b)!r}.'
+            )
+        
+        detail = '\n  '.join(mismatches[:10])
+        if len(mismatches) > 10:
+            detail += f'\n  ... and {len(mismatches) - 10} more'
+        raise MedNormMismatchError(
+            f'Ref.MedNormExt reference vectors are not identical for shared SeqIds. '
+            f'Mismatches ({len(mismatches)} total):\n  {detail}\n'
+            f'Provide med_norm_ref to override.'
+        )
+
+
+# ---------------------------------------------------------------------------
+# ProcessSteps Validation
+# ---------------------------------------------------------------------------
+
+
+def validate_v2_ngs_process_steps(adat_a: Adat, adat_b: Adat) -> None:
+    """Validate that two v2.0 NGS-only ADATs have identical ProcessSteps.
+    
+    For NGS-only pairs, both sources must have the same ProcessSteps entries.
+    
+    Parameters
+    ----------
+    adat_a : Adat
+        First v2.0 NGS ADAT.
+    adat_b : Adat
+        Second v2.0 NGS ADAT.
+    
+    Raises
+    ------
+    ProcessStepsMismatchError
+        If ProcessSteps are not identical.
+    """
+    from somadata.conversion.errors import ProcessStepsMismatchError
+    
+    ps_a = adat_a.header_metadata.get('ProcessSteps', {})
+    ps_b = adat_b.header_metadata.get('ProcessSteps', {})
+    
+    if not isinstance(ps_a, dict) or not isinstance(ps_b, dict):
+        return
+    
+    steps_a = sorted(ps_a.values())
+    steps_b = sorted(ps_b.values())
+    
+    if steps_a != steps_b:
+        raise ProcessStepsMismatchError(
+            f'NGS-only v2.0 pair requires identical ProcessSteps. '
+            f'Source A has {len(ps_a)} ProcessSteps entries; '
+            f'Source B has {len(ps_b)} ProcessSteps entries. '
+            f'ProcessSteps values do not match.'
+        )
+
+
+# ---------------------------------------------------------------------------
+# Header Merging Utilities
+# ---------------------------------------------------------------------------
+
+
+class HeaderMerger:
+    """Utilities for merging v2.0 headers from multiple sources."""
+    
+    @staticmethod
+    def merge_array_headers(
+        header_a: dict,
+        header_b: dict,
+        ctx_a,
+        ctx_b,
+    ) -> dict:
+        """Merge two converted array v2.0 headers into Array output header.
+        
+        Similar to merge_mixed_headers but output AssayType='Array'.
+        
+        Parameters
+        ----------
+        header_a : dict
+            First converted array v2.0 header.
+        header_b : dict
+            Second converted array v2.0 header.
+        ctx_a : ArrayConversionContext or V2SourceContext
+            Conversion context for first array (with source IDs).
+        ctx_b : ArrayConversionContext or V2SourceContext
+            Conversion context for second array (with source IDs).
+        
+        Returns
+        -------
+        dict
+            A new v2.0-compliant header dict with AssayType='Array'.
+        """
+        from somadata.conversion._helpers import (
+            generate_guid,
+            merge_pipe_delimited,
+            merge_plate_json,
+        )
+        from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
+        
+        out: dict = {key: '' for key in V2_HEADER_FIELD_TYPES}
+        
+        out['FileVersion'] = '2.0'
+        out['AssayType'] = 'Array'
+        out['FileCreatedDate'] = datetime.datetime.now(datetime.timezone.utc).strftime(
+            '%Y-%m-%dT%H:%M:%SZ'
+        )
+        out['AdatId'] = generate_guid()
+        
+        if header_a.get('AssayVersion'):
+            out['AssayVersion'] = header_a['AssayVersion']
+        
+        sf_a = header_a.get('SourceFile') or {}
+        sf_b = header_b.get('SourceFile') or {}
+        merged_sf: dict = {}
+        for _key, val in sf_a.items():
+            merged_sf[ctx_a.source_file_id] = val
+        for _key, val in sf_b.items():
+            merged_sf[ctx_b.source_file_id] = val
+        out['SourceFile'] = merged_sf
+        
+        ps_a = header_a.get('ProcessSteps') or {}
+        ps_b = header_b.get('ProcessSteps') or {}
+        merged_ps: dict = {}
+        for _key, val in ps_a.items():
+            merged_ps[ctx_a.process_steps_id] = val
+        for _key, val in ps_b.items():
+            merged_ps[ctx_b.process_steps_id] = val
+        out['ProcessSteps'] = merged_ps
+        
+        rc_a = header_a.get('ReportConfig') or {}
+        rc_b = header_b.get('ReportConfig') or {}
+        merged_rc: dict = {}
+        for _key, val in rc_a.items():
+            merged_rc[ctx_a.report_config_id] = val
+        for _key, val in rc_b.items():
+            merged_rc[ctx_b.report_config_id] = val
+        if merged_rc:
+            out['ReportConfig'] = merged_rc
+        
+        _PIPE_FIELDS = (
+            'Title',
+            'StudyOrganism',
+            'StudyMatrix',
+            'SOMAmerReferenceSource',
+            'UseRestriction',
+        )
+        for field in _PIPE_FIELDS:
+            merged = merge_pipe_delimited(
+                header_a.get(field, ''), header_b.get(field, '')
+            )
+            if merged:
+                out[field] = merged
+        
+        _PLATE_JSON_FIELDS = (
+            'PlateScaleScalar',
+            'CalibrateTailPercent',
+            'CalibrateTailPercentStatus',
+            'QCCheckTailPercent',
+            'QCCheckTailPercentStatus',
+            'PlateScaleStatus',
+        )
+        for field in _PLATE_JSON_FIELDS:
+            dict_a = header_a.get(field) or {}
+            dict_b = header_b.get(field) or {}
+            if not isinstance(dict_a, dict):
+                dict_a = {}
+            if not isinstance(dict_b, dict):
+                dict_b = {}
+            merged_plates = merge_plate_json(dict_a, dict_b, field_name=field)
+            if merged_plates:
+                out[field] = merged_plates
+        
+        return out
+    
+    @staticmethod
+    def merge_v2_headers(
+        header_a: dict,
+        header_b: dict,
+        assay_type: str,
+    ) -> dict:
+        """Merge two v2.0 headers into a single v2.0 output header.
+        
+        Simplified version of merge_mixed_headers for v2 + v2 case where both
+        sources already have v2.0 structure.
+        
+        Parameters
+        ----------
+        header_a : dict
+            First v2.0 header.
+        header_b : dict
+            Second v2.0 header.
+        assay_type : str
+            Output AssayType ('Array', 'NGS', or 'Mixed').
+        
+        Returns
+        -------
+        dict
+            A new v2.0-compliant header dict.
+        """
+        from somadata.conversion._helpers import (
+            generate_guid,
+            merge_pipe_delimited,
+            merge_plate_json,
+        )
+        from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
+        
+        out: dict = {key: '' for key in V2_HEADER_FIELD_TYPES}
+        
+        out['FileVersion'] = '2.0'
+        out['AssayType'] = assay_type
+        out['FileCreatedDate'] = datetime.datetime.now(datetime.timezone.utc).strftime(
+            '%Y-%m-%dT%H:%M:%SZ'
+        )
+        out['AdatId'] = generate_guid()
+        
+        if header_a.get('AssayVersion'):
+            out['AssayVersion'] = header_a['AssayVersion']
+        elif header_b.get('AssayVersion'):
+            out['AssayVersion'] = header_b['AssayVersion']
+        
+        sf_a = header_a.get('SourceFile') or {}
+        sf_b = header_b.get('SourceFile') or {}
+        if not isinstance(sf_a, dict):
+            sf_a = {}
+        if not isinstance(sf_b, dict):
+            sf_b = {}
+        
+        merged_sf: dict = {}
+        next_id = 1
+        for _key, val in sorted(sf_a.items()):
+            merged_sf[str(next_id)] = val
+            next_id += 1
+        for _key, val in sorted(sf_b.items()):
+            merged_sf[str(next_id)] = val
+            next_id += 1
+        out['SourceFile'] = merged_sf
+        
+        ps_a = header_a.get('ProcessSteps') or {}
+        ps_b = header_b.get('ProcessSteps') or {}
+        if not isinstance(ps_a, dict):
+            ps_a = {}
+        if not isinstance(ps_b, dict):
+            ps_b = {}
+        
+        merged_ps: dict = {}
+        next_id = 1
+        for _key, val in sorted(ps_a.items()):
+            merged_ps[str(next_id)] = val
+            next_id += 1
+        for _key, val in sorted(ps_b.items()):
+            merged_ps[str(next_id)] = val
+            next_id += 1
+        out['ProcessSteps'] = merged_ps
+        
+        rc_a = header_a.get('ReportConfig') or {}
+        rc_b = header_b.get('ReportConfig') or {}
+        if not isinstance(rc_a, dict):
+            rc_a = {}
+        if not isinstance(rc_b, dict):
+            rc_b = {}
+        
+        merged_rc: dict = {}
+        next_id = 1
+        for _key, val in sorted(rc_a.items()):
+            merged_rc[str(next_id)] = val
+            next_id += 1
+        for _key, val in sorted(rc_b.items()):
+            merged_rc[str(next_id)] = val
+            next_id += 1
+        if merged_rc:
+            out['ReportConfig'] = merged_rc
+        
+        _PIPE_FIELDS = (
+            'Title',
+            'StudyOrganism',
+            'StudyMatrix',
+            'SOMAmerReferenceSource',
+            'UseRestriction',
+        )
+        for field in _PIPE_FIELDS:
+            merged = merge_pipe_delimited(
+                header_a.get(field, ''), header_b.get(field, '')
+            )
+            if merged:
+                out[field] = merged
+        
+        _PLATE_JSON_FIELDS = (
+            'PlateScaleScalar',
+            'CalibrateTailPercent',
+            'CalibrateTailPercentStatus',
+            'QCCheckTailPercent',
+            'QCCheckTailPercentStatus',
+            'PlateScaleStatus',
+        )
+        for field in _PLATE_JSON_FIELDS:
+            dict_a = header_a.get(field) or {}
+            dict_b = header_b.get(field) or {}
+            if not isinstance(dict_a, dict):
+                dict_a = {}
+            if not isinstance(dict_b, dict):
+                dict_b = {}
+            merged_plates = merge_plate_json(dict_a, dict_b, field_name=field)
+            if merged_plates:
+                out[field] = merged_plates
+        
+        reads_a = header_a.get('PlateSOMAmerNormReadsStatus') or {}
+        reads_b = header_b.get('PlateSOMAmerNormReadsStatus') or {}
+        if not isinstance(reads_a, dict):
+            reads_a = {}
+        if not isinstance(reads_b, dict):
+            reads_b = {}
+        merged_reads = merge_plate_json(reads_a, reads_b, field_name='PlateSOMAmerNormReadsStatus')
+        if merged_reads:
+            out['PlateSOMAmerNormReadsStatus'] = merged_reads
+        
+        return out
+
+
+# ---------------------------------------------------------------------------
+# Row Index Alignment
+# ---------------------------------------------------------------------------
+
+
+def align_row_indexes(
+    index_a: pd.MultiIndex,
+    index_b: pd.MultiIndex,
+) -> tuple[pd.MultiIndex, pd.MultiIndex]:
+    """Return both MultiIndexes reordered to a shared, canonical level set.
+    
+    Array and NGS row converters build their output MultiIndexes via
+    insertion-order dicts, so the level ordering can differ even when both
+    indexes carry stubs for the other platform's fields. This function
+    computes the canonical union of all level names (``index_a`` order first,
+    then any ``index_b``-exclusive names appended), then reindexes each
+    MultiIndex to that canonical set — inserting blank (empty-string) levels
+    for any fields that a source does not have.
+    
+    Parameters
+    ----------
+    index_a : pd.MultiIndex
+        Row index from first source.
+    index_b : pd.MultiIndex
+        Row index from second source.
+    
+    Returns
+    -------
+    tuple[pd.MultiIndex, pd.MultiIndex]
+        ``(index_a_aligned, index_b_aligned)`` — both share the same level
+        names in the same order and can be safely passed to
+        ``pd.MultiIndex.append``.
+    """
+    names_a = list(index_a.names)
+    names_b = list(index_b.names)
+    
+    seen: set[str] = set(names_a)
+    canonical: list[str] = list(names_a)
+    for name in names_b:
+        if name not in seen:
+            canonical.append(name)
+            seen.add(name)
+    
+    def _reorder(idx: pd.MultiIndex, ordered_names: list[str]) -> pd.MultiIndex:
+        existing = set(idx.names)
+        n = len(idx)
+        arrays: list[list] = []
+        for name in ordered_names:
+            if name in existing:
+                arrays.append(list(idx.get_level_values(name)))
+            else:
+                arrays.append([''] * n)
+        return pd.MultiIndex.from_arrays(arrays, names=ordered_names)
+    
+    return _reorder(index_a, canonical), _reorder(index_b, canonical)
