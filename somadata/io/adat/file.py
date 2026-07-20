@@ -6,11 +6,15 @@ import json
 import logging
 import re
 import warnings
+from datetime import date, datetime
 from importlib.metadata import version
 from typing import Dict, List, Tuple, Union
 
+import pandas as pd
+
 from somadata import Adat
 from somadata.io.adat.errors import AdatReadError, AdatWriteError
+from somadata.io.adat.v2_fields import FieldType
 from somadata.io.adat.v2_fields import (
     serialize_header_value_v2 as _serialize_header_value_v2,
 )
@@ -20,6 +24,29 @@ from somadata.io.adat.v2_fields import (
     validate_v2_header_fields as _validate_v2_header_fields,
 )
 from somadata.tools.math import jround
+
+logger = logging.getLogger(__name__)
+
+
+def _is_valid_iso8601_date(val: str) -> bool:
+    """Return True if *val* is a valid ISO 8601 date or datetime string.
+
+    Accepts ``YYYY-MM-DD`` and ``YYYY-MM-DDTHH:MM:SS[Z]``.  Uses
+    ``datetime.fromisoformat()`` so calendar validity is enforced (e.g.
+    ``2026-02-30`` correctly returns False).
+
+    The trailing ``Z`` suffix is normalised to ``+00:00`` before parsing
+    because ``fromisoformat()`` only accepts ``Z`` natively on Python 3.11+,
+    while this project requires Python 3.9+.
+    """
+    normalised = val[:-1] + '+00:00' if val.endswith('Z') else val
+    for parser in (date.fromisoformat, datetime.fromisoformat):
+        try:
+            parser(normalised)
+            return True
+        except ValueError:
+            continue
+    return False
 
 
 def parse_file(
@@ -197,8 +224,111 @@ def read_file(filepath: str) -> Adat:
     return read_adat(filepath)
 
 
+def _validate_v2_field_values(
+    row_metadata: Dict[str, List],
+    column_metadata: Dict[str, List],
+) -> None:
+    """Emit warnings for v2.0 field values that violate their declared type.
+
+    Called after parsing when ``FileVersion == "2.0"``.  Violations produce
+    ``warnings.warn`` calls (not exceptions) to remain lenient during early
+    adoption of the v2.0 format.
+
+    Detection is vectorized using pandas/numpy so that large COL_DATA sections
+    (thousands of analytes) are checked efficiently.  A single warning is
+    emitted per violating field, listing all offending indices, rather than
+    one warning per value.
+
+    Checks performed per FieldType:
+
+    - **Integer** — value must be a whole-number integer (or a recognised
+      missing-value sentinel: empty string, ``"NA"``, or ``"N/A"``).
+    - **Decimal** — value must be parseable as a float (or missing).
+    - **Date** — value must be a valid ISO 8601 date/datetime (or missing).
+    - **JSON** — value must be parseable as valid JSON (or be empty/missing).
+    - **String** — value must be ≤ 1 024 characters.
+
+    Parameters
+    ----------
+    row_metadata : dict
+        ``{field_name: [value, ...]}`` from ``parse_file``.
+    column_metadata : dict
+        ``{field_name: [value, ...]}`` from ``parse_file``.
+    """
+    _MISSING = {'', 'na', 'n/a'}
+
+    def _check_section(
+        metadata: Dict[str, List],
+        type_fn,
+        section: str,
+    ) -> None:
+        for field_name, values in metadata.items():
+            if not values:
+                continue
+
+            ftype = type_fn(field_name)
+            series = pd.Series(values, dtype=object).fillna('').astype(str)
+            missing_mask = series.str.strip().str.lower().isin(_MISSING)
+            non_missing = series[~missing_mask]
+
+            if non_missing.empty:
+                continue
+
+            bad_indices: list[int] = []
+
+            if ftype is FieldType.INTEGER:
+                numeric = pd.to_numeric(non_missing, errors='coerce')
+                bad_mask = numeric.isna() | (numeric % 1 != 0)
+                bad_indices = list(non_missing.index[bad_mask])
+
+            elif ftype is FieldType.DECIMAL:
+                numeric = pd.to_numeric(non_missing, errors='coerce')
+                bad_indices = list(non_missing.index[numeric.isna()])
+
+            elif ftype is FieldType.DATE:
+                valid_mask = non_missing.str.strip().map(_is_valid_iso8601_date)
+                bad_indices = list(non_missing.index[~valid_mask])
+
+            elif ftype is FieldType.JSON:
+
+                def _invalid_json(v: str) -> bool:
+                    try:
+                        json.loads(v)
+                        return False
+                    except (json.JSONDecodeError, ValueError):
+                        return True
+
+                bad_mask = non_missing.map(_invalid_json)
+                bad_indices = list(non_missing.index[bad_mask])
+
+            elif ftype is FieldType.STRING:
+                bad_mask = non_missing.str.len() > 1024
+                bad_indices = list(non_missing.index[bad_mask])
+
+            if bad_indices:
+                sample = bad_indices[:5]
+                suffix = ', ...' if len(bad_indices) > 5 else ''
+                logger.warning(
+                    'v2.0 type violation in %s field "%s": '
+                    'expected %s, found %d invalid value(s) at indices %s%s.',
+                    section,
+                    field_name,
+                    ftype.value,
+                    len(bad_indices),
+                    sample,
+                    suffix,
+                )
+
+    _check_section(row_metadata, _v2_row_field_type, '^ROW_DATA')
+    _check_section(column_metadata, _v2_col_field_type, '^COL_DATA')
+
+
 def read_adat(path_or_buf: Union[str, io.TextIOWrapper], *args, **kwargs) -> Adat:
     """Returns an Adat from the filepath/name.
+
+    For v2.0 ADATs (``FileVersion == "2.0"``), field values in ``^ROW_DATA``
+    and ``^COL_DATA`` are validated against their declared v2.0 types.
+    Type mismatches are logged as warnings rather than raising errors.
 
     Parameters
     ----------
@@ -216,6 +346,9 @@ def read_adat(path_or_buf: Union[str, io.TextIOWrapper], *args, **kwargs) -> Ada
     rfu_matrix, row_metadata, column_metadata, header_metadata = parse_file(
         path_or_buf, *args, **kwargs
     )
+
+    if header_metadata.get('FileVersion') == '2.0':
+        _validate_v2_field_values(row_metadata, column_metadata)
 
     return Adat.from_features(
         rfu_matrix=rfu_matrix,
