@@ -196,14 +196,12 @@ class TestV2ReaderDispatch:
         assert rt.shape == adat.shape
 
     def test_missing_rfu_values_handled(self):
-        """NA values in the RFU matrix are represented as NaN floats after read."""
-        import math
-
+        """Non-numeric RFU values (e.g., 'NA') raise ValueError on read."""
         adat = _make_minimal_v2_adat()
         buf = io.StringIO()
         write_adat(adat, buf)
         content = buf.getvalue()
-        # Replace one RFU value with empty (simulates missing data)
+        # Replace one RFU value with a non-numeric sentinel (simulates missing data)
         content = content.replace('1000.0\t1000.0', 'NA\t1000.0', 1)
         with pytest.raises(ValueError):
             # Attempting to parse a non-numeric RFU value raises ValueError

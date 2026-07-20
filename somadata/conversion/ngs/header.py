@@ -21,7 +21,6 @@ from somadata.conversion._helpers import (
     parse_process_steps,
     strip_bang_prefix,
 )
-
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
 
 if TYPE_CHECKING:

@@ -129,24 +129,22 @@ def _derive_med_norm_status(scale_factors: list[str]) -> str:
 
 
 def _derive_med_norm_status_vectorized(
-    field_names: list[str],
-    out_levels: dict[str, list],
-    n_rows: int
+    field_names: list[str], out_levels: dict[str, list], n_rows: int
 ) -> list[str]:
     """Vectorized MedNorm status derivation for all rows.
-    
+
     All scale factors for a row must be numeric and in [0.4, 2.5] for PASS.
     """
     result = [''] * n_rows
-    
+
     if not field_names:
         return result
-    
+
     # Build matrix of scale factor values (rows × fields)
     scale_matrix = []
     for field_name in field_names:
         scale_matrix.append(out_levels[field_name])
-    
+
     # Process each row
     for i in range(n_rows):
         values = [scale_matrix[j][i] for j in range(len(field_names))]
@@ -154,17 +152,17 @@ def _derive_med_norm_status_vectorized(
         values = [v for v in values if v]
         if not values:
             continue
-        
+
         try:
             floats = [float(v) for v in values]
         except (ValueError, TypeError):
             continue
-        
+
         if all(0.4 <= f <= 2.5 for f in floats):
             result[i] = 'PASS'
         else:
             result[i] = 'FLAG'
-    
+
     return result
 
 
@@ -225,7 +223,7 @@ def convert_ngs_row_data(
     # 2. New generated fields (one value per row)
     # ------------------------------------------------------------------
     out_levels['SampleReadout'] = ['NGS'] * n_rows
-    
+
     # GUID generation optimization: only generate for missing/blank keys
     if 'UniqueSampleKey' in out_levels:
         existing_keys = out_levels['UniqueSampleKey']
@@ -235,7 +233,7 @@ def convert_ngs_row_data(
         ]
     else:
         out_levels['UniqueSampleKey'] = [generate_guid() for _ in range(n_rows)]
-    
+
     out_levels['SourceFileId'] = [ctx.source_file_id] * n_rows
     out_levels['ProcessStepsId'] = [ctx.process_steps_id] * n_rows
 

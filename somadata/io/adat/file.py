@@ -8,9 +8,8 @@ import re
 import warnings
 from datetime import date, datetime
 from importlib.metadata import version
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
-import numpy as np
 import pandas as pd
 
 from somadata import Adat
@@ -40,7 +39,7 @@ def _is_valid_iso8601_date(val: str) -> bool:
     because ``fromisoformat()`` only accepts ``Z`` natively on Python 3.11+,
     while this project requires Python 3.9+.
     """
-    normalised = val.replace('Z', '+00:00')
+    normalised = val[:-1] + '+00:00' if val.endswith('Z') else val
     for parser in (date.fromisoformat, datetime.fromisoformat):
         try:
             parser(normalised)
@@ -287,15 +286,8 @@ def _validate_v2_field_values(
                 bad_indices = list(non_missing.index[numeric.isna()])
 
             elif ftype is FieldType.DATE:
-                normalised = non_missing.str.replace('Z', '+00:00', regex=False)
-                parsed_date = pd.to_datetime(
-                    normalised, format='%Y-%m-%d', errors='coerce', utc=False
-                )
-                parsed_dt = pd.to_datetime(
-                    normalised, format='ISO8601', errors='coerce'
-                )
-                valid = parsed_date.notna() | parsed_dt.notna()
-                bad_indices = list(non_missing.index[~valid])
+                valid_mask = non_missing.str.strip().map(_is_valid_iso8601_date)
+                bad_indices = list(non_missing.index[~valid_mask])
 
             elif ftype is FieldType.JSON:
 
@@ -336,7 +328,7 @@ def read_adat(path_or_buf: Union[str, io.TextIOWrapper], *args, **kwargs) -> Ada
 
     For v2.0 ADATs (``FileVersion == "2.0"``), field values in ``^ROW_DATA``
     and ``^COL_DATA`` are validated against their declared v2.0 types.
-    Type mismatches produce warnings calls rather than errors.
+    Type mismatches are logged as warnings rather than raising errors.
 
     Parameters
     ----------
