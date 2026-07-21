@@ -213,7 +213,7 @@ def consolidate_plate_fields(
     ...     {'PlateScale_Scalar_PLT1': '1.23', '!PlateScale_Scalar_PLT2': '0.99'},
     ...     prefix='PlateScale_Scalar_',
     ... )
-    {'PLT1': {'PlatformSpecific': '1.23'}, 'PLT2': {'PlatformSpecific': '0.99'}}
+    {'PLT1': {'PlatformSpecific': 1.23}, 'PLT2': {'PlatformSpecific': 0.99}}
     """
     result: dict[str, Any] = {}
     for raw_key, value in header.items():
@@ -221,8 +221,53 @@ def consolidate_plate_fields(
         if clean_key.startswith(prefix):
             plate_id = clean_key[len(prefix) :]
             if plate_id:
-                result[plate_id] = {stage: value} if stage is not None else value
+                coerced = _coerce_numeric(value)
+                result[plate_id] = {stage: coerced} if stage is not None else coerced
     return result
+
+
+def _coerce_numeric(value: Any) -> Any:
+    """Return *value* as a float if it represents a number, else unchanged.
+
+    Converts string representations of numbers to ``float``.  Non-numeric
+    strings and non-string types are returned unchanged.
+
+    Always returns ``float`` (never ``int``) so that decimal-valued header JSON
+    fields (e.g. PlateScaleScalar, CalibrateTailPercent) are serialised as
+    bare JSON numbers with a decimal point when appropriate.
+
+    Parameters
+    ----------
+    value : any
+        The value to coerce.
+
+    Returns
+    -------
+    float, or the original value
+        The float representation if conversion is possible, otherwise the
+        original value.
+
+    Examples
+    --------
+    >>> _coerce_numeric('1.23')
+    1.23
+    >>> _coerce_numeric('PASS')
+    'PASS'
+    >>> _coerce_numeric(0.72)
+    0.72
+    >>> _coerce_numeric('1.0')
+    1.0
+    """
+    if isinstance(value, float):
+        return value
+    if isinstance(value, int):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            pass
+    return value
 
 
 # ---------------------------------------------------------------------------

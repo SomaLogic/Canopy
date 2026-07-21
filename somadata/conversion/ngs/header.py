@@ -15,6 +15,7 @@ import re
 from typing import TYPE_CHECKING
 
 from somadata.conversion._helpers import (
+    _coerce_numeric,
     _compute_adat_md5sum,
     generate_guid,
     lookup_header,
@@ -266,16 +267,21 @@ def _extract_whole_dict_or_per_plate(
     Returns
     -------
     dict
-        Flat dict: ``{"PlateId": value}``.
+        Flat dict: ``{"PlateId": value}`` where numeric strings are stored as
+        their numeric type (float/int) for correct JSON serialisation.
     """
     # Try bare key first
     for candidate in (bare_key, f'!{bare_key}'):
         raw_val = header.get(candidate, '')
         if raw_val:
+            # If the raw value is already a dict (parsed from JSON by the reader),
+            # return it directly with numeric coercion applied to values.
+            if isinstance(raw_val, dict):
+                return {str(k): _coerce_numeric(v) for k, v in raw_val.items()}
             parsed = _parse_python_dict_value(str(raw_val))
             if parsed:
-                return {str(k): str(v) for k, v in parsed.items()}
-            # Non-dict bare value — no PlateId key available; ignore and fall back to per-plate scan
+                return {str(k): _coerce_numeric(v) for k, v in parsed.items()}
+            # Non-dict bare value — no PlateId key available; fall back to per-plate scan
             break
 
     # Fall back to per-plate suffix pattern
@@ -319,7 +325,7 @@ def _consolidate_dual_platform_fields(
     ...     'CrossPlatformPlateScale_ScaleFactor',
     ...     ['PLT1'],
     ... )
-    {'PLT1': {'PlatformSpecific': '1.02', 'CrossPlatform': '0.98'}}
+    {'PLT1': {'PlatformSpecific': 1.02, 'CrossPlatform': 0.98}}
     """
     result = {}
 
@@ -346,9 +352,9 @@ def _consolidate_dual_platform_fields(
         if platform_val or cross_val:
             result[plate_id] = {}
             if platform_val:
-                result[plate_id]['PlatformSpecific'] = platform_val
+                result[plate_id]['PlatformSpecific'] = _coerce_numeric(platform_val)
             if cross_val:
-                result[plate_id]['CrossPlatform'] = cross_val
+                result[plate_id]['CrossPlatform'] = _coerce_numeric(cross_val)
 
     if result:
         return result
@@ -364,9 +370,9 @@ def _consolidate_dual_platform_fields(
     for pid in sorted(all_plate_ids):
         result[str(pid)] = {}
         if pid in platform_dict:
-            result[str(pid)]['PlatformSpecific'] = str(platform_dict[pid])
+            result[str(pid)]['PlatformSpecific'] = _coerce_numeric(platform_dict[pid])
         if pid in cross_dict:
-            result[str(pid)]['CrossPlatform'] = str(cross_dict[pid])
+            result[str(pid)]['CrossPlatform'] = _coerce_numeric(cross_dict[pid])
 
     return result
 
@@ -384,13 +390,14 @@ def _extract_plate_keyed_json(header: dict, pattern: str) -> dict:
     Returns
     -------
     dict
-        Flat dict: ``{"PlateId": value}``, or empty dict if no matches.
+        Flat dict: ``{"PlateId": value}`` where numeric strings are stored as
+        their numeric type (float/int) for correct JSON serialisation.
 
     Examples
     --------
     >>> hdr = {'QCCheckTailPercent_PLT1': '0.95', '!QCCheckTailPercent-PLT2': '0.92'}
     >>> _extract_plate_keyed_json(hdr, r'^QCCheckTailPercent[_\\-](.+)$')
-    {'PLT1': '0.95', 'PLT2': '0.92'}
+    {'PLT1': 0.95, 'PLT2': 0.92}
     """
     result = {}
     regex = re.compile(pattern)
@@ -410,12 +417,16 @@ def _extract_plate_keyed_json(header: dict, pattern: str) -> dict:
         # The matched *value* may itself be a Python-repr/JSON dict string
         # (NGS ADATs store whole-dict values on bare keys like
         # 'QCCheckTailPercent' → "{'TS00000001': 1.855}").
-        parsed = _parse_python_dict_value(str(value))
-        if parsed:
-            # Expand the inner dict into per-plate entries
-            for inner_plate, inner_val in parsed.items():
-                result[str(inner_plate)] = str(inner_val)
+        if isinstance(value, dict):
+            for inner_plate, inner_val in value.items():
+                result[str(inner_plate)] = _coerce_numeric(inner_val)
         else:
-            result[plate_id] = value
+            parsed = _parse_python_dict_value(str(value))
+            if parsed:
+                # Expand the inner dict into per-plate entries
+                for inner_plate, inner_val in parsed.items():
+                    result[str(inner_plate)] = _coerce_numeric(inner_val)
+            else:
+                result[plate_id] = _coerce_numeric(value)
 
     return result
