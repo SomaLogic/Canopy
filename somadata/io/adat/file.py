@@ -603,11 +603,11 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
 
         if round_rfu:
             rfu_values = [
-                'NA' if (isinstance(v, float) and math.isnan(v)) else jround(v, 1)
+                'NA' if pd.isna(v) else jround(v, 1)
                 for v in rfu_row
             ]
         else:
             rfu_values = [
-                'NA' if (isinstance(v, float) and math.isnan(v)) else v for v in rfu_row
+                'NA' if pd.isna(v) else v for v in rfu_row
             ]
         writer.writerow(row_meta + [None] + rfu_values)
