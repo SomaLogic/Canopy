@@ -241,7 +241,7 @@ class TestV2TypeValidationInteger:
                 ['S1', 'S2'],
                 ['Sample', 'Sample'],
                 ['PLT001', 'PLT001'],
-                ['not_an_int', '3'],
+                ['3.5', '3'],
             ],
         )
         buf = io.StringIO()

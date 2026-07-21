@@ -595,7 +595,7 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
                 # Coerce float-like integer values (e.g. 1234.0 → 1234).
                 try:
                     fval = float(val)
-                    if not math.isnan(fval):
+                    if not math.isnan(fval) and fval.is_integer():
                         val = int(fval)
                 except (TypeError, ValueError):
                     pass
