@@ -46,6 +46,8 @@ _PLATE_SCALE_REF_RE = re.compile(r'^PlateScale_Reference$')
 _CAL_REFERENCE_RE = re.compile(r'^CalReference$')
 _QC_REFERENCE_RE = re.compile(r'^QcReference_(.+)$')
 _MED_NORM_RFU_RE = re.compile(r'^medNorm(?:Ref|SMP)_ReferenceRFU$')
+_QC_CHECK_SCALE_RE = re.compile(r'^QCCheck_(.+?)_ScaleFactor$')
+_QC_CHECK_PASSFLAG_RE = re.compile(r'^QCCheck_(.+?)_PassFlag$')
 
 
 def _rename_col_field(
@@ -93,6 +95,16 @@ def _rename_col_field(
     m = _QC_REFERENCE_RE.match(name)
     if m:
         return f'Ref.Array.QCRatio_{m.group(1)}'
+
+    # QCCheck_<PlateId>_ScaleFactor → QCRatio_<PlateId>
+    # (bridged array ADATs may carry NGS-style QCCheck columns)
+    m = _QC_CHECK_SCALE_RE.match(name)
+    if m:
+        return f'QCRatio_{m.group(1)}'
+
+    # QCCheck_<PlateId>_PassFlag → remove
+    if _QC_CHECK_PASSFLAG_RE.match(name):
+        return None
 
     # medNormRef_ReferenceRFU or medNormSMP_ReferenceRFU → Ref.MedNorm.Id
     if _MED_NORM_RFU_RE.match(name):
@@ -207,15 +219,28 @@ def convert_array_col_data(
             rename_map[name] = _rename_col_field(name, calibrator_id=calibrator_id)
 
     # ------------------------------------------------------------------
-    # 3. Build new arrays, filtering out removed fields
+    # 3. Build new arrays, filtering out removed fields and deduplicating.
+    #    When two legacy fields map to the same v2.0 name (e.g. a stray
+    #    QCCheck_*_ScaleFactor alongside a CalQcRatio_*-derived QCRatio_*),
+    #    the first occurrence wins.
     # ------------------------------------------------------------------
     new_names: list[str] = []
     new_arrays: list[list] = []
+    seen_output_names: set[str] = set()
 
     for old_name, values in zip(level_names, level_arrays):
         new_name = rename_map[old_name]
         if new_name is None:
             continue  # field removed
+        if new_name in seen_output_names:
+            logger.warning(
+                'Array COL_DATA: duplicate output field %r (from legacy field %r); '
+                'skipping duplicate.',
+                new_name,
+                old_name,
+            )
+            continue
+        seen_output_names.add(new_name)
         new_names.append(new_name)
         new_arrays.append(values)
 

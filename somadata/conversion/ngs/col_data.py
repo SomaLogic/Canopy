@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from somadata.io.adat.v2_fields import FieldType, v2_col_field_type
+
 if TYPE_CHECKING:
     from somadata.adat import Adat
 
@@ -182,16 +184,30 @@ def convert_ngs_col_data(adat: Adat) -> pd.MultiIndex:
         rename_map[name] = _rename_col_field(name)
 
     # ------------------------------------------------------------------
-    # 2. Build new arrays, filtering out removed fields
+    # 2. Build new arrays, filtering out removed fields and deduplicating.
+    #    When two legacy fields map to the same v2.0 name (e.g. a stray
+    #    unconverted QCCheck_*_ScaleFactor alongside a correctly-renamed
+    #    QCRatio_* column), the first occurrence wins and the duplicate is
+    #    silently dropped.
     # ------------------------------------------------------------------
     new_names: list[str] = []
     new_arrays: list[list] = []
+    seen_output_names: set[str] = set()
 
     for old_name, values in zip(level_names, level_arrays):
         new_name = rename_map[old_name]
         if new_name is None:
             logger.debug(f'Removing NGS COL_DATA field: {old_name}')
             continue  # field removed
+        if new_name in seen_output_names:
+            logger.warning(
+                'NGS COL_DATA: duplicate output field %r (from legacy field %r); '
+                'skipping duplicate.',
+                new_name,
+                old_name,
+            )
+            continue
+        seen_output_names.add(new_name)
         new_names.append(new_name)
         new_arrays.append(values)
 
@@ -220,6 +236,19 @@ def convert_ngs_col_data(adat: Adat) -> pd.MultiIndex:
         new_arrays.append(hyb_control_values)
 
     # ------------------------------------------------------------------
-    # 4. Reconstruct MultiIndex
+    # 4. Normalise missing-value sentinels for String-typed fields.
+    #    Legacy NGS COL_DATA sometimes contains "N/A" or "NA" in string
+    #    fields.  v2.0 spec mandates empty strings for missing string values.
+    # ------------------------------------------------------------------
+    _NA_SENTINELS = frozenset({'n/a', 'na'})
+    for i, (name, values) in enumerate(zip(new_names, new_arrays)):
+        if v2_col_field_type(name) is FieldType.STRING:
+            new_arrays[i] = [
+                '' if (isinstance(v, str) and v.strip().lower() in _NA_SENTINELS) else v
+                for v in values
+            ]
+
+    # ------------------------------------------------------------------
+    # 5. Reconstruct MultiIndex
     # ------------------------------------------------------------------
     return pd.MultiIndex.from_arrays(new_arrays, names=new_names)

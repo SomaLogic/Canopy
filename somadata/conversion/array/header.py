@@ -50,8 +50,8 @@ _PLATE_FIELD_SPECS: list[tuple[str, str, str | None]] = [
     ('CalPlateTailPercent_', 'CalibrateTailPercent', 'PlatformSpecific'),
     ('CalPlateTailTest_', 'CalibrateTailPercentStatus', 'PlatformSpecific'),
     ('PlateScale_PassFlag_', 'PlateScaleStatus', None),
-    ('PlateTailPercent_', 'QCCheckTailPercent', 'PlatformSpecific'),
-    ('PlateTailTest_', 'QCCheckTailPercentStatus', 'PlatformSpecific'),
+    ('PlateTailPercent_', 'QCCheckTailPercent', None),
+    ('PlateTailTest_', 'QCCheckTailPercentStatus', None),
 ]
 
 

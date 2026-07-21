@@ -83,10 +83,61 @@ _ARRAY_ONLY_FIELDS: list[str] = [
 # MedNormInt dilution suffix normalization: replace '-' with '_'
 # ---------------------------------------------------------------------------
 _MED_NORM_INT_RE = re.compile(r'^(MedNormInt_)(.+?)(_ScaleFactor)$')
+_MED_NORM_EXT_RE = re.compile(r'^(MedNormExt_)(.+?)(_ScaleFactor)$')
+
+
+def _normalize_dilution_group(dilution: str) -> str:
+    """Normalise a dilution group string for use in a field name.
+
+    1. If the dilution value looks like scientific notation (e.g. ``5e-05``),
+       convert it to a plain decimal string (``0.00005``) to avoid the illegal
+       hyphen that would otherwise appear in the field name.
+    2. Replace any remaining hyphens with underscores (hyphens are not
+       permitted in v2.0 field names per §2.1).
+
+    Periods are explicitly permitted in field names (spec §2.1: "letters,
+    numbers, periods, or underscores") so they are preserved as-is.
+
+    Parameters
+    ----------
+    dilution : str
+        Raw dilution group string extracted from a field name.
+
+    Returns
+    -------
+    str
+        Normalised dilution string safe for embedding in a field name.
+
+    Examples
+    --------
+    >>> _normalize_dilution_group('5e-05')
+    '0.00005'
+    >>> _normalize_dilution_group('0.005')
+    '0.005'
+    >>> _normalize_dilution_group('0-2')
+    '0_2'
+    """
+    # Convert scientific notation to decimal representation to avoid hyphens
+    if 'e' in dilution.lower() or 'E' in dilution:
+        try:
+            fval = float(dilution)
+            # Format as fixed-point decimal, stripping trailing zeros
+            # Use enough decimal places to fully express small values (e.g. 5e-05)
+            formatted = f'{fval:.15f}'.rstrip('0').rstrip('.')
+            dilution = formatted
+        except ValueError:
+            pass
+    # Replace hyphens with underscores; periods are valid in field names and preserved
+    return dilution.replace('-', '_')
 
 
 def _normalize_dilution_suffix(name: str) -> str:
-    """Replace hyphens with underscores in MedNormInt dilution suffixes.
+    """Normalise the dilution suffix in MedNormInt/MedNormExt field names.
+
+    Converts scientific notation dilution values (e.g. ``5e-05``) to plain
+    decimal strings to remove the illegal hyphen. Any remaining literal
+    hyphens are replaced with underscores. Periods are preserved because
+    they are valid field-name characters per spec §2.1.
 
     Parameters
     ----------
@@ -96,22 +147,24 @@ def _normalize_dilution_suffix(name: str) -> str:
     Returns
     -------
     str
-        The field name with hyphens replaced by underscores in dilution values.
+        The field name with dilution group normalised.
 
     Examples
     --------
     >>> _normalize_dilution_suffix('MedNormInt_0-2_ScaleFactor')
     'MedNormInt_0_2_ScaleFactor'
     >>> _normalize_dilution_suffix('MedNormInt_0.005_ScaleFactor')
-    'MedNormInt_0_005_ScaleFactor'
+    'MedNormInt_0.005_ScaleFactor'
+    >>> _normalize_dilution_suffix('MedNormExt_5e-05_ScaleFactor')
+    'MedNormExt_0.00005_ScaleFactor'
     >>> _normalize_dilution_suffix('SampleId')
     'SampleId'
     """
-    m = _MED_NORM_INT_RE.match(name)
-    if m:
-        prefix, dilution, suffix = m.groups()
-        dilution_normalized = dilution.replace('-', '_').replace('.', '_')
-        return f'{prefix}{dilution_normalized}{suffix}'
+    for pattern in (_MED_NORM_INT_RE, _MED_NORM_EXT_RE):
+        m = pattern.match(name)
+        if m:
+            prefix, dilution, suffix = m.groups()
+            return f'{prefix}{_normalize_dilution_group(dilution)}{suffix}'
     return name
 
 

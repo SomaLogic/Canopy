@@ -22,6 +22,7 @@ from somadata.conversion._helpers import (
     lookup_header,
     try_float,
 )
+from somadata.conversion.ngs.row_data import _normalize_dilution_suffix
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -254,6 +255,9 @@ def convert_array_row_data(
             rma_values = values
             continue
         new_name = _ROW_RENAMES.get(old_name, old_name)
+        # Apply dilution suffix normalization (converts e.g. MedNormExt_5e-05_ScaleFactor
+        # → MedNormExt_0.00005_ScaleFactor; hyphens replaced, periods preserved)
+        new_name = _normalize_dilution_suffix(new_name)
         # Convert to list only once per field
         out_levels[new_name] = list(values)
 

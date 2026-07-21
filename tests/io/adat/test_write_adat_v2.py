@@ -11,12 +11,12 @@ import pytest
 
 from somadata.adat import Adat
 from somadata.io.adat.file import write_adat
+from somadata.io.adat.v2_fields import FieldType
 from somadata.io.adat.v2_fields import (
-    FieldType,
     serialize_header_value_v2 as _serialize_header_value_v2,
-    v2_col_field_type as _v2_col_field_type,
-    v2_row_field_type as _v2_row_field_type,
 )
+from somadata.io.adat.v2_fields import v2_col_field_type as _v2_col_field_type
+from somadata.io.adat.v2_fields import v2_row_field_type as _v2_row_field_type
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -118,7 +118,8 @@ class TestV2ColFieldType:
             assert _v2_col_field_type(name) is FieldType.STRING
 
     def test_static_integer_field(self):
-        assert _v2_col_field_type('EntrezGeneId') is FieldType.INTEGER
+        # EntrezGeneId was changed to String (supports pipe-delimited multi-gene IDs)
+        assert _v2_col_field_type('EntrezGeneId') is FieldType.STRING
 
     def test_dynamic_platform_specific_calibrate(self):
         assert (
@@ -168,13 +169,13 @@ class TestV2RowFieldType:
 
     def test_dynamic_norm_scale(self):
         assert _v2_row_field_type('NormScale_20') is FieldType.DECIMAL
-        assert _v2_row_field_type('NormScale_0_005') is FieldType.DECIMAL
+        assert _v2_row_field_type('NormScale_0.005') is FieldType.DECIMAL
 
     def test_dynamic_med_norm_int(self):
-        assert _v2_row_field_type('MedNormInt_0_2_ScaleFactor') is FieldType.DECIMAL
+        assert _v2_row_field_type('MedNormInt_0.2_ScaleFactor') is FieldType.DECIMAL
 
     def test_dynamic_med_norm_ext(self):
-        assert _v2_row_field_type('MedNormExt_0_2_ScaleFactor') is FieldType.DECIMAL
+        assert _v2_row_field_type('MedNormExt_0.2_ScaleFactor') is FieldType.DECIMAL
 
     def test_dynamic_anml(self):
         assert _v2_row_field_type('ANMLFractionUsed_20') is FieldType.DECIMAL
@@ -339,6 +340,7 @@ class TestWriteAdatV2ColData:
         assert type_parts[idx] == 'Decimal'
 
     def test_integer_col_field_type(self):
+        # EntrezGeneId is now String (supports pipe-delimited multi-gene IDs)
         col_levels = {
             'SeqId': ['10000-01'],
             'EntrezGeneId': ['8514'],
@@ -348,7 +350,7 @@ class TestWriteAdatV2ColData:
         name_parts = sections['^COL_DATA'][0].split('\t')
         type_parts = sections['^COL_DATA'][1].split('\t')
         idx = name_parts.index('EntrezGeneId')
-        assert type_parts[idx] == 'Integer'
+        assert type_parts[idx] == 'String'
 
 
 class TestWriteAdatV2RowData:
