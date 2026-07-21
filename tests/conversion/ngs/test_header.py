@@ -43,7 +43,9 @@ class TestConvertNGSHeader:
         ctx = NGSConversionContext.from_adat(minimal_ngs_adat)
         result = convert_ngs_header(minimal_ngs_adat, ctx)
         # Check ISO 8601 format
-        assert re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', result['FileCreatedDate'])
+        assert re.match(
+            r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', result['FileCreatedDate']
+        )
 
     def test_creates_source_file_json(self, minimal_ngs_adat):
         ctx = NGSConversionContext.from_adat(minimal_ngs_adat)
@@ -52,11 +54,15 @@ class TestConvertNGSHeader:
         assert '1' in result['SourceFile']
         assert result['SourceFile']['1']['AdatId'] == 'GID-old-ngs-id'
 
-    def test_source_file_uses_md5sum_when_no_adat_id_and_md5_provided(self, minimal_ngs_adat):
+    def test_source_file_uses_md5sum_when_no_adat_id_and_md5_provided(
+        self, minimal_ngs_adat
+    ):
         adat = minimal_ngs_adat
         del adat.header_metadata['!AdatId']
         # Simulate loading from file with md5sum
-        ctx = NGSConversionContext.from_adat(adat, source_file_md5sum='d5d5c48070766aeb078b50b111897e25')
+        ctx = NGSConversionContext.from_adat(
+            adat, source_file_md5sum='d5d5c48070766aeb078b50b111897e25'
+        )
         result = convert_ngs_header(adat, ctx)
         assert result['SourceFile'] != ''
         assert isinstance(result['SourceFile'], dict)
@@ -69,12 +75,14 @@ class TestConvertNGSHeader:
         del adat.header_metadata['!AdatId']
         # No file md5sum - will use object md5sum
         ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=None)
-        
+
         # Compute md5sum twice - should be identical
         result1 = convert_ngs_header(adat, ctx)
         result2 = convert_ngs_header(adat, ctx)
-        
-        assert result1['SourceFile']['1']['md5sum'] == result2['SourceFile']['1']['md5sum']
+
+        assert (
+            result1['SourceFile']['1']['md5sum'] == result2['SourceFile']['1']['md5sum']
+        )
 
     def test_file_md5sum_preferred_over_object_md5sum(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
@@ -83,7 +91,7 @@ class TestConvertNGSHeader:
         file_md5 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1'
         ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=file_md5)
         result = convert_ngs_header(adat, ctx)
-        
+
         # Should use file md5sum, not compute from object
         assert result['SourceFile']['1']['md5sum'] == file_md5
 
@@ -139,7 +147,7 @@ class TestConvertNGSHeader:
         ctx = NGSConversionContext.from_adat(minimal_ngs_adat)
         result = convert_ngs_header(minimal_ngs_adat, ctx)
         from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
-        
+
         # All v2.0 fields present
         assert set(result.keys()) == set(V2_HEADER_FIELD_TYPES.keys())
 
@@ -153,18 +161,18 @@ class TestPlatformSpecificJSONConsolidation:
         adat.header_metadata['CrossPlatformPlateScale_ScaleFactor_PLT100'] = '0.98'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        
+
         assert isinstance(result['PlateScaleScalar'], dict)
         assert 'PLT100' in result['PlateScaleScalar']
-        assert result['PlateScaleScalar']['PLT100']['PlatformSpecific'] == '1.02'
-        assert result['PlateScaleScalar']['PLT100']['CrossPlatform'] == '0.98'
+        assert result['PlateScaleScalar']['PLT100']['PlatformSpecific'] == 1.02
+        assert result['PlateScaleScalar']['PLT100']['CrossPlatform'] == 0.98
 
     def test_handles_hyphen_suffix(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         adat.header_metadata['PlatformSpecificPlateScale_ScaleFactor-PLT100'] = '1.02'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        
+
         # Should still parse with hyphen
         if result['PlateScaleScalar']:
             assert 'PLT100' in result['PlateScaleScalar']

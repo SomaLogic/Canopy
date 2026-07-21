@@ -196,16 +196,18 @@ class TestV2ReaderDispatch:
         assert rt.shape == adat.shape
 
     def test_missing_rfu_values_handled(self):
-        """Non-numeric RFU values (e.g., 'NA') raise ValueError on read."""
+        """'NA' RFU values in v2.0 ADATs are parsed as NaN (not as ValueError)."""
+        import numpy as np
+
         adat = _make_minimal_v2_adat()
         buf = io.StringIO()
         write_adat(adat, buf)
         content = buf.getvalue()
-        # Replace one RFU value with a non-numeric sentinel (simulates missing data)
+        # Replace one RFU value with the v2.0 missing-value sentinel 'NA'
         content = content.replace('1000.0\t1000.0', 'NA\t1000.0', 1)
-        with pytest.raises(ValueError):
-            # Attempting to parse a non-numeric RFU value raises ValueError
-            read_adat(io.StringIO(content))
+        rt = read_adat(io.StringIO(content))
+        # The NA sentinel should have been parsed as NaN
+        assert np.isnan(rt.values).sum() >= 1
 
     def test_all_header_fields_round_trip(self):
         """Every field in the closed v2.0 header set survives a round-trip."""
@@ -513,11 +515,13 @@ class TestV2TypeValidationString:
 
 class TestV2TypeValidationColData:
     def test_integer_col_field_non_integer_warns(self, caplog):
-        """EntrezGeneId is INTEGER; a float value must log a warning."""
+        """EntrezGeneId was changed to STRING type (supports pipe-delimited multi-gene
+        values). As a String field, '12.5' is now a valid value and no warning is expected.
+        """
         adat = _make_minimal_v2_adat(
             col_levels={
                 'SeqId': ['10000-01'],
-                'EntrezGeneId': ['12.5'],  # not a whole number
+                'EntrezGeneId': ['12.5'],  # valid string value
             }
         )
         buf = io.StringIO()
@@ -526,7 +530,8 @@ class TestV2TypeValidationColData:
         with caplog.at_level(logging.WARNING, logger='somadata.io.adat.file'):
             read_adat(buf)
         messages = [r.message for r in caplog.records]
-        assert any('EntrezGeneId' in m and 'Integer' in m for m in messages)
+        # EntrezGeneId is now String — no Integer-type warning expected
+        assert not any('EntrezGeneId' in m and 'Integer' in m for m in messages)
 
     def test_decimal_col_field_non_numeric_warns(self, caplog):
         """A Ref.Array.* field is DECIMAL; a non-numeric value must log a warning."""

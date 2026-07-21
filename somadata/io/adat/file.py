@@ -206,7 +206,9 @@ def parse_file(
                     row_metadata[name].append(data)
                 # Store the RFU data
                 rfu_row_data = line[row_metadata_offset + 1 :]
-                converted_rfu_row_data = list(map(float, rfu_row_data))
+                converted_rfu_row_data = [
+                    float('nan') if v == 'NA' else float(v) for v in rfu_row_data
+                ]
                 rfu_matrix.append(converted_rfu_row_data)
 
     f.close()
@@ -517,6 +519,8 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     - JSON header values serialized as single-line minified JSON
     - Sections in order: ^HEADER, ^COL_DATA, ^ROW_DATA, ^TABLE_BEGIN
     - Validates the closed header field set before writing
+    - NaN RFU values written as ``NA`` (spec missing value for Decimal)
+    - Integer-typed ROW_DATA fields written without decimal point
 
     Parameters
     ----------
@@ -527,6 +531,8 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     round_rfu : bool
         Round RFU values to one decimal place when True (default).
     """
+    import math
+
     if not _validate_v2_header_fields(adat.header_metadata):
         raise AdatWriteError(
             'v2.0 ADAT header metadata is not compliant with the closed field set '
@@ -560,6 +566,13 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     writer.writerow(['Name'] + row_names)
     writer.writerow(['Type'] + row_types)
 
+    # Precompute which row fields are Integer-typed for formatting in the data loop.
+    _integer_row_fields = frozenset(
+        name
+        for name in row_names
+        if row_types[row_names.index(name)] == FieldType.INTEGER
+    )
+
     # --- ^TABLE_BEGIN ---
     writer.writerow(['^TABLE_BEGIN'])
 
@@ -575,9 +588,26 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
 
     # Write row metadata + RFU data
     for i, rfu_row in enumerate(adat.values):
-        row_meta = [adat.index.get_level_values(name)[i] for name in row_names]
+        row_meta = []
+        for name in row_names:
+            val = adat.index.get_level_values(name)[i]
+            if name in _integer_row_fields:
+                # Coerce float-like integer values (e.g. 1234.0 → 1234).
+                try:
+                    fval = float(val)
+                    if not math.isnan(fval) and fval.is_integer():
+                        val = int(fval)
+                except (TypeError, ValueError):
+                    pass
+            row_meta.append(val)
+
         if round_rfu:
-            rfu_values = [jround(v, 1) for v in rfu_row]
+            rfu_values = [
+                'NA' if pd.isna(v) else jround(v, 1)
+                for v in rfu_row
+            ]
         else:
-            rfu_values = list(rfu_row)
+            rfu_values = [
+                'NA' if pd.isna(v) else v for v in rfu_row
+            ]
         writer.writerow(row_meta + [None] + rfu_values)

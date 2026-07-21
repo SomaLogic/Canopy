@@ -75,7 +75,7 @@ V2_COL_FIELD_TYPES: dict[str, FieldType] = {
     'Type': FieldType.STRING,
     'Organism': FieldType.STRING,
     'UniProt': FieldType.STRING,
-    'EntrezGeneId': FieldType.INTEGER,
+    'EntrezGeneId': FieldType.STRING,
     'EntrezGeneSymbol': FieldType.STRING,
     'HybControl': FieldType.STRING,
     'Dilution': FieldType.STRING,

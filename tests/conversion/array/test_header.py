@@ -7,7 +7,6 @@ import pytest
 from somadata.conversion.array import ArrayConversionContext
 from somadata.conversion.array.header import convert_array_header
 from somadata.io.adat.v2_fields import V2_HEADER_FIELD_TYPES
-
 from tests.conversion.conftest import make_full_legacy_array_adat
 
 
@@ -170,15 +169,15 @@ def test_plate_scale_scalar_consolidated(result):
     pss = result['PlateScaleScalar']
     assert isinstance(pss, dict)
     assert 'PLT1' in pss and 'PLT2' in pss
-    assert pss['PLT1'] == {'PlatformSpecific': '1.02'}
-    assert pss['PLT2'] == {'PlatformSpecific': '0.98'}
+    assert pss['PLT1'] == {'PlatformSpecific': 1.02}
+    assert pss['PLT2'] == {'PlatformSpecific': 0.98}
 
 
 def test_calibrate_tail_percent_consolidated(result):
     ctp = result['CalibrateTailPercent']
     assert isinstance(ctp, dict)
     assert 'PLT1' in ctp and 'PLT2' in ctp
-    assert ctp['PLT1']['PlatformSpecific'] == '5.2'
+    assert ctp['PLT1']['PlatformSpecific'] == 5.2
 
 
 def test_calibrate_tail_percent_status_consolidated(result):
@@ -197,12 +196,14 @@ def test_plate_scale_status_flat_structure(result):
 def test_qc_check_tail_percent_consolidated(result):
     qctp = result['QCCheckTailPercent']
     assert 'PLT1' in qctp
-    assert qctp['PLT1']['PlatformSpecific'] == '3.1'
+    # QCCheckTailPercent is flat (no PlatformSpecific nesting)
+    assert qctp['PLT1'] == 3.1
 
 
 def test_qc_check_tail_percent_status_consolidated(result):
     qctps = result['QCCheckTailPercentStatus']
-    assert qctps['PLT1']['PlatformSpecific'] == 'PASS'
+    # QCCheckTailPercentStatus is flat (no PlatformSpecific nesting)
+    assert qctps['PLT1'] == 'PASS'
 
 
 # ---------------------------------------------------------------------------
@@ -216,5 +217,3 @@ def test_generated_by_not_in_output(result):
 
 def test_ngs_only_field_blank(result):
     assert result['PlateSOMAmerNormReadsStatus'] == ''
-
-
