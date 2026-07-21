@@ -85,7 +85,7 @@ _NGS_ONLY_FIELDS: list[str] = [
     'SOMAmerNormReads',
     'SOMAmerNormReadsStatus',
     'RefCorr',
-    'EmpericalHybTemp',
+    'EmpiricalHybTemp',
     'EmpiricalHybTempStatus',
     'MedNormExtStatus',
     'CrossPlateMedNormIntScaleFactor',

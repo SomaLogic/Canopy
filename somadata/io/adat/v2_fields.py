@@ -127,7 +127,7 @@ V2_ROW_FIELD_TYPES: dict[str, FieldType] = {
     'SOMAmerNormReads': FieldType.DECIMAL,
     'SOMAmerNormReadsStatus': FieldType.STRING,
     'RefCorr': FieldType.DECIMAL,
-    'EmpericalHybTemp': FieldType.DECIMAL,
+    'EmpiricalHybTemp': FieldType.DECIMAL,
     'EmpiricalHybTempStatus': FieldType.STRING,
     'HybNormScaleFactor': FieldType.DECIMAL,
     'HybNormStatus': FieldType.STRING,
