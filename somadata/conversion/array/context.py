@@ -33,8 +33,10 @@ class ArrayConversionContext:
         The legacy ``CreatedDate`` header value; used as a fallback for
         blank ``PlateRunDate`` values in ROW_DATA.
     source_file_md5sum : str or None
-        MD5 checksum of the source ADAT file, if available. Used as a
-        fallback identifier when the source ADAT lacks an AdatId.
+        MD5 checksum of the source ADAT file, if available. Used as the
+        second-priority identifier when the source ADAT lacks an AdatId.
+        When absent, an in-memory checksum is computed and prefixed with
+        ``"mem."`` to distinguish it from a file-based checksum.
     """
 
     source_adat_id: str = ''

@@ -46,8 +46,8 @@ _ROW_RENAMES: dict[str, str] = {
     'RowCheck_PassFlag': 'RowCheckStatus',
     'SOMAmerReads_PassFlag': 'SOMAmerReadsStatus',
     'SOMAmerNormReads_PassFlag': 'SOMAmerNormReadsStatus',
-    'EmpiricalHybTemp': 'EmpiricalHybTemp',
-    'EmpiricalHybTemp_PassFlag': 'EmpiricalHybTempStatus',
+    'EmpiricalHybTemp': 'HybQC',
+    'EmpiricalHybTemp_PassFlag': 'HybQCStatus',
 }
 
 # ---------------------------------------------------------------------------
@@ -368,10 +368,10 @@ def convert_ngs_row_data(
             out_levels[array_field] = [''] * n_rows
 
     # ------------------------------------------------------------------
-    # 6. Ensure EmpiricalHybTemp exists (blank stub for rows where absent)
+    # 6. Ensure HybQC exists (blank stub for rows where absent)
     # ------------------------------------------------------------------
-    if 'EmpiricalHybTemp' not in out_levels:
-        out_levels['EmpiricalHybTemp'] = [''] * n_rows
+    if 'HybQC' not in out_levels:
+        out_levels['HybQC'] = [''] * n_rows
 
     # ------------------------------------------------------------------
     # 7. Reconstruct MultiIndex

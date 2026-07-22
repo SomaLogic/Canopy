@@ -73,8 +73,10 @@ def _rename_col_field(name: str) -> str | None:
     'TargetFullName'
     >>> _rename_col_field('DRC_Level')
     'DRCLevelNGS'
-    >>> _rename_col_field('DRC_Level.W4')
-    'DRCLevelNGS'
+    >>> _rename_col_field('DRC_Level.Serum')
+    'DRCLevelNGS.Serum'
+    >>> _rename_col_field('DRC_Level.Plasma')
+    'DRCLevelNGS.Plasma'
     >>> _rename_col_field('QCCheck_PLT123_ScaleFactor')
     'QCRatio_PLT123'
     >>> _rename_col_field('SomaId')
@@ -87,9 +89,12 @@ def _rename_col_field(name: str) -> str | None:
     if name in _COL_RENAMES:
         return _COL_RENAMES[name]
 
-    # DRC_Level* → DRCLevelNGS (handles DRC_Level, DRC_Level.W4, etc.)
-    if _DRC_LEVEL_RE.match(name):
-        return 'DRCLevelNGS'
+    # DRC_Level[.<MatrixType>] → DRCLevelNGS[.<MatrixType>]
+    # Handles bare 'DRC_Level', 'DRC_Level.Serum', 'DRC_Level.Plasma', etc.
+    m = _DRC_LEVEL_RE.match(name)
+    if m:
+        suffix = name[m.end() :]  # everything after 'DRC_Level'
+        return f'DRCLevelNGS{suffix}'
 
     # QCCheck_<PlateId>_ScaleFactor → QCRatio_<PlateId>
     m = _QC_CHECK_RE.match(name)

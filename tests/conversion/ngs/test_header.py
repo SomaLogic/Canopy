@@ -59,7 +59,7 @@ class TestConvertNGSHeader:
     ):
         adat = minimal_ngs_adat
         del adat.header_metadata['!AdatId']
-        # Simulate loading from file with md5sum
+        # Simulate loading from file with md5sum — no mem. prefix expected
         ctx = NGSConversionContext.from_adat(
             adat, source_file_md5sum='d5d5c48070766aeb078b50b111897e25'
         )
@@ -70,13 +70,27 @@ class TestConvertNGSHeader:
         assert 'md5sum' in result['SourceFile']['1']
         assert result['SourceFile']['1']['md5sum'] == 'd5d5c48070766aeb078b50b111897e25'
 
+    def test_object_md5sum_has_mem_prefix(self, minimal_ngs_adat):
+        adat = minimal_ngs_adat
+        del adat.header_metadata['!AdatId']
+        # No file md5sum - will use in-memory object md5sum with mem. prefix
+        ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=None)
+
+        result = convert_ngs_header(adat, ctx)
+
+        md5val = result['SourceFile']['1']['md5sum']
+        assert md5val.startswith('mem.')
+        # Strip prefix and verify it's a 32-char hex digest
+        digest = md5val[len('mem.') :]
+        assert len(digest) == 32
+        assert all(c in '0123456789abcdef' for c in digest)
+
     def test_object_md5sum_deterministic(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         del adat.header_metadata['!AdatId']
-        # No file md5sum - will use object md5sum
+        # No file md5sum - should be deterministic across two calls
         ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=None)
 
-        # Compute md5sum twice - should be identical
         result1 = convert_ngs_header(adat, ctx)
         result2 = convert_ngs_header(adat, ctx)
 
@@ -87,13 +101,14 @@ class TestConvertNGSHeader:
     def test_file_md5sum_preferred_over_object_md5sum(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         del adat.header_metadata['!AdatId']
-        # File md5sum provided
+        # File md5sum provided — should be used as-is without mem. prefix
         file_md5 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1'
         ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=file_md5)
         result = convert_ngs_header(adat, ctx)
 
         # Should use file md5sum, not compute from object
         assert result['SourceFile']['1']['md5sum'] == file_md5
+        assert not result['SourceFile']['1']['md5sum'].startswith('mem.')
 
     def test_converts_process_steps_to_json(self, minimal_ngs_adat):
         ctx = NGSConversionContext.from_adat(minimal_ngs_adat)

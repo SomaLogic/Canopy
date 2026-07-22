@@ -118,14 +118,16 @@ def convert_array_header(
 
     # ------------------------------------------------------------------
     # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}
-    #    Priority: AdatId > file md5sum > object md5sum (computed on demand)
+    #    Priority: AdatId > file checksum > in-memory checksum (prefixed "mem.")
     # ------------------------------------------------------------------
     old_adat_id = ctx.source_adat_id or lookup_header(hdr, 'AdatId')
     if old_adat_id:
         out['SourceFile'] = {ctx.source_file_id: {'AdatId': old_adat_id}}
+    elif ctx.source_file_md5sum:
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': ctx.source_file_md5sum}}
     else:
-        md5 = ctx.source_file_md5sum or _compute_adat_md5sum(adat)
-        out['SourceFile'] = {ctx.source_file_id: {'md5sum': md5}}
+        mem_md5 = f'mem.{_compute_adat_md5sum(adat)}'
+        out['SourceFile'] = {ctx.source_file_id: {'md5sum': mem_md5}}
 
     # ------------------------------------------------------------------
     # 4. SOMAmerReferenceSource  ← ProteinEffectiveDate

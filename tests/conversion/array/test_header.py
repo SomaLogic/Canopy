@@ -88,6 +88,42 @@ def test_source_file_contains_old_adat_id(result):
     assert sf['1']['AdatId'] == 'SL-99999'
 
 
+def test_source_file_uses_file_md5sum_when_no_adat_id(legacy_adat):
+    """File checksum is used as-is (no mem. prefix) when AdatId absent."""
+    del legacy_adat.header_metadata['!AdatId']
+    file_md5 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    ctx = ArrayConversionContext.from_adat(legacy_adat, source_file_md5sum=file_md5)
+    result = convert_array_header(legacy_adat, ctx)
+    sf = result['SourceFile']
+    assert '1' in sf
+    assert sf['1']['md5sum'] == file_md5
+    assert not sf['1']['md5sum'].startswith('mem.')
+
+
+def test_source_file_uses_mem_prefix_for_object_md5sum(legacy_adat):
+    """In-memory checksum gets a mem. prefix when no AdatId and no file checksum."""
+    del legacy_adat.header_metadata['!AdatId']
+    ctx = ArrayConversionContext.from_adat(legacy_adat, source_file_md5sum=None)
+    result = convert_array_header(legacy_adat, ctx)
+    sf = result['SourceFile']
+    assert '1' in sf
+    md5val = sf['1']['md5sum']
+    assert md5val.startswith('mem.')
+    digest = md5val[len('mem.') :]
+    assert len(digest) == 32
+    assert all(c in '0123456789abcdef' for c in digest)
+
+
+def test_source_file_file_md5sum_preferred_over_object(legacy_adat):
+    """File md5sum takes precedence over in-memory computation."""
+    del legacy_adat.header_metadata['!AdatId']
+    file_md5 = 'cccccccccccccccccccccccccccccccc'
+    ctx = ArrayConversionContext.from_adat(legacy_adat, source_file_md5sum=file_md5)
+    r1 = convert_array_header(legacy_adat, ctx)
+    # Confirm the file md5 is used, not a mem. prefixed value
+    assert r1['SourceFile']['1']['md5sum'] == file_md5
+
+
 # ---------------------------------------------------------------------------
 # Pass-through fields
 # ---------------------------------------------------------------------------
