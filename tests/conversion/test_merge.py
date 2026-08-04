@@ -125,14 +125,14 @@ class TestComputeSeqidUnion:
         )
         ngs_adat = _make_converted_adat(
             ['B', 'C'],
-            extra_levels={'Target': ['ProteinB', 'ProteinC'], 'DRCLevelNGS': ['0', '1']},
+            extra_levels={'Target': ['ProteinB', 'ProteinC'], 'DRCLevel_Plasma_NGS': ['0', '1']},
         )
         _, merged_cols = compute_seqid_union(array_adat, ngs_adat)
 
         assert 'SeqId' in merged_cols.names
         assert 'Target' in merged_cols.names
         assert 'HybControl' in merged_cols.names
-        assert 'DRCLevelNGS' in merged_cols.names
+        assert 'DRCLevel_Plasma_NGS' in merged_cols.names
 
     def test_shared_seqid_prefers_array_annotation(self):
         """For shared SeqIds, array annotation values take precedence."""
@@ -153,7 +153,7 @@ class TestComputeSeqidUnion:
             ['A'], extra_levels={'HybControl': ['False']}
         )
         ngs_adat = _make_converted_adat(
-            ['B'], extra_levels={'DRCLevelNGS': ['0']}
+            ['B'], extra_levels={'DRCLevel_Plasma_NGS': ['0']}
         )
         _, merged_cols = compute_seqid_union(array_adat, ngs_adat)
 

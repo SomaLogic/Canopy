@@ -632,17 +632,26 @@ class TestV2DateMissingValueSpec:
         content = _write_to_string(adat)
         assert 'PlateRunDate' in content
 
-    def test_plate_run_date_empty_string_passes_validation(self):
-        """_validate_v2_field_values must not flag empty string as invalid for Date fields."""
-        import warnings
+    def test_plate_run_date_empty_string_passes_validation(self, caplog):
+        """_validate_v2_field_values must not log a type-violation warning for empty-string Date fields.
+
+        The function uses logger.warning (not warnings.warn), so caplog is the
+        correct way to assert no violations are emitted.
+        """
+        import logging
 
         from somadata.io.adat.file import _validate_v2_field_values
 
-        # Simulate a row-metadata dict with PlateRunDate = ''
+        # Simulate a row-metadata dict with PlateRunDate = '' (missing per spec §2.6.2)
         row_metadata = {'PlateRunDate': ['', '']}
-        # Should run without emitting any warnings
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter('always')
+
+        with caplog.at_level(logging.WARNING, logger='somadata.io.adat.file'):
             _validate_v2_field_values(row_metadata, {})
-        date_warnings = [w for w in caught if 'PlateRunDate' in str(w.message)]
-        assert date_warnings == [], f'Unexpected warnings for empty PlateRunDate: {date_warnings}'
+
+        plate_run_date_violations = [
+            r for r in caplog.records if 'PlateRunDate' in r.getMessage()
+        ]
+        assert plate_run_date_violations == [], (
+            f'Unexpected type-violation log for empty PlateRunDate: '
+            f'{[r.getMessage() for r in plate_run_date_violations]}'
+        )
