@@ -57,6 +57,7 @@ def make_ngs_adat(
         '!YieldQ30Demux': '11800000',
         '!Q30WeightedMean': '92.5',
         '!AdatId': 'GID-old-ngs-id',
+        '!StudyMatrix': 'Plasma',
     }
     
     # Row metadata (NGS-specific fields)

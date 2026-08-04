@@ -62,8 +62,12 @@ class TestNGSConversionIntegration:
         assert 'Target Full Name' not in result.columns.names
         assert 'UniProt' in result.columns.names
         assert 'UniProt ID' not in result.columns.names
-        assert 'DRCLevelNGS' in result.columns.names
-        assert 'BlockListNGS' in result.columns.names
+        # DRC_Level (bare) → DRCLevel_<Matrix>_NGS (Plasma from StudyMatrix header)
+        assert 'DRCLevel_Plasma_NGS' in result.columns.names
+        assert 'DRCLevelNGS' not in result.columns.names
+        # BlockList passes through unchanged (no longer renamed to BlockListNGS)
+        assert 'BlockList' in result.columns.names
+        assert 'BlockListNGS' not in result.columns.names
 
     def test_adds_hyb_control_column_level(self, minimal_ngs_adat):
         result = to_v2_adat([minimal_ngs_adat])

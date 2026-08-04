@@ -48,6 +48,7 @@ _ROW_RENAMES: dict[str, str] = {
     'SOMAmerNormReads_PassFlag': 'SOMAmerNormReadsStatus',
     'EmpiricalHybTemp': 'HybQC',
     'EmpiricalHybTemp_PassFlag': 'HybQCStatus',
+    'HybQC_PassFlag': 'HybQCStatus',
 }
 
 # ---------------------------------------------------------------------------

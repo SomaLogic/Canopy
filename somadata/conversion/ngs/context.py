@@ -53,6 +53,10 @@ class NGSConversionContext:
         second-priority identifier when the source ADAT lacks an AdatId.
         When absent, an in-memory checksum is computed and prefixed with
         ``"mem."`` to distinguish it from a file-based checksum.
+    matrix : str
+        The study matrix type (e.g., ``'Plasma'``, ``'Serum'``), derived from
+        the ``StudyMatrix`` header field.  Used to resolve bare ``DRC_Level``
+        column fields to ``DRCLevel_<Matrix>_NGS`` in the output.
     """
 
     source_adat_id: str | None = None
@@ -68,6 +72,7 @@ class NGSConversionContext:
     process_steps_id: str = '1'
     source_file_id: str = '1'
     source_file_md5sum: str | None = None
+    matrix: str = ''
 
     @classmethod
     def from_adat(
@@ -136,4 +141,5 @@ class NGSConversionContext:
             plate_ids=plate_ids,
             process_steps=lookup_header(hdr, 'ProcessSteps'),
             source_file_md5sum=source_file_md5sum,
+            matrix=lookup_header(hdr, 'StudyMatrix'),
         )

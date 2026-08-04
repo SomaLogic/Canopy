@@ -30,7 +30,6 @@ _COL_RENAMES: dict[str, str] = {
     'UniProt ID': 'UniProt',
     'Entrez Gene ID': 'EntrezGeneId',
     'Entrez Gene Symbol': 'EntrezGeneSymbol',
-    'BlockList': 'BlockListNGS',
 }
 
 # ---------------------------------------------------------------------------
@@ -54,13 +53,17 @@ _QC_CHECK_PASSFLAG_RE = re.compile(r'^QCCheck_(.+?)_PassFlag$')
 _DRC_LEVEL_RE = re.compile(r'^DRC_Level')
 
 
-def _rename_col_field(name: str) -> str | None:
+def _rename_col_field(name: str, matrix: str = '') -> str | None:
     """Return the v2.0 name for a legacy NGS COL_DATA field.
 
     Parameters
     ----------
     name : str
         The legacy level name.
+    matrix : str, optional
+        The study matrix type (e.g., ``'Plasma'``, ``'Serum'``).  Required
+        only when the source contains a bare ``DRC_Level`` field with no
+        matrix suffix, to form ``DRCLevel_<Matrix>_NGS``.
 
     Returns
     -------
@@ -71,12 +74,12 @@ def _rename_col_field(name: str) -> str | None:
     --------
     >>> _rename_col_field('Target Full Name')
     'TargetFullName'
-    >>> _rename_col_field('DRC_Level')
-    'DRCLevelNGS'
+    >>> _rename_col_field('DRC_Level', matrix='Plasma')
+    'DRCLevel_Plasma_NGS'
     >>> _rename_col_field('DRC_Level.Serum')
-    'DRCLevelNGS.Serum'
+    'DRCLevel_Serum_NGS'
     >>> _rename_col_field('DRC_Level.Plasma')
-    'DRCLevelNGS.Plasma'
+    'DRCLevel_Plasma_NGS'
     >>> _rename_col_field('QCCheck_PLT123_ScaleFactor')
     'QCRatio_PLT123'
     >>> _rename_col_field('SomaId')
@@ -89,12 +92,25 @@ def _rename_col_field(name: str) -> str | None:
     if name in _COL_RENAMES:
         return _COL_RENAMES[name]
 
-    # DRC_Level[.<MatrixType>] → DRCLevelNGS[.<MatrixType>]
-    # Handles bare 'DRC_Level', 'DRC_Level.Serum', 'DRC_Level.Plasma', etc.
+    # DRC_Level[.<MatrixType>] → DRCLevel_<MatrixType>_NGS
+    # New spec (0731): use underscore separators and _NGS suffix.
     m = _DRC_LEVEL_RE.match(name)
     if m:
-        suffix = name[m.end() :]  # everything after 'DRC_Level'
-        return f'DRCLevelNGS{suffix}'
+        suffix = name[m.end():]  # everything after 'DRC_Level'
+        if suffix.startswith('.'):
+            # DRC_Level.Serum → DRCLevel_Serum_NGS
+            mat = suffix[1:]  # strip leading dot
+        else:
+            # Bare DRC_Level — infer matrix from context
+            mat = matrix
+        if mat:
+            return f'DRCLevel_{mat}_NGS'
+        # No matrix info available: fall back to bare DRCLevel_NGS with a warning
+        logger.warning(
+            'DRC_Level field has no matrix suffix and no matrix context was provided; '
+            'emitting bare DRCLevel_NGS. Pass the matrix parameter to avoid this.'
+        )
+        return 'DRCLevel_NGS'
 
     # QCCheck_<PlateId>_ScaleFactor → QCRatio_<PlateId>
     m = _QC_CHECK_RE.match(name)
@@ -129,7 +145,7 @@ def _ensure_ngs_ref_prefix(name: str) -> str:
     Examples
     --------
     >>> _ensure_ngs_ref_prefix('Ref.Bridging.params')
-    'Ref.NGS.Bridging.params'
+    'Ref.Bridging.params'
     >>> _ensure_ngs_ref_prefix('Ref.NGS.MedNormExt.Matrix')
     'Ref.NGS.MedNormExt.Matrix'
     >>> _ensure_ngs_ref_prefix('Ref.MedNorm.Id')
@@ -143,21 +159,31 @@ def _ensure_ngs_ref_prefix(name: str) -> str:
     if name.startswith('Ref.MedNorm.'):
         return name
 
+    # If Ref.Bridging.*, pass through (spec §3.3.2: bridging refs are not prefixed)
+    if name.startswith('Ref.Bridging.'):
+        return name
+
     # Otherwise, insert NGS after Ref.
-    # e.g., Ref.Bridging.* → Ref.NGS.Bridging.*
+    # e.g., Ref.Calibrator.* → Ref.NGS.Calibrator.*
     if name.startswith('Ref.'):
         return name.replace('Ref.', 'Ref.NGS.', 1)
 
     return name
 
 
-def convert_ngs_col_data(adat: Adat) -> pd.MultiIndex:
+def convert_ngs_col_data(adat: Adat, matrix: str = '') -> pd.MultiIndex:
     """Convert the column MultiIndex of a legacy NGS ADAT to v2.0 field names.
 
     Parameters
     ----------
     adat : Adat
         The source NGS ADAT.  Only ``adat.columns`` is read.
+    matrix : str, optional
+        The study matrix type (e.g., ``'Plasma'``, ``'Serum'``).  Used to
+        resolve bare ``DRC_Level`` fields (no matrix suffix) to
+        ``DRCLevel_<Matrix>_NGS``.  Typically supplied from
+        ``NGSConversionContext.matrix``.  When absent, a bare ``DRC_Level``
+        falls back to the unqualified name ``DRCLevel_NGS``.
 
     Returns
     -------
@@ -166,10 +192,10 @@ def convert_ngs_col_data(adat: Adat) -> pd.MultiIndex:
 
     Examples
     --------
-    >>> new_cols = convert_ngs_col_data(ngs_adat)
+    >>> new_cols = convert_ngs_col_data(ngs_adat, matrix='Plasma')
     >>> 'TargetFullName' in new_cols.names
     True
-    >>> 'DRCLevelNGS' in new_cols.names
+    >>> 'DRCLevel_Plasma_NGS' in new_cols.names
     True
     >>> 'SomaId' in new_cols.names
     False
@@ -186,7 +212,7 @@ def convert_ngs_col_data(adat: Adat) -> pd.MultiIndex:
     # ------------------------------------------------------------------
     rename_map: dict[str, str | None] = {}
     for name in level_names:
-        rename_map[name] = _rename_col_field(name)
+        rename_map[name] = _rename_col_field(name, matrix=matrix)
 
     # ------------------------------------------------------------------
     # 2. Build new arrays, filtering out removed fields and deduplicating.

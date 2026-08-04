@@ -79,18 +79,19 @@ V2_COL_FIELD_TYPES: dict[str, FieldType] = {
     'EntrezGeneSymbol': FieldType.STRING,
     'HybControl': FieldType.STRING,
     'Dilution': FieldType.STRING,
-    'DRCLevelNGS': FieldType.STRING,
-    'BlockListNGS': FieldType.STRING,
+    'BlockList': FieldType.STRING,
     'Ref.MedNorm.Id': FieldType.STRING,
 }
 
 # (prefix, type) — matched in order; first match wins.
 V2_COL_DYNAMIC_PREFIX_TYPES: list[tuple[str, FieldType]] = [
+    ('DRCLevel_', FieldType.DECIMAL),
     ('PlatformSpecificCalibrate_', FieldType.DECIMAL),
     ('CrossPlatformCalibrate_', FieldType.DECIMAL),
     ('QCRatio_', FieldType.DECIMAL),
     ('Ref.Array.', FieldType.DECIMAL),
     ('Ref.NGS.', FieldType.DECIMAL),
+    ('Ref.Bridging.', FieldType.DECIMAL),
 ]
 
 # ---------------------------------------------------------------------------
