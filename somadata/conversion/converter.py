@@ -218,7 +218,7 @@ def _merge_bridged_array_and_ngs(
 
     validate_source_ngs_adat(raw_ngs)
     ngs_header_v2 = convert_ngs_header(raw_ngs, ngs_ctx, assay_type='Mixed')
-    ngs_columns_v2 = convert_ngs_col_data(raw_ngs)
+    ngs_columns_v2 = convert_ngs_col_data(raw_ngs, matrix=ngs_ctx.matrix)
     ngs_index_v2 = convert_ngs_row_data(raw_ngs, ngs_ctx)
 
     # Assemble temporary intermediate Adats to pass into SeqId union
@@ -512,7 +512,7 @@ def _merge_ngs_and_v2(
 
     validate_source_ngs_adat(raw_ngs)
     ngs_header_v2 = convert_ngs_header(raw_ngs, ngs_ctx, assay_type=output_assay_type)
-    ngs_columns_v2 = convert_ngs_col_data(raw_ngs)
+    ngs_columns_v2 = convert_ngs_col_data(raw_ngs, matrix=ngs_ctx.matrix)
     ngs_index_v2 = convert_ngs_row_data(raw_ngs, ngs_ctx)
 
     ngs_intermediate = AdatClass(
@@ -1001,7 +1001,7 @@ def _run_ngs_conversion(
     validate_source_ngs_adat(adat)
     ctx = NGSConversionContext.from_adat(adat, source_file_md5sum=md5sum)
     new_header = convert_ngs_header(adat, ctx, assay_type=assay_type)
-    new_columns = convert_ngs_col_data(adat)
+    new_columns = convert_ngs_col_data(adat, matrix=ctx.matrix)
     new_index = convert_ngs_row_data(adat, ctx)
     return _assemble_v2_adat(adat, new_header, new_columns, new_index)
 

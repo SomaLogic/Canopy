@@ -253,3 +253,23 @@ class TestEmpiricalHybTempRename:
         assert 'HybQC' in result.names
         vals = list(result.get_level_values('HybQC'))
         assert all(v == '' for v in vals)
+
+    def test_renames_hyb_qc_pass_flag_to_hyb_qc_status(self):
+        """HybQC_PassFlag (newer DPQ) is renamed to HybQCStatus."""
+        import pandas as pd
+
+        adat = make_ngs_adat()
+        idx_names = list(adat.index.names) + ['HybQC_PassFlag']
+        idx_values = [
+            list(adat.index.get_level_values(i)) for i in range(adat.index.nlevels)
+        ]
+        idx_values.append(['PASS', 'FLAG'])
+        adat.index = pd.MultiIndex.from_arrays(idx_values, names=idx_names)
+
+        ctx = NGSConversionContext.from_adat(adat)
+        result = convert_ngs_row_data(adat, ctx)
+
+        assert 'HybQCStatus' in result.names
+        assert 'HybQC_PassFlag' not in result.names
+        vals = list(result.get_level_values('HybQCStatus'))
+        assert vals == ['PASS', 'FLAG']

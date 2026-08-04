@@ -612,3 +612,46 @@ class TestWriteAdatV2HeaderValidationException:
             _write_to_string(adat)
         except AdatWriteError:
             pytest.fail('AdatWriteError raised on a compliant v2.0 header')
+
+
+class TestV2DateMissingValueSpec:
+    """Verify that Date fields accept empty string as the missing-value sentinel (spec §2.6.2)."""
+
+    def test_plate_run_date_empty_string_does_not_raise(self):
+        """PlateRunDate = '' (missing) should pass v2.0 write without errors."""
+        adat = _make_v2_adat(
+            row_names=['SampleId', 'SampleType', 'PlateId', 'PlateRunDate'],
+            row_values=[
+                ['S1', 'S2'],
+                ['Sample', 'Sample'],
+                ['PLT001', 'PLT001'],
+                ['', ''],  # empty string = missing Date value per spec
+            ],
+        )
+        # Should not raise
+        content = _write_to_string(adat)
+        assert 'PlateRunDate' in content
+
+    def test_plate_run_date_empty_string_passes_validation(self, caplog):
+        """_validate_v2_field_values must not log a type-violation warning for empty-string Date fields.
+
+        The function uses logger.warning (not warnings.warn), so caplog is the
+        correct way to assert no violations are emitted.
+        """
+        import logging
+
+        from somadata.io.adat.file import _validate_v2_field_values
+
+        # Simulate a row-metadata dict with PlateRunDate = '' (missing per spec §2.6.2)
+        row_metadata = {'PlateRunDate': ['', '']}
+
+        with caplog.at_level(logging.WARNING, logger='somadata.io.adat.file'):
+            _validate_v2_field_values(row_metadata, {})
+
+        plate_run_date_violations = [
+            r for r in caplog.records if 'PlateRunDate' in r.getMessage()
+        ]
+        assert plate_run_date_violations == [], (
+            f'Unexpected type-violation log for empty PlateRunDate: '
+            f'{[r.getMessage() for r in plate_run_date_violations]}'
+        )

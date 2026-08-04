@@ -34,13 +34,18 @@ class TestConvertNGSColData:
         assert 'EntrezGeneSymbol' in result.names
         assert 'Entrez Gene Symbol' not in result.names
 
-    def test_renames_drc_level_to_drc_level_ngs(self, minimal_ngs_adat):
-        result = convert_ngs_col_data(minimal_ngs_adat)
-        assert 'DRCLevelNGS' in result.names
+    def test_renames_drc_level_to_drc_level_matrix_ngs(self, minimal_ngs_adat):
+        """Bare DRC_Level maps to DRCLevel_<Matrix>_NGS using StudyMatrix from header."""
+        from somadata.conversion.ngs import NGSConversionContext
+
+        ctx = NGSConversionContext.from_adat(minimal_ngs_adat)
+        result = convert_ngs_col_data(minimal_ngs_adat, matrix=ctx.matrix)
+        assert 'DRCLevel_Plasma_NGS' in result.names
         assert 'DRC_Level' not in result.names
+        assert 'DRCLevelNGS' not in result.names
 
     def test_drc_level_preserves_matrix_suffix(self):
-        """DRC_Level.<MatrixType> is renamed to DRCLevelNGS.<MatrixType>."""
+        """DRC_Level.Serum is renamed to DRCLevel_Serum_NGS."""
         import pandas as pd
 
         adat = make_ngs_adat()
@@ -54,12 +59,13 @@ class TestConvertNGSColData:
         adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
 
         result = convert_ngs_col_data(adat)
-        assert 'DRCLevelNGS.Serum' in result.names
+        assert 'DRCLevel_Serum_NGS' in result.names
         assert 'DRC_Level.Serum' not in result.names
-        assert 'DRCLevelNGS' not in result.names  # bare name must not appear
+        assert 'DRCLevelNGS' not in result.names  # old name must not appear
+        assert 'DRCLevelNGS.Serum' not in result.names  # old dotted format must not appear
 
     def test_drc_level_plasma_suffix(self):
-        """DRC_Level.Plasma is renamed to DRCLevelNGS.Plasma."""
+        """DRC_Level.Plasma is renamed to DRCLevel_Plasma_NGS."""
         import pandas as pd
 
         adat = make_ngs_adat()
@@ -72,13 +78,15 @@ class TestConvertNGSColData:
         adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
 
         result = convert_ngs_col_data(adat)
-        assert 'DRCLevelNGS.Plasma' in result.names
+        assert 'DRCLevel_Plasma_NGS' in result.names
         assert 'DRC_Level.Plasma' not in result.names
+        assert 'DRCLevelNGS.Plasma' not in result.names  # old dotted format must not appear
 
-    def test_renames_block_list_to_block_list_ngs(self, minimal_ngs_adat):
+    def test_block_list_passes_through_unchanged(self, minimal_ngs_adat):
+        """BlockList is no longer renamed to BlockListNGS; it passes through as-is."""
         result = convert_ngs_col_data(minimal_ngs_adat)
-        assert 'BlockListNGS' in result.names
-        assert 'BlockList' not in result.names
+        assert 'BlockList' in result.names
+        assert 'BlockListNGS' not in result.names
 
     def test_block_list_absent_when_not_in_source(self):
         """BlockList is optional — absent in source means absent in output."""
@@ -92,7 +100,7 @@ class TestConvertNGSColData:
 
         result = convert_ngs_col_data(adat)
 
-        # Neither the original nor the renamed field should be present
+        # Neither BlockList nor BlockListNGS should be present
         assert 'BlockList' not in result.names
         assert 'BlockListNGS' not in result.names
 
@@ -198,6 +206,25 @@ class TestReferencePrefixing:
     """Test Ref.NGS.* prefix enforcement."""
 
     def test_adds_ngs_prefix_to_ref_fields(self):
+        """Non-Bridging, non-MedNorm Ref.* fields get the Ref.NGS.* prefix."""
+        adat = make_ngs_adat()
+        import pandas as pd
+
+        # Add a generic Ref.* field that should receive the NGS prefix
+        col_names = list(adat.columns.names) + ['Ref.Calibrator.SomeField']
+        col_values = [
+            list(adat.columns.get_level_values(i)) for i in range(adat.columns.nlevels)
+        ]
+        col_values.append(['123.4', '234.5'])
+
+        adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
+        result = convert_ngs_col_data(adat)
+
+        assert 'Ref.NGS.Calibrator.SomeField' in result.names
+        assert 'Ref.Calibrator.SomeField' not in result.names
+
+    def test_ref_bridging_passes_through(self):
+        """Ref.Bridging.* fields must NOT receive the Ref.NGS.* prefix (spec §3.3.2)."""
         adat = make_ngs_adat()
         import pandas as pd
 
@@ -211,8 +238,26 @@ class TestReferencePrefixing:
         adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
         result = convert_ngs_col_data(adat)
 
-        assert 'Ref.NGS.Bridging.params' in result.names
-        assert 'Ref.Bridging.params' not in result.names
+        # Must pass through unchanged — no NGS prefix added
+        assert 'Ref.Bridging.params' in result.names
+        assert 'Ref.NGS.Bridging.params' not in result.names
+
+    def test_ref_bridging_with_calibrator_id_passes_through(self):
+        """Ref.Bridging.<CalibratorId>.<Platform> passes through unchanged."""
+        adat = make_ngs_adat()
+        import pandas as pd
+
+        col_names = list(adat.columns.names) + ['Ref.Bridging.CAL001.Plasma']
+        col_values = [
+            list(adat.columns.get_level_values(i)) for i in range(adat.columns.nlevels)
+        ]
+        col_values.append(['500.0', '510.0'])
+
+        adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
+        result = convert_ngs_col_data(adat)
+
+        assert 'Ref.Bridging.CAL001.Plasma' in result.names
+        assert 'Ref.NGS.Bridging.CAL001.Plasma' not in result.names
 
     def test_preserves_ref_ngs_prefix(self):
         adat = make_ngs_adat()
@@ -247,3 +292,21 @@ class TestReferencePrefixing:
         # Should NOT add NGS prefix
         assert 'Ref.MedNorm.Id' in result.names
         assert 'Ref.NGS.MedNorm.Id' not in result.names
+
+    def test_adds_ngs_prefix_to_ref_mednormext(self):
+        """Ref.MedNormExt.* (not Ref.MedNorm.*) should receive the Ref.NGS.* prefix."""
+        adat = make_ngs_adat()
+        import pandas as pd
+
+        col_names = list(adat.columns.names) + ['Ref.MedNormExt.Matrix']
+        col_values = [
+            list(adat.columns.get_level_values(i)) for i in range(adat.columns.nlevels)
+        ]
+        col_values.append(['300.1', '310.2'])
+
+        adat.columns = pd.MultiIndex.from_arrays(col_values, names=col_names)
+        result = convert_ngs_col_data(adat)
+
+        # MedNormExt is NOT the same as MedNorm — it should get the NGS prefix
+        assert 'Ref.NGS.MedNormExt.Matrix' in result.names
+        assert 'Ref.MedNormExt.Matrix' not in result.names
