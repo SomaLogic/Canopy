@@ -11,17 +11,21 @@ import pytest
 from somadata.adat import Adat
 from somadata.conversion.detection import (
     InputType,
+    _BRIDGED_TERMINAL_STEPS,
     _has_array_row_metadata,
     _has_ngs_row_metadata,
     _is_bridged_array,
     _parse_assay_version_major,
     detect_input_type,
+    diagnose_bridging,
 )
 from somadata.conversion.errors import AssayVersionError, UnrecognizedFormatError
 from tests.conversion.conftest import (
     BRIDGED_STEPS,
+    NATIVE_STEPS,
     make_adat,
     make_array_adat,
+    make_bridged_array_adat,
     make_ngs_adat,
     make_v2_combined_adat,
 )
@@ -287,3 +291,73 @@ class TestIsBridgedArray:
             }
         )
         assert _is_bridged_array(adat) is False
+
+
+# ---------------------------------------------------------------------------
+# Unit tests: diagnose_bridging
+# ---------------------------------------------------------------------------
+
+
+class TestDiagnoseBridging:
+    def test_returns_none_when_already_bridged(self):
+        """Properly bridged ADAT returns None (no diagnostic needed)."""
+        adat = make_bridged_array_adat()
+        assert diagnose_bridging(adat) is None
+
+    def test_returns_message_when_process_steps_missing(self):
+        """Missing ProcessSteps header yields an explanatory message."""
+        adat = make_adat(
+            header={'!AssayVersion': 'V4'},
+            row_names=['SampleId', 'SampleType', 'SlideId', 'Subarray'],
+            row_values=[['S1'], ['Sample'], ['258740110837'], ['3']],
+        )
+        msg = diagnose_bridging(adat)
+        assert msg is not None
+        expected_terminal = ', '.join(_BRIDGED_TERMINAL_STEPS[0])
+        assert 'ProcessSteps' in msg
+        assert expected_terminal in msg
+
+    def test_returns_message_when_process_steps_empty_string(self):
+        """Empty ProcessSteps string (key present but blank) yields a message."""
+        adat = make_adat(
+            header={'!AssayVersion': 'V4', '!ProcessSteps': ''},
+            row_names=['SampleId', 'SampleType', 'SlideId', 'Subarray'],
+            row_values=[['S1'], ['Sample'], ['258740110837'], ['3']],
+        )
+        msg = diagnose_bridging(adat)
+        assert msg is not None
+        assert 'ProcessSteps' in msg
+
+    def test_mismatch_message_includes_expected_and_actual_steps(self):
+        """Wrong terminal steps produce a diff with expected vs actual values."""
+        adat = make_array_adat(process_steps=NATIVE_STEPS)
+        msg = diagnose_bridging(adat)
+        assert msg is not None
+        # Should mention both what was expected and what was found
+        assert 'expected' in msg
+        assert 'got' in msg
+
+    def test_mismatch_message_includes_actual_tail(self):
+        """The actual last-N steps appear in the diagnostic output."""
+        wrong_steps = 'Raw RFU, Hyb Normalization, medNormInt, plateScale, WrongStep'
+        adat = make_array_adat(process_steps=wrong_steps)
+        msg = diagnose_bridging(adat)
+        assert msg is not None
+        assert 'WrongStep' in msg
+
+    def test_too_few_steps_returns_count_message(self):
+        """Fewer steps than the required terminal triple yields a count message."""
+        adat = make_array_adat(process_steps='CrossPlatformPlateScale')
+        msg = diagnose_bridging(adat)
+        assert msg is not None
+        # Either a count message or a mismatch message — either way informative
+        assert 'step' in msg.lower() or 'position' in msg.lower()
+
+    def test_single_wrong_terminal_step_is_identified(self):
+        """Only the last step differs — the mismatch detail pinpoints that position."""
+        steps = 'CrossPlatformPlateScale, CrossPlatformCalibrate, WrongLastStep'
+        adat = make_array_adat(process_steps=steps)
+        msg = diagnose_bridging(adat)
+        assert msg is not None
+        assert 'MedNormExt' in msg  # expected value should appear
+        assert 'WrongLastStep' in msg  # actual value should appear

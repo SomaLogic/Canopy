@@ -25,22 +25,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # --------------------------------------------------------------------------
-# Install Python dependencies (cached layer unless requirements change)
+# Copy source and install the package (dependencies resolved from pyproject.toml)
 # --------------------------------------------------------------------------
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir \
-    "pandas>=1.1.2" \
-    "numpy>=1.19" \
-    "openpyxl>=3.0"
-
-# --------------------------------------------------------------------------
-# Copy source and install the package
-# --------------------------------------------------------------------------
-COPY README.md ./
+COPY pyproject.toml README.md ./
 COPY somadata/ ./somadata/
 COPY bin/ ./bin/
 
-RUN pip install --no-cache-dir --no-deps .
+RUN pip install --no-cache-dir .
 
 # Default working directory for bind-mounted data
 VOLUME ["/data"]

@@ -123,7 +123,8 @@ def to_v2_adat(
         array_adat = adat_a if type_a is InputType.NATIVE_ARRAY else adat_b
         diag = diagnose_bridging(array_adat)
         msg = (
-            f'Native array data cannot be combined with NGS-space data. '
+            f'Native array data cannot be combined with NGS-space data '
+            f'({ngs_type.value}). '
             f'The array input was not detected as bridged.'
         )
         if diag:
