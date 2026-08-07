@@ -144,6 +144,75 @@ def _is_bridged_array(adat: Adat) -> bool:
     JSON dict (v2.0). Only string form is expected here since v2.0 files are
     handled earlier in the decision tree.
     """
+    steps = _get_process_steps_list(adat)
+    if not steps:
+        return False
+
+    for terminal in _BRIDGED_TERMINAL_STEPS:
+        if len(steps) >= len(terminal) and tuple(steps[-len(terminal) :]) == terminal:
+            return True
+    return False
+
+
+def diagnose_bridging(adat: Adat) -> str | None:
+    """Return a diagnostic message explaining why the ADAT was not detected as bridged.
+
+    If the ADAT *is* properly bridged (terminal steps match), returns None.
+    Otherwise returns a human-readable explanation of what was expected vs. found.
+
+    Parameters
+    ----------
+    adat : Adat
+        An Adat already identified as having array row metadata.
+
+    Returns
+    -------
+    str or None
+        Diagnostic message, or None if the ADAT matches a valid bridged triple.
+    """
+    steps = _get_process_steps_list(adat)
+    if not steps:
+        return (
+            'ProcessSteps header field is missing or empty. A bridged array '
+            'ADAT must contain a ProcessSteps field ending with: '
+            f'{", ".join(_BRIDGED_TERMINAL_STEPS[0])}.'
+        )
+
+    # Check if it actually matches (should not reach here if called correctly).
+    for terminal in _BRIDGED_TERMINAL_STEPS:
+        if len(steps) >= len(terminal) and tuple(steps[-len(terminal) :]) == terminal:
+            return None
+
+    # Build a helpful diff showing expected vs actual terminal steps.
+    expected = _BRIDGED_TERMINAL_STEPS[0]
+    n = len(expected)
+    actual_tail = tuple(steps[-n:]) if len(steps) >= n else tuple(steps)
+
+    mismatches = []
+    for i, (exp, act) in enumerate(
+        zip(expected[-len(actual_tail) :], actual_tail)
+    ):
+        if exp != act:
+            mismatches.append(f'  position -{n - i}: expected {exp!r}, got {act!r}')
+
+    if mismatches:
+        detail = '\n'.join(mismatches)
+        return (
+            f'ProcessSteps do not end with the required bridged terminal triple '
+            f'({", ".join(expected)}). '
+            f'Last {n} steps found: {", ".join(actual_tail)}.\n'
+            f'Mismatched steps:\n{detail}'
+        )
+
+    # Fewer steps than expected.
+    return (
+        f'ProcessSteps has only {len(steps)} step(s), but the bridged '
+        f'terminal triple requires at least {n}: {", ".join(expected)}.'
+    )
+
+
+def _get_process_steps_list(adat: Adat) -> list[str]:
+    """Extract ProcessSteps as a list of trimmed step names from the header."""
     process_steps_raw = ''
     for key in ('!ProcessSteps', 'ProcessSteps'):
         process_steps_raw = adat.header_metadata.get(key, '')
@@ -151,13 +220,9 @@ def _is_bridged_array(adat: Adat) -> bool:
             break
 
     if not process_steps_raw or not isinstance(process_steps_raw, str):
-        return False
+        return []
 
-    steps = [s.strip() for s in process_steps_raw.split(',') if s.strip()]
-    for terminal in _BRIDGED_TERMINAL_STEPS:
-        if len(steps) >= len(terminal) and tuple(steps[-len(terminal) :]) == terminal:
-            return True
-    return False
+    return [s.strip() for s in process_steps_raw.split(',') if s.strip()]
 
 
 def _has_ngs_row_metadata(adat: Adat) -> bool:
