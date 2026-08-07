@@ -12,7 +12,7 @@ from somadata.conversion.array.col_data import convert_array_col_data
 from somadata.conversion.array.header import convert_array_header
 from somadata.conversion.array.row_data import convert_array_row_data
 from somadata.conversion.array.validation import validate_source_array_adat
-from somadata.conversion.detection import InputType, detect_input_type
+from somadata.conversion.detection import InputType, detect_input_type, diagnose_bridging
 from somadata.conversion.errors import (
     AssayVersionError,
     ConversionError,
@@ -120,10 +120,16 @@ def to_v2_adat(
     input_types = {type_a, type_b}
     if InputType.NATIVE_ARRAY in input_types and input_types & _NGS_SPACE_TYPES:
         ngs_type = next(t for t in input_types if t in _NGS_SPACE_TYPES)
-        raise UnsupportedCombinationError(
-            f'Native array data cannot be combined with NGS-space data. '
-            f'Array must be bridged first. Input: {ngs_type.value}.'
+        array_adat = adat_a if type_a is InputType.NATIVE_ARRAY else adat_b
+        diag = diagnose_bridging(array_adat)
+        msg = (
+            f'Native array data cannot be combined with NGS-space data '
+            f'({ngs_type.value}). '
+            f'The array input was not detected as bridged.'
         )
+        if diag:
+            msg += f'\n{diag}'
+        raise UnsupportedCombinationError(msg)
 
     # Same-type pairs use a canonical tuple key; mixed-type pairs use a frozenset.
     key = (type_a, type_b) if type_a is type_b else frozenset({type_a, type_b})

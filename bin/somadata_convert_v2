@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""CLI tool to convert pre-v2.0 ADAT file(s) into a single v2.0 combined ADAT.
+
+Usage
+-----
+    somadata_convert_v2 input1.adat [input2.adat] -o output_v2.adat
+
+Examples
+--------
+    # Single NGS-normalized ADAT:
+    somadata_convert_v2 ngs_normalized.adat -o converted_v2.adat
+
+    # Merge array-normalized + NGS-normalized into combined v2.0:
+    somadata_convert_v2 array_norm.adat ngs_norm.adat -o combined_v2.adat
+
+    # With MedNorm reference override:
+    somadata_convert_v2 array.adat ngs.adat --med-norm-ref REF123 -o out.adat
+"""
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+
+from somadata.conversion import to_v2_adat
+from somadata.io.adat.file import write_adat
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='somadata_convert_v2',
+        description='Convert pre-v2.0 ADAT file(s) to a single v2.0 combined ADAT.',
+    )
+    parser.add_argument(
+        'adats',
+        nargs='+',
+        metavar='INPUT_ADAT',
+        help='One or two input ADAT file paths to convert.',
+    )
+    parser.add_argument(
+        '-o',
+        '--output',
+        required=True,
+        metavar='OUTPUT_PATH',
+        help='Output file path for the v2.0 ADAT.',
+    )
+    parser.add_argument(
+        '--med-norm-ref',
+        default=None,
+        metavar='REF_ID',
+        help=(
+            'MedNorm reference identifier to resolve mismatches between '
+            'Ref.MedNormExt vectors when merging two sources.'
+        ),
+    )
+    parser.add_argument(
+        '--annotations',
+        default=None,
+        metavar='ANNOTATIONS_XLSX',
+        help=(
+            'Path to an annotations .xlsx file. Updates the output ADAT '
+            'column metadata (Target, UniProt, EntrezGeneSymbol, etc.) '
+            'from this file after conversion.'
+        ),
+    )
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help='Enable verbose (DEBUG) logging.',
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='%(levelname)s: %(message)s',
+    )
+    logger = logging.getLogger(__name__)
+
+    if len(args.adats) > 2:
+        parser.error('At most 2 input ADATs are supported.')
+
+    try:
+        logger.info(
+            'Converting %d input(s) to v2.0: %s',
+            len(args.adats),
+            ', '.join(args.adats),
+        )
+        result = to_v2_adat(args.adats, med_norm_ref=args.med_norm_ref)
+
+        if args.annotations:
+            from somadata.io.annotations.file import read_annotations
+
+            logger.info('Updating column metadata from: %s', args.annotations)
+            ann = read_annotations(args.annotations)
+            result = ann.update_adat_column_meta(result)
+
+        logger.info('Writing v2.0 ADAT to: %s', args.output)
+        with open(args.output, 'w', newline='') as fh:
+            write_adat(result, fh)
+        logger.info('Done.')
+        return 0
+    except Exception as e:
+        logger.error('Conversion failed: %s', e)
+        if args.verbose:
+            logger.debug('Traceback:', exc_info=True)
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

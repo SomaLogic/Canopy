@@ -215,20 +215,20 @@ class TestTwoInputRouting:
 
 class TestUnsupportedCombinations:
     def test_native_array_plus_native_ngs_rejected(self):
-        with pytest.raises(UnsupportedCombinationError, match='bridged first'):
+        with pytest.raises(UnsupportedCombinationError, match='not detected as bridged'):
             to_v2_adat([make_native_array_adat(), make_ngs_adat()])
 
     def test_native_ngs_plus_native_array_rejected_order_independent(self):
-        with pytest.raises(UnsupportedCombinationError, match='bridged first'):
+        with pytest.raises(UnsupportedCombinationError, match='not detected as bridged'):
             to_v2_adat([make_ngs_adat(), make_native_array_adat()])
 
     def test_native_array_plus_v2_combined_rejected(self):
         """native_array + v2_combined is not an approved path."""
-        with pytest.raises(UnsupportedCombinationError, match='bridged first'):
+        with pytest.raises(UnsupportedCombinationError, match='not detected as bridged'):
             to_v2_adat([make_native_array_adat(), make_v2_combined_adat()])
 
     def test_v2_combined_plus_native_array_rejected_order_independent(self):
-        with pytest.raises(UnsupportedCombinationError, match='bridged first'):
+        with pytest.raises(UnsupportedCombinationError, match='not detected as bridged'):
             to_v2_adat([make_v2_combined_adat(), make_native_array_adat()])
 
     def test_bridged_array_plus_bridged_array_rejected(self):
