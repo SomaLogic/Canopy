@@ -53,6 +53,15 @@ _ARRAY_TERMINAL_TRIPLE = [
     'MedNormExt',
 ]
 
+# Legacy variant: older ADATs used 'CrossPlatformPlateScaling' (with trailing 'ing').
+_ARRAY_TERMINAL_TRIPLE_LEGACY = [
+    'CrossPlatformPlateScaling',
+    'CrossPlatformCalibrate',
+    'MedNormExt',
+]
+
+_ACCEPTED_ARRAY_TERMINAL_TRIPLES = (_ARRAY_TERMINAL_TRIPLE, _ARRAY_TERMINAL_TRIPLE_LEGACY)
+
 
 # NGS exact ProcessSteps sequence
 _NGS_REQUIRED_STEPS = [
@@ -108,7 +117,7 @@ def _validate_array_process_steps(adat: Adat) -> None:
     hdr = getattr(adat, 'header_metadata', {})
     raw = lookup_header(hdr, 'ProcessSteps')
     steps = parse_process_steps(raw)
-    if steps[-3:] != _ARRAY_TERMINAL_TRIPLE:
+    if steps[-3:] not in _ACCEPTED_ARRAY_TERMINAL_TRIPLES:
         raise ProcessStepsMismatchError(
             f'Array ADAT ProcessSteps do not end with the required bridged '
             f'terminal triple {_ARRAY_TERMINAL_TRIPLE!r}. '

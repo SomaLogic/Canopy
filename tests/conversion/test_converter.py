@@ -231,12 +231,11 @@ class TestUnsupportedCombinations:
         with pytest.raises(UnsupportedCombinationError, match='not detected as bridged'):
             to_v2_adat([make_v2_combined_adat(), make_native_array_adat()])
 
-    def test_bridged_array_plus_bridged_array_rejected(self):
-        """bridged_array + bridged_array is not an approved path."""
-        with pytest.raises(
-            UnsupportedCombinationError, match='Unsupported input combination'
-        ):
-            to_v2_adat([make_bridged_array_adat(), make_bridged_array_adat()])
+    def test_bridged_array_plus_bridged_array_supported(self):
+        """bridged_array + bridged_array is an approved path (two-study merge)."""
+        # Both arrays have AssayVersion v5.0 — should succeed without raising.
+        result = to_v2_adat([make_bridged_array_adat(), make_bridged_array_adat()])
+        assert result.header_metadata['AssayType'] == 'Array'
 
     def test_native_ngs_plus_native_ngs_rejected(self):
         """native_ngs + native_ngs is not an approved path."""
@@ -252,8 +251,8 @@ class TestUnsupportedCombinations:
 
 
 class TestApprovedPathsTable:
-    def test_pair_table_contains_five_conversions(self):
-        assert len(_APPROVED_PAIR_CONVERSIONS) == 5
+    def test_pair_table_contains_six_conversions(self):
+        assert len(_APPROVED_PAIR_CONVERSIONS) == 6
 
     def test_single_table_contains_three_conversions(self):
         assert len(_APPROVED_SINGLE_CONVERSIONS) == 3

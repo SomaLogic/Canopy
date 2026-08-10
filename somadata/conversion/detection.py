@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 # Each inner tuple is a sequence of the last 3 ProcessSteps that qualifies.
 _BRIDGED_TERMINAL_STEPS = (
     ('CrossPlatformPlateScale', 'CrossPlatformCalibrate', 'MedNormExt'),
+    # Legacy variant: older ADATs used 'CrossPlatformPlateScaling' (with trailing 'ing')
+    ('CrossPlatformPlateScaling', 'CrossPlatformCalibrate', 'MedNormExt'),
 )
 
 

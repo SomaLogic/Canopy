@@ -51,6 +51,7 @@ def make_array_adat(
         header={
             '!AssayVersion': assay_version,
             '!ProcessSteps': process_steps,
+            '!ProteinEffectiveDate': '2020-08-07',
         },
         row_names=['SampleId', 'SampleType', 'SlideId', 'Subarray'],
         row_values=[

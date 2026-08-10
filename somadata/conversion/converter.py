@@ -1027,6 +1027,9 @@ _APPROVED_PAIR_CONVERSIONS: dict = {
     ): _merge_bridged_array_and_v2,
     frozenset({InputType.NATIVE_NGS, InputType.V2_COMBINED}): _merge_ngs_and_v2,
     (InputType.NATIVE_ARRAY, InputType.NATIVE_ARRAY): _merge_native_arrays,
+    # Two bridged arrays (e.g. Plasma + CSF from different studies) use the same
+    # merge path as native arrays — both are converted to v2.0 then merged.
+    (InputType.BRIDGED_ARRAY, InputType.BRIDGED_ARRAY): _merge_native_arrays,
     (InputType.V2_COMBINED, InputType.V2_COMBINED): _merge_v2_combined_adats,
 }
 
