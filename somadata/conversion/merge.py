@@ -53,14 +53,7 @@ _ARRAY_TERMINAL_TRIPLE = [
     'MedNormExt',
 ]
 
-# Legacy variant: older ADATs used 'CrossPlatformPlateScaling' (with trailing 'ing').
-_ARRAY_TERMINAL_TRIPLE_LEGACY = [
-    'CrossPlatformPlateScaling',
-    'CrossPlatformCalibrate',
-    'MedNormExt',
-]
-
-_ACCEPTED_ARRAY_TERMINAL_TRIPLES = (_ARRAY_TERMINAL_TRIPLE, _ARRAY_TERMINAL_TRIPLE_LEGACY)
+_ACCEPTED_ARRAY_TERMINAL_TRIPLES = (_ARRAY_TERMINAL_TRIPLE,)
 
 
 # NGS exact ProcessSteps sequence
