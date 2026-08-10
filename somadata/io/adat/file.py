@@ -589,11 +589,21 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     column_offset = [None] * len(row_names)
     for column_name in column_names:
         column_data = list(adat.columns.get_level_values(column_name))
+        col_ftype = _v2_col_field_type(column_name)
         if column_name in _decimal_col_fields:
-            # Blank values for Decimal fields → "NA" per spec §2.2.
+            # Blank/nan values for Decimal fields → "NA" per spec §2.2.
             column_data = [
                 'NA' if (isinstance(v, str) and v.strip() in ('', 'NA', 'nan', 'NaN'))
                 or (isinstance(v, float) and math.isnan(v))
+                else v
+                for v in column_data
+            ]
+        elif col_ftype == FieldType.STRING:
+            # nan sentinels in String fields (e.g. introduced by annotations xlsx)
+            # must be written as '' per spec §2.2.
+            column_data = [
+                '' if (isinstance(v, float) and math.isnan(v))
+                or (isinstance(v, str) and v.strip().lower() in ('nan', 'n/a', 'na'))
                 else v
                 for v in column_data
             ]
