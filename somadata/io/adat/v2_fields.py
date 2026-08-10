@@ -43,7 +43,8 @@ V2_HEADER_FIELD_TYPES: dict[str, FieldType] = {
     'FileVersion': FieldType.STRING,
     'AdatId': FieldType.STRING,
     'AssayType': FieldType.STRING,
-    'AssayVersion': FieldType.STRING,
+    # NOTE: AssayVersion was removed from the header in v2.0 (spec §3.2.1 / §3.3.1).
+    # It is now a per-sample ROW_DATA field populated from source ADAT header.
     'UseRestriction': FieldType.STRING,
     'SourceFile': FieldType.JSON,
     'SOMAmerReferenceSource': FieldType.STRING,
@@ -104,6 +105,8 @@ V2_ROW_FIELD_TYPES: dict[str, FieldType] = {
     'UniqueSampleKey': FieldType.STRING,
     'SampleType': FieldType.STRING,
     'SourceFileId': FieldType.STRING,
+    'AssayVersion': FieldType.STRING,
+    'MasterMixVersion': FieldType.STRING,
     'ProcessStepsId': FieldType.STRING,
     'ReportConfigId': FieldType.STRING,
     'SoftwareVersion': FieldType.STRING,

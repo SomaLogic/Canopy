@@ -53,8 +53,11 @@ class TestNGSConversionIntegration:
 
     def test_maps_assay_version(self, minimal_ngs_adat):
         result = to_v2_adat([minimal_ngs_adat])
-        # 6k → v1
-        assert result.header_metadata['AssayVersion'] == 'v1'
+        # AssayVersion is now in ROW_DATA (spec §3.3.1), not the header.
+        # 6k → 'SomaSeq v1'
+        assert result.header_metadata.get('AssayVersion', '') == ''
+        assert 'AssayVersion' in result.index.names
+        assert result.index.get_level_values('AssayVersion')[0] == 'SomaSeq v1'
 
     def test_column_fields_renamed(self, minimal_ngs_adat):
         result = to_v2_adat([minimal_ngs_adat])

@@ -10,11 +10,8 @@ Examples
     # Single NGS-normalized ADAT:
     somadata_convert_v2 ngs_normalized.adat -o converted_v2.adat
 
-    # Merge array-normalized + NGS-normalized into combined v2.0:
-    somadata_convert_v2 array_norm.adat ngs_norm.adat -o combined_v2.adat
-
-    # With MedNorm reference override:
-    somadata_convert_v2 array.adat ngs.adat --med-norm-ref REF123 -o out.adat
+    # Merge bridged array + NGS-normalized into combined v2.0:
+    somadata_convert_v2 bridged_array.adat ngs_norm.adat -o combined_v2.adat
 """
 from __future__ import annotations
 
@@ -43,15 +40,6 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         metavar='OUTPUT_PATH',
         help='Output file path for the v2.0 ADAT.',
-    )
-    parser.add_argument(
-        '--med-norm-ref',
-        default=None,
-        metavar='REF_ID',
-        help=(
-            'MedNorm reference identifier to resolve mismatches between '
-            'Ref.MedNormExt vectors when merging two sources.'
-        ),
     )
     parser.add_argument(
         '--annotations',
@@ -91,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
             len(args.adats),
             ', '.join(args.adats),
         )
-        result = to_v2_adat(args.adats, med_norm_ref=args.med_norm_ref)
+        result = to_v2_adat(args.adats)
 
         if args.annotations:
             from somadata.io.annotations.file import read_annotations
@@ -99,6 +87,12 @@ def main(argv: list[str] | None = None) -> int:
             logger.info('Updating column metadata from: %s', args.annotations)
             ann = read_annotations(args.annotations)
             result = ann.update_adat_column_meta(result)
+            # Per spec §3.2.1 / §3.3.1: when an annotations file is provided,
+            # SOMAmerReferenceSource must refer to that file rather than the
+            # original source ADAT's ProteinEffectiveDate / SOMAmerReferenceSource.
+            import os
+            ann_basename = os.path.basename(args.annotations)
+            result.header_metadata['SOMAmerReferenceSource'] = ann_basename
 
         logger.info('Writing v2.0 ADAT to: %s', args.output)
         with open(args.output, 'w', newline='') as fh:
