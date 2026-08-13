@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import math
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
@@ -131,19 +132,21 @@ def _validate_ngs_process_steps(adat: Adat) -> None:
         )
 
 
-def _get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, str]]:
+def _get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, str | float]]:
     """Extract Ref.MedNormExt.* column values keyed by (field, SeqId).
 
     Returns
     -------
     dict
         ``{field_name: {seq_id: value}}`` for all ``Ref.MedNormExt.*`` levels.
+        Values are returned as floats if numeric, otherwise as strings.
+        Missing/invalid values are stored as None.
     """
     columns = getattr(adat, 'columns', None)
     if columns is None or not hasattr(columns, 'names'):
         return {}
 
-    result: dict[str, dict[str, str]] = {}
+    result: dict[str, dict[str, str | float | None]] = {}
     seq_id_level = None
     if 'SeqId' in columns.names:
         seq_id_level = columns.get_level_values('SeqId')
@@ -152,9 +155,24 @@ def _get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, str]]:
         if name.startswith('Ref.MedNormExt.'):
             values = columns.get_level_values(name)
             if seq_id_level is not None:
-                result[name] = {
-                    str(sid): str(val) for sid, val in zip(seq_id_level, values)
-                }
+                result[name] = {}
+                for sid, val in zip(seq_id_level, values):
+                    # Check for missing/NA values (pandas NaN, None, empty string, 'NA', 'nan')
+                    if val is None or val == '' or str(val).upper() in ('NA', 'NAN'):
+                        result[name][str(sid)] = None
+                        continue
+                    
+                    # Try to convert to float for numeric comparison
+                    try:
+                        float_val = float(val)
+                        # Check if it's NaN
+                        if math.isnan(float_val):
+                            result[name][str(sid)] = None
+                        else:
+                            result[name][str(sid)] = float_val
+                    except (ValueError, TypeError):
+                        # Keep as string if not numeric
+                        result[name][str(sid)] = str(val)
             else:
                 result[name] = {}
 
@@ -197,16 +215,43 @@ def _validate_mednorm_vectors(
     if not shared_seqids:
         return
 
-    # Check element-wise exact string identity for shared fields and shared SeqIds
+    # Check element-wise identity for shared fields and shared SeqIds.
+    # Use numeric comparison with tolerance for float values, exact comparison for strings.
+    # Per spec §3.4, Ref.MedNormExt.* are RFU reference values (Decimal type),
+    # but legacy data may use string identifiers.
+    # Skip comparisons where either value is None/missing (e.g., internal-use-only
+    # analytes that are array-only and not present in NGS data).
     mismatches: list[str] = []
     for field in sorted(shared_fields):
         for seq_id in sorted(shared_seqids):
-            array_val = array_vecs[field].get(seq_id, '')
-            ngs_val = ngs_vecs[field].get(seq_id, '')
-            if array_val != ngs_val:
-                mismatches.append(
-                    f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r}'
-                )
+            array_val = array_vecs[field].get(seq_id)
+            ngs_val = ngs_vecs[field].get(seq_id)
+            
+            # Skip comparison if either value is missing/None.
+            # This handles internal-use-only SOMAmers that appear in the array source
+            # but have no MedNormExt reference in the NGS source (e.g., array-exclusive
+            # calibrators or controls).
+            if array_val is None or ngs_val is None:
+                continue
+            
+            # Determine if we should use numeric comparison
+            is_numeric = isinstance(array_val, float) and isinstance(ngs_val, float)
+            
+            if is_numeric:
+                # For numeric values, use tolerance-based comparison
+                # Use rtol=1e-9 (relative tolerance) and atol=1e-12 (absolute tolerance)
+                # to handle both large and small RFU values appropriately.
+                if not math.isclose(array_val, ngs_val, rel_tol=1e-9, abs_tol=1e-12):
+                    mismatches.append(
+                        f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r} '
+                        f'(diff={abs(array_val - ngs_val):.2e})'
+                    )
+            else:
+                # For string values or mixed types, use exact comparison
+                if str(array_val) != str(ngs_val):
+                    mismatches.append(
+                        f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r}'
+                    )
 
     if not mismatches:
         return

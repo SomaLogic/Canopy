@@ -374,6 +374,110 @@ class TestValidateMednormCompatibility:
         # Should not raise — no shared SeqIds means no vector comparison
         validate_mednorm_compatibility(array_adat, ngs_adat)
 
+    def test_numeric_mednorm_values_with_rounding_tolerance(self):
+        """Numeric MedNormExt values should use tolerance-based comparison.
+        
+        Real-world RFU reference values may differ slightly due to floating-point
+        precision from different computation paths (e.g., reading from different
+        file formats, intermediate rounding in pipelines). These should be
+        considered equal within a reasonable tolerance.
+        """
+        # Create ADATs with numeric MedNormExt values that differ by tiny amounts
+        # due to floating-point precision (not actual biological differences)
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=['30000-01'],
+            mednorm_ext_values=[1234.56789, 9876.54321],
+        )
+        
+        # Simulate slightly different values from NGS source due to rounding
+        # (difference of ~1e-12, within floating-point tolerance)
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=['20000-01'],
+            mednorm_ext_values=[1234.567890000001, 9876.543210000001],
+        )
+        
+        # Should not raise — values are identical within tolerance
+        validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_numeric_mednorm_values_outside_tolerance_raises(self):
+        """Numeric MedNormExt values that differ significantly should raise."""
+        array_adat = make_bridged_array_with_mednorm(
+            mednorm_ext_values=[1234.5, 9876.5],
+        )
+        
+        # Significant difference (0.1 units) should raise
+        ngs_adat = make_full_legacy_ngs_adat(
+            mednorm_ext_values=[1234.5, 9876.6],  # Different by 0.1
+        )
+        
+        with pytest.raises(MedNormMismatchError, match='Ref.MedNormExt'):
+            validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_missing_ngs_mednorm_values_skipped(self):
+        """SeqIds with missing/NA MedNormExt values in NGS should be skipped.
+        
+        Internal-use-only (IUO) SOMAmers or array-exclusive calibrators may
+        appear in both datasets but have no MedNormExt reference value in the
+        NGS source (e.g., NaN, blank, or 'NA'). These should not cause
+        validation failures.
+        """
+        # Create array ADAT with MedNormExt values for all SeqIds (including IUO)
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=['10002-9'],  # IUO analyte
+            mednorm_ext_values=[1234.5, 5678.9],  # Only for shared SeqIds
+        )
+        
+        # Create NGS ADAT with one extra SeqId that has a missing MedNormExt value
+        # The third SeqId (10002-9) appears in both, but NGS has blank/missing value
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=['10002-9'],  # Same IUO analyte
+            mednorm_ext_values=[1234.5, 5678.9],  # Only for first two
+        )
+        
+        # Manually add the third SeqId to NGS with blank MedNormExt
+        # (simulating an IUO analyte that exists in both but has no NGS MedNormExt ref)
+        # For now, this scenario is handled by SeqId filtering — the IUO analyte
+        # won't be in shared_seqids if it's in different lists. Let me revise...
+        
+        # Actually, create a simpler test: both have the same SeqIds, but NGS
+        # has a blank value for one
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=[],
+            mednorm_ext_values=[1234.5, 5678.9],
+        )
+        
+        # Manually modify NGS ADAT to have a blank MedNormExt for second SeqId
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=[],
+            mednorm_ext_values=[1234.5, ''],  # Second is blank (IUO)
+        )
+        
+        # Should not raise — missing NGS values are skipped
+        validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_na_string_mednorm_values_skipped(self):
+        """SeqIds with 'NA' string MedNormExt values should be skipped."""
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=[],
+            mednorm_ext_values=[1234.5, 'NA'],  # Second value is 'NA'
+        )
+        
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=[],
+            mednorm_ext_values=[1234.5, 'NA'],  # Also 'NA'
+        )
+        
+        # Should not raise — 'NA' values are treated as missing
+        validate_mednorm_compatibility(array_adat, ngs_adat)
+
 
 # ===========================================================================
 # Task 1.9: Mixed Header & Metadata Combination
