@@ -84,27 +84,43 @@ V2_COL_REMOVED: set[str] = {
     'eLOD',
 }
 
-# Required row metadata fields (Value Required = True for all ADATs).
+# Required row metadata fields (Value Required = True for all ADATs, per spec §2.6.2).
+# Note: HybNormScaleFactor is Value Required = False in the spec (not in this set).
 V2_ROW_REQUIRED: set[str] = {
     'SampleId',
     'SampleReadout',
+    'UniqueSampleKey',
     'SampleType',
+    'AssayVersion',
     'ProcessStepsId',
     'SoftwareVersion',
     'PlateId',
     'WellPosition',
-    'HybNormScaleFactor',
     'HybNormStatus',
     'RowCheckStatus',
 }
 
-# Row fields that must NOT appear (removed or renamed in v2.0).
+# Row fields that must NOT appear (removed or renamed in v2.0, per spec §3.2.3 / §3.3.3).
 V2_ROW_REMOVED: set[str] = {
-    'PlatePosition',
-    'HybControlNormScale',
-    'RowCheck',
-    'StudyId',
-    'SubjectID',
+    # Renamed fields — old names must be gone
+    'PlatePosition',           # → WellPosition
+    'HybControlNormScale',     # → HybNormScaleFactor
+    'HybNorm_1_ScaleFactor',   # → HybNormScaleFactor (NGS legacy)
+    'RowCheck',                # → RowCheckStatus
+    'StudyId',                 # → Project
+    'SubjectID',               # → SubjectId (PascalCase)
+    'Barcode2d',               # → MatrixTubeBarcode
+    'EmpiricalHybTemp',        # → HybQC (older NGS)
+    # Legacy _PassFlag suffix renamed to *Status
+    'SOMAmerReads_PassFlag',
+    'SOMAmerNormReads_PassFlag',
+    'HybQC_PassFlag',
+    'EmpiricalHybTemp_PassFlag',
+    'HybNorm_PassFlag',
+    'MedNormInt_PassFlag',
+    'MedNormExt_PassFlag',
+    'RowCheck_PassFlag',
+    # Fully removed fields
     'ExtIdentifier',
     'SsfExtId',
     'ScannerID',
@@ -122,8 +138,10 @@ V2_ROW_REMOVED: set[str] = {
     'RMA',
 }
 
-# Header fields that must NOT appear (removed in v2.0 or pre-v2.0 only).
+# Header fields that must NOT appear (removed in v2.0 or pre-v2.0 only,
+# per spec §3.2.1 and §3.3.1).
 V2_HEADER_REMOVED: set[str] = {
+    # Pre-v2 array fields
     '!Version',
     'Version',
     'CreatedDate',
@@ -141,8 +159,24 @@ V2_HEADER_REMOVED: set[str] = {
     'LabLocation',
     'Legal',
     'PlateType',
-    'RunId',
     '!Checksum',
+    # AssayVersion moved from header to sample table in both array and NGS
+    'AssayVersion',
+    # NGS header fields moved to sample table (row data)
+    'RunId',           # → SequencingRunId in sample table
+    'InstrumentType',  # → InstrumentType in sample table
+    'Flowcell',        # → Flowcell in sample table
+    'YieldDemux',      # → RunYieldDemux in sample table
+    'YieldQ30Demux',   # → RunYieldQ30Demux in sample table
+    'Q30WeightedMean', # → RunQ30WeightedMean in sample table
+    # NGS header fields consolidated into JSON under new names
+    'PlatformSpecificPlateScale_ScaleFactor',    # → PlateScaleScalar JSON
+    'CrossPlatformPlateScale_ScaleFactor',        # → PlateScaleScalar JSON
+    'PlatformSpecificCalibrateTailPercent',       # → CalibrateTailPercent JSON
+    'CrossPlatformCalibrateTailPercent',          # → CalibrateTailPercent JSON
+    'PlatformSpecificCalibrateTailPercent_PassFlag',  # → CalibrateTailPercentStatus JSON
+    'QCCheckTailPercent_PassFlag',               # → QCCheckTailPercentStatus JSON
+    'PlateSOMAmerNormReads_PassFlag',            # → PlateSOMAmerNormReadsStatus JSON
 }
 
 _DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?$')
@@ -410,14 +444,15 @@ def check_row_fields(adat: Adat, r: Report, assay_type: str) -> None:
         else:
             r.pass_('RowData.SampleReadout.AssayTypeConsistency')
 
-    # 5. UniqueSampleKey — if present, values should be GUIDs and unique
+    # 5. UniqueSampleKey — values must be GUIDs and unique
+    # (absence already caught by V2_ROW_REQUIRED check above)
     if 'UniqueSampleKey' in row_names:
         keys = list(adat.index.get_level_values('UniqueSampleKey'))
         non_blank = [k for k in keys if k and str(k) != 'nan']
         if non_blank:
             bad_guids = [k for k in non_blank if not _GUID_RE.match(str(k))]
             if bad_guids:
-                r.warn(
+                r.fail(
                     'RowData.UniqueSampleKey.GuidFormat',
                     f'{len(bad_guids)} key(s) not in GID-<uuid> format: {bad_guids[:3]}',
                 )
@@ -427,8 +462,6 @@ def check_row_fields(adat: Adat, r: Report, assay_type: str) -> None:
                 r.fail('RowData.UniqueSampleKey.Unique', 'UniqueSampleKey values are not all unique')
             else:
                 r.pass_('RowData.UniqueSampleKey.Unique')
-    else:
-        r.warn('RowData.UniqueSampleKey', 'UniqueSampleKey field not present')
 
     # 6. ProcessStepsId links to header ProcessSteps keys
     hm = adat.header_metadata
@@ -504,7 +537,7 @@ def check_data_matrix(adat: Adat, r: Report) -> None:
 
     n_neg = int((non_nan < 0).sum())
     if n_neg:
-        r.warn('DataMatrix.NonNegative', f'{n_neg} negative RFU/count values found')
+        r.fail('DataMatrix.NonNegative', f'{n_neg} negative RFU/count values found')
     else:
         r.pass_('DataMatrix.NonNegative')
 

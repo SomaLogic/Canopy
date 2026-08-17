@@ -190,9 +190,8 @@ column and row metadata with the data matrix:
     trimmed.
 
   - **Exception --- reference fields:** SOMAmer annotation reference
-    fields use dotted prefixes `Ref.Array.*` or `Ref.NGS.*` to
+    fields use dotted prefixes `Ref.Array.`\* or `Ref.NGS.`\* to
     indicate platform applicability
-
 
 - Field names are case-sensitive
 
@@ -240,7 +239,7 @@ All fields in the v2.0 ADAT file conform to one of the following types:
 
 - Whole number (positive, negative, or zero)
 
-- Limits: up to ±9.22×10^18 (fits 64-bit range)
+- Limits: up to ±9.22×10\^18 (fits 64-bit range)
 
 - Missing values are represented using `NA`
 
@@ -276,7 +275,6 @@ All fields in the v2.0 ADAT file conform to one of the following types:
 
   - Missing values represented as empty string ("").
 
-
 - Examples:
 
   - `2026-02-04`
@@ -300,7 +298,7 @@ All fields in the v2.0 ADAT file conform to one of the following types:
 \
 `{"1":["Raw RFU","Hyb Normalization","medNormInt"],"2":["Raw RFU","Hyb Normalization"]}`
 
-### 2.3 ^HEADER Section --- Field Definitions
+### 2.3 \^HEADER Section --- Field Definitions
 
 Fields are tab-separated key-value pairs: `FieldName\tValue`. The
 section begins with the `^HEADER` token line. Data outside the first two
@@ -342,7 +340,7 @@ values:
 | PlateScaleStatus | JSON | False | `{"PLT45241":"PASS"}` | "PASS" or "FLAG" per plate based on PlateScale scalar acceptance criteria. |
 | PlateSOMAmerNormReadsStatus | JSON | False | `{"TS00000001":"PASS"}` | "PASS" or "WARNING" per plate; WARNING if > 70% of blank samples have SOMAmerNormReadsStatus = FLAG |
 
-### 2.4 ^COL_DATA Section (SOMAmer Annotation)
+### 2.4 \^COL_DATA Section (SOMAmer Annotation)
 
 The `COL_DATA` section lists the fields for SeqId-specific annotations
 in the data table. The section begins with the `^COL_DATA` token line.
@@ -359,7 +357,7 @@ in `^COL_DATA` defines the column order used in the `^TABLE_BEGIN` data
 table. Fields may appear in any order, but the order must be consistent
 between the two sections. Full field definitions are in Section 2.6.1.
 
-### 2.5 ^ROW_DATA Section (Sample Annotation)
+### 2.5 \^ROW_DATA Section (Sample Annotation)
 
 The `ROW_DATA` section lists the fields for sample-specific annotations
 in the data table. The section begins with the `^ROW_DATA` token line.
@@ -376,7 +374,7 @@ in `^ROW_DATA` defines the column order used in the `^TABLE_BEGIN` data
 table. Fields may appear in any order, but the order must be consistent
 between the two sections. Full field definitions are in Section 2.6.2.
 
-### 2.6 ^TABLE_BEGIN Section --- Data Table
+### 2.6 \^TABLE_BEGIN Section --- Data Table
 
 The data matrix begins with the `^TABLE_BEGIN` token line. The table has
 a combined structure: the left-hand columns contain per-sample metadata
@@ -418,7 +416,7 @@ to the number of sample annotation fields.
 | Ref.NGS.QCCheck.<Matrix> | Decimal | False | `1.02` | NGS QC check reference. The ".Matrix" suffix is matrix-dependent (Plasma, Serum, etc.) |
 | Ref.MedNorm | String | False | `REF001` | Median normalization reference identifier; links to MedNormRefId in sample table |
 
-#### 2.6.2 Sample (Row) Fields
+####  2.6.2 Sample (Row) Fields
 
 These fields are declared in `^ROW_DATA` and define per-sample metadata.
 One row per sample appears in the data matrix.
@@ -471,9 +469,9 @@ One row per sample appears in the data matrix.
 | CrossPlateMedNormIntScaleFactor | Decimal | False | `0.993` | Cross-platform internal median normalization scale factor; pass-through for NGS-only data; blank for array-only data |
 | InstrumentType | String | NGS-only | `NovaSeq` | Sequencing instrument type (e.g., `"NovaSeq"`); moved from NGS header; see Appendix A.4 |
 | Flowcell | String | NGS-only | `HFFKNDSXF` | Flowcell identifier; moved from NGS header; see Appendix A.4 |
-| YieldDemux | Integer | NGS-only | `222843111190` | Total demultiplexed yield (base pairs); moved from NGS header; see Appendix A.4 |
-| YieldQ30Demux | Integer | NGS-only | `209705605492` | Q30 demultiplexed yield; moved from NGS header; see Appendix A.4 |
-| Q30WeightedMean | Decimal | NGS-only | `0.9410` | Q30 weighted mean quality score; moved from NGS header; see Appendix A.4 |
+| RunYieldDemux | Integer | NGS-only | `222843111190` | Total demultiplexed yield (base pairs); moved from NGS header; see Appendix A.4 |
+| RunYieldQ30Demux | Integer | NGS-only | `209705605492` | Q30 demultiplexed yield; moved from NGS header; see Appendix A.4 |
+| RunQ30WeightedMean | Decimal | NGS-only | `0.9410` | Q30 weighted mean quality score; moved from NGS header; see Appendix A.4 |
 
 #### 2.6.3 RFU Data Matrix
 
@@ -552,7 +550,7 @@ value.
 
 | Legacy Array Field | v2.0 Field | Transformation Notes |
 | --- | --- | --- |
-| Version | *(removed)* | Value not mapped; `FileVersion` is set to `"2.0"` by spec |
+| Version | *(removed)* | Value not mapped; `FileVersion` is set to "`2.0”` by spec |
 | FileVersion | FileVersion | Set to `"2.0"` |
 | AdatId | AdatId | Generate new GUID; preserve old in `SourceFile` |
 | Title | Title | Pass through; pipe-separate values from all source ADAT title fields on merge by default. Option to set file-level title in parser merging function argument. |
@@ -575,7 +573,7 @@ value.
 | MedNormReference | *(removed)* | Remove. Refer users to `ReportConfig` |
 | PlateScale_ReferenceSource | *(removed)* | Remove. Refer users to `ReportConfig` |
 | PlateMedianCal_PlateId | *(removed)* | Remove. Not meaningful metric for v4+ array data |
-| PlateMedianTest_PlateId | *(removed)* | Remove. Value is dependent on `PlateMedianCal` which is removed |
+| PlateMedianTest_PlateId | *(removed)* | Remove. Value is dependent on `PlateMedianCal `which is removed |
 | QcReferenceSource_SampleId | *(removed)* | Remove. Refer users to `ReportConfig` |
 | CalPlateTailPercent_PlateId | CalibrateTailPercent | Rename field, consolidate per-plate values into JSON as described in section 2.3 |
 | CalPlateTailTest_PlateId | CalibrateTailPercentStatus | Rename field, consolidate per-plate values into JSON as described in section 2.3 |
@@ -697,19 +695,19 @@ through.
 | *(not present)* | SourceFile | Populate from legacy AdatId if present. Otherwise calculate md5sum value from input NGS file and insert according to format detailed in section 2.3. |
 | SOMAmerReferenceSource | SOMAmerReferenceSource | If using the optional extended annotation file value should be set to "<DocumentID>_<rev#>_<Document_date (YYYY-MM-DD)>" and static SeqId annotations taken from this source (recommended approach). If no reference file is provided, choose the reference from source ADATs using the with the most recent reference using the date in the reference ID. Use the ProteinEffectiveDate for array data or SOMAmerReferenceSource for NGS data. Populate all SeqIds static annotation data with that reference data and use this reference identifier in this field. If that reference does not have annotation information for all SeqIds, continue the process of using the next most recent annotation source and using that for any remaining SeqId static annotation data still needed. Add that reference ID to this field using the pipe delimiter. Repeat until all SeqIds in the combined file have static annotation data. |
 | AssayType | AssayType | Set to `"NGS"` (or `"Mixed"` if merging with array) |
-| AssayVersion | *(removed from header)* | Remove field from header and transfer to sample table. Map values: 6k→"SomaSeq v1", 9k TMS→ "SomaSeq v2", 9k xTMS→ "SomaSeq v3", Calypso→ "SomaSeq v4" |
-| RunId | *(removed from header)* | Moved to `SequencingRunId` in sample table |
+| AssayVersion | *(removed from header)* | Remove field from header and transfer to sample table. Map values: 6k→"SomaSeq `v1”`, 9k TMS→ "SomaSeq `v2”`, 9k xTMS→ "SomaSeq `v3”`, Calypso→ "SomaSeq `v4”` |
+| RunId | *(removed from header)* | Moved to `SequencingRunId` in sample table. If field is missing in NGS file, create column name in sample table and populate with missing values. |
 | CreatedDate | FileCreatedDate | Set `FileCreatedDate` to write timestamp |
 | StudyOrganism | StudyOrganism | Pass through - Combine unique values from source ADATs using pipe-delimiter |
 | StudyMatrix | StudyMatrix | Pass through - Combine unique values from source ADATs using pipe-delimiter |
 | CalibratorId | *(removed)* | Remove field. Point logic to `ControlId` in sample table |
 | ProcessSteps | ProcessSteps | Reformat to JSON with `ProcessStepsId` key according to format described in section 2.3. |
 | *(not present)* | ReportConfig | See section 2.3. No entry for NGS data that did not have this field |
-| InstrumentType | *(removed from header)* | Move to sample table (NGS-only); replicate header value to all NGS sample rows |
-| Flowcell | *(removed from header)* | Move to sample table (NGS-only); replicate header value to all NGS sample rows |
-| YieldDemux | *(removed from header)* | Move to sample table (NGS-only); replicate header value to all NGS sample rows |
-| YieldQ30Demux | *(removed from header)* | Move to sample table (NGS-only); replicate header value to all NGS sample rows |
-| Q30WeightedMean | *(removed from header)* | Move to sample table (NGS-only); replicate header value to all NGS sample rows |
+| InstrumentType | *(removed from header)* | Move to sample table; replicate header value to all NGS sample rows |
+| Flowcell | *(removed from header)* | Move to sample table; replicate header value to all NGS sample rows |
+| YieldDemux | *(removed from header)* | Move to sample table and change field name to RunYieldDemux. Replicate header value to all associated NGS sample rows. If field is missing in NGS file, create column name in sample table and populate with missing values. |
+| YieldQ30Demux | *(removed from header)* | Move to sample table and change field name to RunYieldQ30Demux Replicate header value to all associated NGS sample rows. If field is missing in NGS file, create column name in sample table and populate with missing values. |
+| Q30WeightedMean | *(removed from header)* | Move to sample table and change field name to Run Q30WeightedMean. Replicate header value to all associated NGS sample rows. If field is missing in NGS file, create column name in sample table and populate with missing values. |
 | PlatformSpecificPlateScale_ScaleFactor | PlateScaleScalar | Rename field, consolidate per-plate values into JSON as described in section 2.3 |
 | CrossPlatformPlateScale_ScaleFactor | PlateScaleScalar | Rename field, consolidate per-plate values into JSON as described in section 2.3 |
 | PlatformSpecificCalibrateTailPercent | CalibrateTailPercent | Rename field, consolidate per-plate values into JSON as described in section 2.3 |
@@ -794,9 +792,9 @@ through.
 | RowCheck_PassFlag | RowCheckStatus | Rename (`_PassFlag` → `Status`) |
 | InstrumentType (from header) | InstrumentType | Move from header; replicate to all NGS sample rows |
 | Flowcell (from header) | Flowcell | Move from header; replicate to all NGS sample rows |
-| YieldDemux (from header) | YieldDemux | Move from header; replicate to all NGS sample rows |
-| YieldQ30Demux (from header) | YieldQ30Demux | Move from header; replicate to all NGS sample rows |
-| Q30WeightedMean (from header) | Q30WeightedMean | Move from header; replicate to all NGS sample rows |
+| YieldDemux (from header) | RunYieldDemux | Move from header if present and renamed; replicate to all NGS sample rows |
+| YieldQ30Demux (from header) | RunYieldQ30Demux | Move from header if present and renamed; replicate to all NGS sample rows |
+| Q30WeightedMean (from header) | RunQ30WeightedMean | Move from header if present and renamed; replicate to all NGS sample rows |
 
 ### 3.4 Mixed (Merge) Conversion Rules
 
@@ -827,22 +825,21 @@ an array source and an NGS source.
         `"PlatformSpecificCalibrate"`, `"CrossPlatformPlateScale"`,
         `"CrossPlatformCalibrate"`, `"MedNormExt"`.
 
-    3.  `Ref.MedNormExt.<Matrix>` RFU reference values must be identical
-        across the array and NGS source files.
+    3.  `Ref.MedNormExt.<Matrix>` RFU reference values must be
+        equivalent across the array and NGS source files. Equivalency is
+        defined as satisfying \| *a* -- *b* \| ≤ 0.1 RFU for all SeqIds
+        where *a* and *b* are reference RFUs for common SeqIds where *a*
+        and *b* both have non-missing values.
 
-
-  - *Combining NGS-only data:* `ProcessSteps` must be identical across
-    all source ADATs. If external MedNorm has been performed,
+  - *Combining NGS-only data:* If external MedNorm has been performed,
     `Ref.MedNormExt.<Matrix>` RFU reference values must match across all
-    source files. Raise an exception if `CrossPlateMedNormInt`-only
-    normalization is detected without a corresponding `MedNormExt` step.
+    source ADATs.
 
   - *Combining Array-only data:* Apply existing array-only parser merge
     logic.
 
   - *Format conversion only (no merge):* No Median Normalization
     compatibility check is required.
-
 
 - **Dilution Group Alignment:** After conversion of array Dilution
   values to fractions, all SeqIds present in both source ADATs must

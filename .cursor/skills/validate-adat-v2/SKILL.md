@@ -27,8 +27,8 @@ Exit codes: **0** = all checks pass · **1** = one or more FAILs · **2** = file
 | Section | Checks |
 |---|---|
 | **FileVersion** | Must equal `"2.0"` (gates all other checks) |
-| **Header.ClosedFieldSet** | No extra fields beyond the 20-field v2.0 closed set |
-| **Header.NoRemovedFields** | Pre-v2 fields (`!Version`, `CreatedDate`, `GeneratedBy`, etc.) absent |
+| **Header.ClosedFieldSet** | No extra fields beyond the 19-field v2.0 closed set |
+| **Header.NoRemovedFields** | Pre-v2 / moved fields (`!Version`, `CreatedDate`, `GeneratedBy`, `AssayVersion`, `InstrumentType`, `Flowcell`, `YieldDemux`, legacy NGS scalars, etc.) absent |
 | **Header.RequiredFields** | All `Value Required = True` fields present and non-empty |
 | **Header.AssayType** | Value is one of `"Array"`, `"NGS"`, `"Mixed"` |
 | **Header.AdatId** | Matches `GID-<uuid>` pattern |
@@ -40,16 +40,16 @@ Exit codes: **0** = all checks pass · **1** = one or more FAILs · **2** = file
 | **ColData.NoRemovedFields** | `SeqIdVersion`, `SomaId`, `ColCheck`, `Units`, `eLOD` absent |
 | **ColData.HybControl.Values** | Only `"True"` / `"False"` values |
 | **ColData.NoLegacyCal** | No `Cal_<PlateId>` legacy naming |
-| **RowData.RequiredFields** | Core v2.0 row fields present |
-| **RowData.NoRemovedFields** | `PlatePosition`, `HybControlNormScale`, `RowCheck`, `StudyId`, etc. absent |
+| **RowData.RequiredFields** | `SampleId`, `SampleReadout`, `UniqueSampleKey`, `SampleType`, `AssayVersion`, `ProcessStepsId`, `SoftwareVersion`, `PlateId`, `WellPosition`, `HybNormStatus`, `RowCheckStatus` present |
+| **RowData.NoRemovedFields** | `PlatePosition`, `HybControlNormScale`, `HybNorm_1_ScaleFactor`, `RowCheck`, `StudyId`, `Barcode2d`, legacy `_PassFlag` fields, etc. absent |
 | **RowData.SampleReadout** | Values are `"Array"` / `"NGS"`; consistent with `AssayType` header |
-| **RowData.UniqueSampleKey** | GUIDs, all unique |
+| **RowData.UniqueSampleKey** | GUIDs (FAIL on bad format), all unique |
 | **RowData.ProcessStepsId** | All values resolve to keys in `ProcessSteps` header JSON |
 | **RowData.RowCheckStatus** | Values are `"PASS"`, `"FLAG"`, or `"LEAK"` |
-| **DataMatrix** | No negative RFU values; NaN% reported (expected for SeqId union) |
+| **DataMatrix** | No negative RFU values (FAIL); NaN% reported (expected for SeqId union) |
 
 WARN (not FAIL) is used for checks that indicate likely issues but may have valid exceptions
-(e.g., missing `UniqueSampleKey`, `AdatId` GUID pattern, NGS-specific fields not present).
+(e.g., `AdatId` GUID pattern, missing reference columns, NGS-specific fields not present).
 
 ## Interpreting the output
 
