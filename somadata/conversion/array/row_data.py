@@ -91,9 +91,9 @@ _NGS_ONLY_FIELDS: list[str] = [
     'CrossPlateMedNormIntScaleFactor',
     'InstrumentType',
     'Flowcell',
-    'YieldDemux',
-    'YieldQ30Demux',
-    'Q30WeightedMean',
+    'RunYieldDemux',
+    'RunYieldQ30Demux',
+    'RunQ30WeightedMean',
 ]
 
 # SampleTypes that should have ControlId populated from SampleId.

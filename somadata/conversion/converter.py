@@ -768,8 +768,7 @@ def _merge_v2_combined_adats(
     """Merge two existing v2.0 ADATs into a single v2.0 output.
 
     Both inputs are already in v2.0 format. Derive output AssayType from
-    the union of SampleReadout values. For NGS-only pairs, validate that
-    ProcessSteps are identical.
+    the union of SampleReadout values.
     """
     # 1. Derive output AssayType from SampleReadout union
     readout_a = set(adat_a.index.get_level_values('SampleReadout'))

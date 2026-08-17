@@ -10,6 +10,17 @@ from somadata.conversion.errors import ConversionError
 if TYPE_CHECKING:
     from somadata.adat import Adat
 
+# These header fields are optional — present in single-run ADATs but absent when DPQ
+# combines multiple runs (e.g. ICM merged outputs). If missing, the corresponding
+# ROW_DATA columns are created with empty values rather than raising an error.
+# Exported so that row_data and context modules can reference the same set.
+OPTIONAL_HEADER_FIELDS: frozenset[str] = frozenset({
+    'RunId',
+    'YieldDemux',
+    'YieldQ30Demux',
+    'Q30WeightedMean',
+})
+
 
 def validate_source_ngs_adat(adat: Adat) -> None:
     """Validate that *adat* meets NGS v1.x → v2.0 conversion requirements.
@@ -44,15 +55,8 @@ def validate_source_ngs_adat(adat: Adat) -> None:
         'Flowcell': 'Flowcell identifier',
     }
 
-    # These fields are optional — present in single-run ADATs but absent when DPQ
-    # combines multiple runs (e.g. ICM merged outputs). If missing, the corresponding
-    # ROW_DATA columns are created with empty values rather than raising an error.
-    _OPTIONAL_FIELDS = {
-        'RunId',
-        'YieldDemux',
-        'YieldQ30Demux',
-        'Q30WeightedMean',
-    }
+    # Fields in OPTIONAL_HEADER_FIELDS are skipped here; their absence is handled
+    # gracefully by the row_data/context modules (empty strings instead of errors).
 
     missing = []
     for field, description in required_fields.items():

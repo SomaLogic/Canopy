@@ -397,8 +397,9 @@ class MedNormValidator:
         if len(mismatches) > 10:
             detail += f'\n  ... and {len(mismatches) - 10} more'
         raise MedNormMismatchError(
-            f'Ref.MedNormExt reference vectors are not identical for shared SeqIds '
-            f'(NGS-only merges require exact Ref.MedNormExt match across sources). '
+            f'Ref.MedNormExt reference vectors are not equivalent for shared SeqIds '
+            f'(NGS-only merges require near-exact Ref.MedNormExt match across sources; '
+            f'float representation noise is tolerated but meaningful differences are not). '
             f'Mismatches ({len(mismatches)} total):\n  {detail}\n'
             f'Provide med_norm_ref to override.'
         )
