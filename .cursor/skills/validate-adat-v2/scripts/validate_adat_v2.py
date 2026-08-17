@@ -29,11 +29,12 @@ from somadata.adat import Adat
 V2_FILE_VERSION = '2.0'
 
 # All header fields defined in spec Section 2.3, mapped to their type.
+# NOTE: AssayVersion was *removed* from the header in v2.0 (spec §3.2.1 / §3.3.1);
+# it now lives in the sample table (ROW_DATA) and is NOT a header field.
 V2_HEADER_FIELDS: dict[str, str] = {
     'FileVersion': 'String',
     'AdatId': 'String',
     'AssayType': 'String',
-    'AssayVersion': 'String',
     'UseRestriction': 'String',
     'SourceFile': 'JSON',
     'SOMAmerReferenceSource': 'String',
@@ -57,7 +58,6 @@ V2_HEADER_REQUIRED: set[str] = {
     'FileVersion',
     'AdatId',
     'AssayType',
-    'AssayVersion',
     'UseRestriction',
     'SOMAmerReferenceSource',
     'FileCreatedDate',

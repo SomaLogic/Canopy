@@ -36,7 +36,7 @@ def _make_v2_adat(
         'FileVersion': '2.0',
         'AdatId': 'GID-test-0001',
         'AssayType': 'Array',
-        'AssayVersion': 'v5.0',
+        # AssayVersion was removed from header in v2.0 (spec §3.2.1); it lives in ROW_DATA
         'UseRestriction': 'Research Use Only',
         'SourceFile': '',
         'SOMAmerReferenceSource': '2025-04-10',

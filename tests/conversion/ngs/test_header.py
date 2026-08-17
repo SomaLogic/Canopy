@@ -124,25 +124,26 @@ class TestConvertNGSHeader:
         assert result['ReportConfig'] == ''
 
     def test_maps_assay_version_6k(self, minimal_ngs_adat):
+        # AssayVersion is no longer in the header (spec §3.3.1 moves it to ROW_DATA).
         adat = minimal_ngs_adat
         adat.header_metadata['!AssayVersion'] = '6k'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        assert result['AssayVersion'] == 'v1'
+        assert 'AssayVersion' not in result
 
     def test_maps_assay_version_9k_tms(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         adat.header_metadata['!AssayVersion'] = '9k TMS'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        assert result['AssayVersion'] == 'v2'
+        assert 'AssayVersion' not in result
 
     def test_maps_assay_version_calypso(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         adat.header_metadata['!AssayVersion'] = 'Calypso'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        assert result['AssayVersion'] == 'v4'
+        assert 'AssayVersion' not in result
 
     def test_pass_through_title(self, minimal_ngs_adat):
         adat = minimal_ngs_adat

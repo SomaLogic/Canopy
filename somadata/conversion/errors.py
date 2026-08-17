@@ -29,3 +29,7 @@ class ProcessStepsMismatchError(ConversionError):
 
 class UnrecognizedFormatError(ConversionError):
     """Raised when an Adat cannot be classified as any known input type."""
+
+
+class DilutionMismatchError(ConversionError):
+    """Raised when shared SeqIds have differing Dilution values across source ADATs."""

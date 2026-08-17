@@ -343,6 +343,19 @@ def convert_array_row_data(
     # ------------------------------------------------------------------
     out_levels['SampleReadout'] = ['Array'] * n_rows
 
+    # AssayVersion: spec §3.2.1 — move from header to sample table.
+    # Format: "SomaScan <AssayVersion>" (e.g. "SomaScan v5.0").
+    raw_assay_version = lookup_header(getattr(adat, 'header_metadata', {}), 'AssayVersion')
+    if raw_assay_version:
+        assay_version_val = f'SomaScan {raw_assay_version}'
+    else:
+        assay_version_val = ''
+    out_levels['AssayVersion'] = [assay_version_val] * n_rows
+
+    # MasterMixVersion: spec §3.2.1 — move MasterMixLot from header to sample table.
+    raw_master_mix = lookup_header(getattr(adat, 'header_metadata', {}), 'MasterMixLot')
+    out_levels['MasterMixVersion'] = [raw_master_mix or ''] * n_rows
+
     # Only generate for missing/blank keys
     if 'UniqueSampleKey' in out_levels:
         # Some keys may already exist; only generate for missing/blank

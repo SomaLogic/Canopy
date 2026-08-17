@@ -35,7 +35,6 @@ _PASS_THROUGH_FIELDS = (
     'StudyOrganism',
     'StudyMatrix',
     'UseRestriction',
-    'AssayVersion',
 )
 
 # ---------------------------------------------------------------------------
@@ -115,6 +114,12 @@ def convert_array_header(
         val = lookup_header(hdr, field)
         if val:
             out[field] = val
+
+    # UseRestriction is required (Value Required = True in spec §2.3).
+    # Fall back to the canonical default prescribed in spec §2.3 Table 2
+    # when the source ADAT lacks it.
+    if not out.get('UseRestriction'):
+        out['UseRestriction'] = 'Research Use Only'
 
     # ------------------------------------------------------------------
     # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}

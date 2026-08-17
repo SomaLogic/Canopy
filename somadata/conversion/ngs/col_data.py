@@ -268,10 +268,11 @@ def convert_ngs_col_data(adat: Adat, matrix: str = '') -> pd.MultiIndex:
 
     # ------------------------------------------------------------------
     # 4. Normalise missing-value sentinels for String-typed fields.
-    #    Legacy NGS COL_DATA sometimes contains "N/A" or "NA" in string
-    #    fields.  v2.0 spec mandates empty strings for missing string values.
+    #    Legacy NGS COL_DATA sometimes contains "N/A", "NA", or "nan"
+    #    in string fields.  v2.0 spec mandates empty strings for missing
+    #    string values.
     # ------------------------------------------------------------------
-    _NA_SENTINELS = frozenset({'n/a', 'na'})
+    _NA_SENTINELS = frozenset({'n/a', 'na', 'nan'})
     for i, (name, values) in enumerate(zip(new_names, new_arrays)):
         if v2_col_field_type(name) is FieldType.STRING:
             new_arrays[i] = [

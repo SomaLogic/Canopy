@@ -457,9 +457,6 @@ class HeaderMerger:
         )
         out['AdatId'] = generate_guid()
 
-        if header_a.get('AssayVersion'):
-            out['AssayVersion'] = header_a['AssayVersion']
-
         sf_a = header_a.get('SourceFile') or {}
         sf_b = header_b.get('SourceFile') or {}
         merged_sf: dict = {}
@@ -563,11 +560,6 @@ class HeaderMerger:
             '%Y-%m-%dT%H:%M:%SZ'
         )
         out['AdatId'] = generate_guid()
-
-        if header_a.get('AssayVersion'):
-            out['AssayVersion'] = header_a['AssayVersion']
-        elif header_b.get('AssayVersion'):
-            out['AssayVersion'] = header_b['AssayVersion']
 
         sf_a = header_a.get('SourceFile') or {}
         sf_b = header_b.get('SourceFile') or {}

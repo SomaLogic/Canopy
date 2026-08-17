@@ -45,10 +45,13 @@ _PASS_THROUGH_FIELDS = (
 # AssayVersion mapping for NGS platforms
 # ---------------------------------------------------------------------------
 _NGS_ASSAY_VERSION_MAP = {
-    '6k': 'v1',
-    '9k TMS': 'v2',
-    '9k xTMS': 'v3',
-    'Calypso': 'v4',
+    '6k': 'SomaSeq v1',
+    '9k TMS': 'SomaSeq v2',
+    '9k xTMS': 'SomaSeq v3',
+    'Calypso': 'SomaSeq v4',
+    # Alternative forms seen in production ADATs
+    'Illumina Protein Prep 9k': 'SomaSeq v2',
+    'IPP 9k': 'SomaSeq v2',
 }
 
 
@@ -108,6 +111,11 @@ def convert_ngs_header(
         if val:
             out[field] = val
 
+    # UseRestriction is required (Value Required = True in spec §2.3).
+    # Fall back to the canonical default when the source ADAT lacks it.
+    if not out.get('UseRestriction'):
+        out['UseRestriction'] = 'Research Use Only'
+
     # ------------------------------------------------------------------
     # 3. SourceFile JSON  {"1": {"AdatId": "<old>"}} or {"1": {"md5sum": "<hash>"}}
     #    Priority: AdatId > file checksum > in-memory checksum (prefixed "mem.")
@@ -131,13 +139,6 @@ def convert_ngs_header(
     # 5. ReportConfig  →  blank for NGS (uses separate YAML file)
     # ------------------------------------------------------------------
     out['ReportConfig'] = ''
-
-    # ------------------------------------------------------------------
-    # 6. AssayVersion mapping for NGS platforms
-    # ------------------------------------------------------------------
-    raw_version = lookup_header(hdr, 'AssayVersion')
-    if raw_version:
-        out['AssayVersion'] = _NGS_ASSAY_VERSION_MAP.get(raw_version, raw_version)
 
     # ------------------------------------------------------------------
     # 7. NGS-specific JSON consolidations

@@ -42,7 +42,7 @@ def _make_minimal_v2_adat(
         'FileVersion': '2.0',
         'AdatId': 'GID-test-reader-001',
         'AssayType': 'Array',
-        'AssayVersion': 'v5.0',
+        # AssayVersion was removed from header in v2.0 (spec §3.2.1); it lives in ROW_DATA
         'UseRestriction': 'Research Use Only',
         'SourceFile': '',
         'SOMAmerReferenceSource': '2025-04-10',
@@ -217,7 +217,7 @@ class TestV2ReaderDispatch:
                 'StudyMatrix': 'CSF',
                 'StudyOrganism': 'Mouse',
                 'SOMAmerReferenceSource': '2025-01-01',
-                'AssayVersion': 'v4.1',
+                # AssayVersion removed from header in v2.0 (spec §3.2.1); lives in ROW_DATA
                 'UseRestriction': 'RUO',
             }
         )
@@ -234,7 +234,8 @@ class TestV2ReaderDispatch:
 
 
 class TestV2TypeValidationInteger:
-    def test_non_integer_float_warns(self, caplog):
+    def test_non_integer_float_written_as_na(self):
+        """A float value in an Integer field is written as NA (missing) per spec §2.2."""
         adat = _make_minimal_v2_adat(
             row_names=['SampleId', 'SampleType', 'PlateId', 'Subarray'],
             row_values=[
@@ -246,11 +247,17 @@ class TestV2TypeValidationInteger:
         )
         buf = io.StringIO()
         write_adat(adat, buf)
-        buf.seek(0)
-        with caplog.at_level(logging.WARNING, logger='somadata.io.adat.file'):
-            read_adat(buf)
-        messages = [r.message for r in caplog.records]
-        assert any('Subarray' in m and 'Integer' in m for m in messages)
+        rt_buf = io.StringIO(buf.getvalue())
+        rt = read_adat(rt_buf)
+        # The non-integer float '3.5' should be written as NA; read back as 'NA'.
+        subarray_vals = list(rt.index.get_level_values('Subarray'))
+        assert subarray_vals[0] == 'NA', (
+            f'Expected NA for non-integer Subarray value, got: {subarray_vals[0]!r}'
+        )
+        # The integer '3' should come through normally.
+        assert subarray_vals[1] == '3', (
+            f'Expected "3" for integer Subarray value, got: {subarray_vals[1]!r}'
+        )
 
     def test_non_numeric_integer_warns(self, caplog):
         adat = _make_minimal_v2_adat(

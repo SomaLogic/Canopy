@@ -146,7 +146,8 @@ def test_pass_through_use_restriction(result):
 
 
 def test_pass_through_assay_version(result):
-    assert result['AssayVersion'] == 'V4'
+    # AssayVersion is no longer in the header (spec §3.2.1 moves it to ROW_DATA).
+    assert 'AssayVersion' not in result
 
 
 def test_bang_prefix_stripped_on_lookup(result):

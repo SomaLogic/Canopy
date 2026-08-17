@@ -22,6 +22,7 @@ from somadata.conversion.merge import (
     _merge_col_data,
     compute_seqid_union,
     merge_mixed_headers,
+    validate_dilution_alignment,
     validate_mednorm_compatibility,
 )
 from somadata.conversion.ngs import NGSConversionContext
@@ -52,7 +53,6 @@ _NGS_SPACE_TYPES: frozenset[InputType] = frozenset(
 
 def to_v2_adat(
     adats: list[str | Adat],
-    med_norm_ref: str | None = None,
 ) -> Adat:
     """Convert one or two pre-v2.0 ADATs (or file paths) into a single v2.0 Adat.
 
@@ -63,11 +63,6 @@ def to_v2_adat(
         ``.adat`` file or an already-loaded :class:`~somadata.adat.Adat`
         object (mixed allowed).  Paths are read via the existing
         :func:`~somadata.io.adat.file.read_adat` function.
-    med_norm_ref : str or None, optional
-        MedNorm reference identifier used to resolve a mismatch between
-        ``Ref.MedNormExt`` vectors when merging two sources. When
-        ``None`` (default) both sources must carry identical reference
-        vectors.
 
     Returns
     -------
@@ -107,7 +102,7 @@ def to_v2_adat(
             raise UnsupportedCombinationError(
                 f'Unsupported input combination: {input_type.value}.'
             )
-        return handler(adat, md5sum=md5sum, med_norm_ref=med_norm_ref)
+        return handler(adat, md5sum=md5sum)
 
     # Two inputs
     adat_a, md5_a = loaded[0]
@@ -140,7 +135,7 @@ def to_v2_adat(
             f'Unsupported input combination: {type_a.value} + {type_b.value}.'
         )
     return handler(
-        adat_a, adat_b, md5sum_a=md5_a, md5sum_b=md5_b, med_norm_ref=med_norm_ref
+        adat_a, adat_b, md5sum_a=md5_a, md5sum_b=md5_b
     )
 
 
@@ -184,7 +179,6 @@ def _merge_bridged_array_and_ngs(
     *,
     md5sum_a: str | None,
     md5sum_b: str | None,
-    med_norm_ref: str | None,
 ) -> Adat:
     """Merge a bridged array ADAT and a native NGS ADAT into a Mixed v2.0 output."""
     # 1. Identify which input is array and which is NGS (order-independent)
@@ -197,10 +191,8 @@ def _merge_bridged_array_and_ngs(
         md5_array, md5_ngs = md5sum_b, md5sum_a
 
     # 2. Validate MedNorm compatibility on raw (pre-conversion) inputs;
-    # returns which source's Ref.MedNormExt.* values to use if overridden
-    mednorm_ref_source = validate_mednorm_compatibility(
-        raw_array, raw_ngs, med_norm_ref=med_norm_ref
-    )
+    # Ref.MedNormExt.* values must be identical across both sources (no override).
+    validate_mednorm_compatibility(raw_array, raw_ngs)
 
     # 3. Build conversion contexts; assign source IDs for Mixed output
     array_ctx = ArrayConversionContext.from_adat(
@@ -241,9 +233,13 @@ def _merge_bridged_array_and_ngs(
         header_metadata=ngs_header_v2,
     )
 
+    # 4b. Validate Dilution alignment: after array ÷100 conversion all shared
+    # SeqIds must have matching Dilution values (spec §3.4).
+    validate_dilution_alignment(array_intermediate, ngs_intermediate)
+
     # 5. Compute SeqId union and merged COL_DATA
     rfu_df, merged_columns = compute_seqid_union(
-        array_intermediate, ngs_intermediate, mednorm_ref_source=mednorm_ref_source
+        array_intermediate, ngs_intermediate
     )
 
     # 6. Merge headers into final Mixed header
@@ -278,7 +274,6 @@ def _merge_bridged_array_and_v2(
     *,
     md5sum_a: str | None,
     md5sum_b: str | None,
-    med_norm_ref: str | None,
 ) -> Adat:
     """Merge a bridged array ADAT and an existing v2.0 ADAT into a Mixed v2.0 output.
 
@@ -307,11 +302,9 @@ def _merge_bridged_array_and_v2(
     v2_has_mednorm = MedNormValidator.has_mednorm_ext_v2(v2_adat.header_metadata)
 
     if array_has_mednorm and v2_has_mednorm:
-        mednorm_ref_source = MedNormValidator.validate_with_v2(
-            raw_array, v2_adat, med_norm_ref=med_norm_ref
+        MedNormValidator.validate_with_v2(
+            raw_array, v2_adat, med_norm_ref=None
         )
-    else:
-        mednorm_ref_source = None
 
     # 4. Convert array source to v2.0
     array_ctx = ArrayConversionContext.from_adat(
@@ -375,7 +368,7 @@ def _merge_bridged_array_and_v2(
         # Simple case: array_intermediate is array, v2_adat is NGS (or both array)
         # Order is correct: array first, NGS second
         rfu_df, merged_columns = compute_seqid_union(
-            array_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            array_intermediate, v2_adat
         )
     else:
         # v2_adat is Mixed: contains both Array and NGS rows
@@ -417,7 +410,6 @@ def _merge_bridged_array_and_v2(
             array_intermediate.columns,
             v2_array_part.columns,
             union_array_seqids,
-            mednorm_ref_source=None,
         )
 
         # Build combined array Adat
@@ -430,7 +422,7 @@ def _merge_bridged_array_and_v2(
 
         # Now merge combined array with NGS part using compute_seqid_union
         rfu_df, merged_columns = compute_seqid_union(
-            combined_array, v2_ngs_part, mednorm_ref_source=mednorm_ref_source
+            combined_array, v2_ngs_part
         )
 
         # Update row indexes to reflect the split
@@ -476,7 +468,6 @@ def _merge_ngs_and_v2(
     *,
     md5sum_a: str | None,
     md5sum_b: str | None,
-    med_norm_ref: str | None,
 ) -> Adat:
     """Merge a native NGS ADAT and an existing v2.0 ADAT into a Mixed or NGS v2.0 output.
 
@@ -505,11 +496,9 @@ def _merge_ngs_and_v2(
     v2_has_mednorm = MedNormValidator.has_mednorm_ext_v2(v2_adat.header_metadata)
 
     if ngs_has_mednorm and v2_has_mednorm:
-        mednorm_ref_source = MedNormValidator.validate_with_v2(
-            raw_ngs, v2_adat, med_norm_ref=med_norm_ref
+        MedNormValidator.validate_with_v2(
+            raw_ngs, v2_adat, med_norm_ref=None
         )
-    else:
-        mednorm_ref_source = None
 
     # 4. Convert NGS source to v2.0
     ngs_ctx = NGSConversionContext.from_adat(raw_ngs, source_file_md5sum=md5_ngs)
@@ -565,13 +554,13 @@ def _merge_ngs_and_v2(
         # Both inputs are NGS-only: use compute_seqid_union normally
         # (parameter names are misleading but function works for same-type merges)
         rfu_df, merged_columns = compute_seqid_union(
-            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            ngs_intermediate, v2_adat
         )
     elif v2_readouts == {'NGS'}:
         # v2 is NGS-only, output is Mixed: ngs_intermediate + v2_adat (both NGS)
         # We have no array data, so use compute_seqid_union with ngs first
         rfu_df, merged_columns = compute_seqid_union(
-            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            ngs_intermediate, v2_adat
         )
     elif 'Array' in v2_readouts:
         # v2 contains Array rows (could be Array-only or Mixed)
@@ -613,7 +602,6 @@ def _merge_ngs_and_v2(
                 ngs_intermediate.columns,
                 v2_ngs_part.columns,
                 union_ngs_seqids,
-                mednorm_ref_source=None,
             )
 
             combined_ngs = AdatClass(
@@ -626,7 +614,7 @@ def _merge_ngs_and_v2(
             # Now merge v2_array_part with combined_ngs using compute_seqid_union
             # (array first, NGS second)
             rfu_df, merged_columns = compute_seqid_union(
-                v2_array_part, combined_ngs, mednorm_ref_source=mednorm_ref_source
+                v2_array_part, combined_ngs
             )
 
             # Update row indexes: array first (v2_array_index), then NGS (combined_ngs.index)
@@ -637,7 +625,7 @@ def _merge_ngs_and_v2(
         else:
             # v2 is Array-only: call compute_seqid_union(v2_array_part, ngs_intermediate)
             rfu_df, merged_columns = compute_seqid_union(
-                v2_array_part, ngs_intermediate, mednorm_ref_source=mednorm_ref_source
+                v2_array_part, ngs_intermediate
             )
             # Update row indexes: array first, NGS second
             v2_index_remapped = v2_array_index
@@ -646,7 +634,7 @@ def _merge_ngs_and_v2(
     else:
         # Shouldn't reach here, but handle gracefully
         rfu_df, merged_columns = compute_seqid_union(
-            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            ngs_intermediate, v2_adat
         )
 
     # 7. Merge headers
@@ -742,7 +730,7 @@ def _merge_native_arrays(
 
     # 4. Compute SeqId union
     rfu_df, merged_columns = compute_seqid_union(
-        intermediate_a, intermediate_b, mednorm_ref_source=None
+        intermediate_a, intermediate_b
     )
 
     # 5. Merge headers (Array + Array → Array output)
@@ -777,7 +765,6 @@ def _merge_v2_combined_adats(
     *,
     md5sum_a: str | None,
     md5sum_b: str | None,
-    med_norm_ref: str | None,
 ) -> Adat:
     """Merge two existing v2.0 ADATs into a single v2.0 output.
 
@@ -806,15 +793,13 @@ def _merge_v2_combined_adats(
     b_has_mednorm = MedNormValidator.has_mednorm_ext_v2(adat_b.header_metadata)
 
     if a_has_mednorm and b_has_mednorm:
-        mednorm_ref_source = MedNormValidator.validate_v2_pair(
-            adat_a, adat_b, med_norm_ref=med_norm_ref
+        MedNormValidator.validate_v2_pair(
+            adat_a, adat_b, med_norm_ref=None
         )
-    else:
-        mednorm_ref_source = None
 
     # 4. Compute SeqId union and merged COL_DATA
     rfu_df, merged_columns = compute_seqid_union(
-        adat_a, adat_b, mednorm_ref_source=mednorm_ref_source
+        adat_a, adat_b
     )
 
     # 4. Merge headers - this renumbers SourceFile/ProcessSteps/ReportConfig keys
@@ -896,14 +881,14 @@ def _merge_v2_combined_adats(
 
 
 def _convert_bridged_array(
-    adat: Adat, *, md5sum: str | None, med_norm_ref: str | None
+    adat: Adat, *, md5sum: str | None
 ) -> Adat:
     """Convert a single bridged array ADAT to Array v2.0 format."""
     return _run_array_conversion(adat, md5sum=md5sum)
 
 
 def _convert_native_array(
-    adat: Adat, *, md5sum: str | None, med_norm_ref: str | None
+    adat: Adat, *, md5sum: str | None
 ) -> Adat:
     """Convert a single native array ADAT to Array v2.0 format."""
     return _run_array_conversion(adat, md5sum=md5sum)
@@ -977,7 +962,7 @@ def _assemble_v2_adat(
 
 
 def _convert_native_ngs(
-    adat: Adat, *, md5sum: str | None, med_norm_ref: str | None
+    adat: Adat, *, md5sum: str | None
 ) -> Adat:
     """Convert a single native NGS ADAT to NGS v2.0 format."""
     return _run_ngs_conversion(adat, md5sum=md5sum)
@@ -1034,6 +1019,9 @@ _APPROVED_PAIR_CONVERSIONS: dict = {
     ): _merge_bridged_array_and_v2,
     frozenset({InputType.NATIVE_NGS, InputType.V2_COMBINED}): _merge_ngs_and_v2,
     (InputType.NATIVE_ARRAY, InputType.NATIVE_ARRAY): _merge_native_arrays,
+    # Two bridged arrays (e.g. Plasma + CSF from different studies) use the same
+    # merge path as native arrays — both are converted to v2.0 then merged.
+    (InputType.BRIDGED_ARRAY, InputType.BRIDGED_ARRAY): _merge_native_arrays,
     (InputType.V2_COMBINED, InputType.V2_COMBINED): _merge_v2_combined_adats,
 }
 

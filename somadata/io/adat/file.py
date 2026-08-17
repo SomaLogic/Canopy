@@ -553,6 +553,9 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     # --- ^COL_DATA ---
     column_names = list(adat.columns.names)
     column_types = [_v2_col_field_type(name) for name in column_names]
+    _decimal_col_fields = frozenset(
+        name for name, t in zip(column_names, column_types) if t == FieldType.DECIMAL
+    )
 
     writer.writerow(['^COL_DATA'])
     writer.writerow(['Name'] + column_names)
@@ -566,11 +569,16 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     writer.writerow(['Name'] + row_names)
     writer.writerow(['Type'] + row_types)
 
-    # Precompute which row fields are Integer-typed for formatting in the data loop.
+    # Precompute which row fields are Integer or Decimal-typed for NA substitution.
     _integer_row_fields = frozenset(
         name
         for name in row_names
         if row_types[row_names.index(name)] == FieldType.INTEGER
+    )
+    _decimal_row_fields = frozenset(
+        name
+        for name in row_names
+        if row_types[row_names.index(name)] == FieldType.DECIMAL
     )
 
     # --- ^TABLE_BEGIN ---
@@ -580,6 +588,24 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
     column_offset = [None] * len(row_names)
     for column_name in column_names:
         column_data = list(adat.columns.get_level_values(column_name))
+        col_ftype = _v2_col_field_type(column_name)
+        if column_name in _decimal_col_fields:
+            # Blank/nan values for Decimal fields → "NA" per spec §2.2.
+            column_data = [
+                'NA' if (isinstance(v, str) and v.strip() in ('', 'NA', 'nan', 'NaN'))
+                or (isinstance(v, float) and math.isnan(v))
+                else v
+                for v in column_data
+            ]
+        elif col_ftype == FieldType.STRING:
+            # nan sentinels in String fields (e.g. introduced by annotations xlsx)
+            # must be written as '' per spec §2.2.
+            column_data = [
+                '' if (isinstance(v, float) and math.isnan(v))
+                or (isinstance(v, str) and v.strip().lower() in ('nan', 'n/a', 'na'))
+                else v
+                for v in column_data
+            ]
         writer.writerow(column_offset + [column_name] + column_data)
 
     # Write the row metadata header line
@@ -593,12 +619,24 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
             val = adat.index.get_level_values(name)[i]
             if name in _integer_row_fields:
                 # Coerce float-like integer values (e.g. 1234.0 → 1234).
-                try:
-                    fval = float(val)
-                    if not math.isnan(fval) and fval.is_integer():
-                        val = int(fval)
-                except (TypeError, ValueError):
-                    pass
+                # Blank/NA → "NA" per spec §2.2.
+                str_val = str(val) if not isinstance(val, str) else val
+                if str_val.strip() in ('', 'NA', 'nan', 'NaN'):
+                    val = 'NA'
+                else:
+                    try:
+                        fval = float(val)
+                        if not math.isnan(fval) and fval.is_integer():
+                            val = int(fval)
+                        else:
+                            val = 'NA'
+                    except (TypeError, ValueError):
+                        pass
+            elif name in _decimal_row_fields:
+                # Blank/NA → "NA" per spec §2.2.
+                str_val = str(val) if not isinstance(val, str) else val
+                if str_val.strip() in ('', 'NA', 'nan', 'NaN'):
+                    val = 'NA'
             row_meta.append(val)
 
         if round_rfu:

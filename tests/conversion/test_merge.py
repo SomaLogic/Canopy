@@ -173,57 +173,6 @@ class TestComputeSeqidUnion:
         with pytest.raises(ValueError, match='SeqId'):
             compute_seqid_union(bad, good)
 
-    def test_mednorm_ref_source_ngs_uses_ngs_values_for_shared_seqids(self):
-        """When mednorm_ref_source='ngs', NGS Ref.MedNormExt.* values win for shared SeqIds."""
-        shared = ['A', 'B']
-        array_adat = _make_converted_adat(
-            shared + ['C'],  # C is array-only
-            extra_levels={
-                'Ref.MedNormExt.Plasma': ['ARRAY-VAL-A', 'ARRAY-VAL-B', 'ARRAY-VAL-C'],
-            },
-        )
-        ngs_adat = _make_converted_adat(
-            shared + ['D'],  # D is NGS-only
-            extra_levels={
-                'Ref.MedNormExt.Plasma': ['NGS-VAL-A', 'NGS-VAL-B', 'NGS-VAL-D'],
-            },
-        )
-
-        _, merged_cols = compute_seqid_union(array_adat, ngs_adat, mednorm_ref_source='ngs')
-
-        union_seqids = list(merged_cols.get_level_values('SeqId'))
-        ref_vals = dict(zip(union_seqids, merged_cols.get_level_values('Ref.MedNormExt.Plasma')))
-
-        # Shared SeqIds: NGS value wins
-        assert ref_vals['A'] == 'NGS-VAL-A'
-        assert ref_vals['B'] == 'NGS-VAL-B'
-        # Array-only SeqId: array value preserved
-        assert ref_vals['C'] == 'ARRAY-VAL-C'
-        # NGS-only SeqId: NGS value preserved
-        assert ref_vals['D'] == 'NGS-VAL-D'
-
-    def test_mednorm_ref_source_array_uses_array_values(self):
-        """When mednorm_ref_source='array' (or None), array values win for shared SeqIds."""
-        shared = ['A', 'B']
-        array_adat = _make_converted_adat(
-            shared,
-            extra_levels={'Ref.MedNormExt.Plasma': ['ARRAY-VAL-A', 'ARRAY-VAL-B']},
-        )
-        ngs_adat = _make_converted_adat(
-            shared,
-            extra_levels={'Ref.MedNormExt.Plasma': ['NGS-VAL-A', 'NGS-VAL-B']},
-        )
-
-        for source in ('array', None):
-            _, merged_cols = compute_seqid_union(
-                array_adat, ngs_adat, mednorm_ref_source=source
-            )
-            union_seqids = list(merged_cols.get_level_values('SeqId'))
-            ref_vals = dict(
-                zip(union_seqids, merged_cols.get_level_values('Ref.MedNormExt.Plasma'))
-            )
-            assert ref_vals['A'] == 'ARRAY-VAL-A'
-            assert ref_vals['B'] == 'ARRAY-VAL-B'
 
 
 # ===========================================================================
@@ -261,37 +210,35 @@ class TestValidateMednormCompatibility:
     def test_mismatched_refs_raise_mednorm_error(self):
         """Mismatched Ref.MedNormExt values should raise MedNormMismatchError."""
         array_adat = make_bridged_array_with_mednorm(
-            mednorm_ext_values=['REF-1', 'REF-2']
+            mednorm_ext_values=[1200.0, 950.0]
         )
         ngs_adat = make_full_legacy_ngs_adat(
-            mednorm_ext_values=['REF-1', 'DIFFERENT']
+            mednorm_ext_values=[1200.0, 999.9]
         )
         with pytest.raises(MedNormMismatchError, match='Ref.MedNormExt'):
             validate_mednorm_compatibility(array_adat, ngs_adat)
 
     def test_med_norm_ref_override_resolves_mismatch(self):
-        """A valid med_norm_ref identifier resolves mismatch without error."""
+        """With no override mechanism, a mismatch always raises MedNormMismatchError."""
         array_adat = make_bridged_array_with_mednorm(
-            mednorm_ext_values=['REF-A', 'REF-B']
+            mednorm_ext_values=[1200.0, 950.0]
         )
         ngs_adat = make_full_legacy_ngs_adat(
-            mednorm_ext_values=['REF-A', 'DIFFERENT']
+            mednorm_ext_values=[1200.0, 999.9]
         )
-        # Both sources have Ref.MedNorm.Id = 'MEDNORM-REF-001'
-        # Should not raise because override matches
-        validate_mednorm_compatibility(
-            array_adat, ngs_adat, med_norm_ref='MEDNORM-REF-001'
-        )
+        # spec §3.4: mismatched Ref.MedNormExt must raise — no override allowed
+        with pytest.raises(MedNormMismatchError, match='Ref.MedNormExt'):
+            validate_mednorm_compatibility(array_adat, ngs_adat)
 
     def test_med_norm_ref_returns_none_when_vectors_identical(self):
         """validate_mednorm_compatibility returns None when no mismatch exists."""
         array_adat = make_bridged_array_with_mednorm()
         ngs_adat = make_full_legacy_ngs_adat()
-        result = validate_mednorm_compatibility(array_adat, ngs_adat)
-        assert result is None
+        # Should not raise when vectors are identical
+        validate_mednorm_compatibility(array_adat, ngs_adat)
 
     def test_med_norm_ref_returns_array_when_override_matches_array(self):
-        """Returns 'array' when med_norm_ref matches the array source's Ref.MedNorm.Id."""
+        """Mismatch always raises; override behavior is no longer supported."""
         import pandas as pd
         from somadata.adat import Adat
         from tests.conversion.conftest import BRIDGED_STEPS, NGS_BRIDGED_STEPS
@@ -307,7 +254,7 @@ class TestValidateMednormCompatibility:
             columns=array_cols,
             header_metadata={'!ProcessSteps': BRIDGED_STEPS},
         )
-        # NGS source with Ref.MedNorm.Id = 'NGS-REF' and different values
+        # NGS source with different values — mismatch → must raise
         ngs_cols = pd.MultiIndex.from_arrays(
             [['10000-28', '10001-7'], ['1.0', '99.0'], ['NGS-REF', 'NGS-REF']],
             names=['SeqId', 'Ref.MedNormExt.Plasma', 'Ref.MedNorm.Id'],
@@ -318,11 +265,11 @@ class TestValidateMednormCompatibility:
             columns=ngs_cols,
             header_metadata={'!ProcessSteps': NGS_BRIDGED_STEPS},
         )
-        result = validate_mednorm_compatibility(array_adat, ngs_adat, med_norm_ref='ARRAY-REF')
-        assert result == 'array'
+        with pytest.raises(MedNormMismatchError):
+            validate_mednorm_compatibility(array_adat, ngs_adat)
 
     def test_med_norm_ref_returns_ngs_when_override_matches_ngs(self):
-        """Returns 'ngs' when med_norm_ref matches only the NGS source's Ref.MedNorm.Id."""
+        """Mismatch always raises; override behavior is no longer supported."""
         import pandas as pd
         from somadata.adat import Adat
         from tests.conversion.conftest import BRIDGED_STEPS, NGS_BRIDGED_STEPS
@@ -347,35 +294,137 @@ class TestValidateMednormCompatibility:
             columns=ngs_cols,
             header_metadata={'!ProcessSteps': NGS_BRIDGED_STEPS},
         )
-        result = validate_mednorm_compatibility(array_adat, ngs_adat, med_norm_ref='NGS-REF')
-        assert result == 'ngs'
+        with pytest.raises(MedNormMismatchError):
+            validate_mednorm_compatibility(array_adat, ngs_adat)
 
     def test_bad_med_norm_ref_raises(self):
-        """A med_norm_ref that matches neither source should raise."""
+        """Mismatch always raises MedNormMismatchError regardless of source IDs."""
         array_adat = make_bridged_array_with_mednorm(
-            mednorm_ext_values=['REF-A', 'REF-B']
+            mednorm_ext_values=[1200.0, 950.0]
         )
         ngs_adat = make_full_legacy_ngs_adat(
-            mednorm_ext_values=['REF-A', 'DIFFERENT']
+            mednorm_ext_values=[1200.0, 999.9]
         )
-        with pytest.raises(MedNormMismatchError, match='does not match any'):
-            validate_mednorm_compatibility(
-                array_adat, ngs_adat, med_norm_ref='NONEXISTENT-ID'
-            )
+        with pytest.raises(MedNormMismatchError, match='Ref.MedNormExt'):
+            validate_mednorm_compatibility(array_adat, ngs_adat)
 
     def test_no_shared_seqids_skips_vector_check(self):
         """Completely disjoint SeqId sets should skip MedNorm vector comparison."""
         array_adat = make_bridged_array_with_mednorm(
             shared_seqids=['10000-28'],
             array_only_seqids=['30000-01'],
-            mednorm_ext_values=['REF-1'],
+            mednorm_ext_values=[1200.0],
         )
         ngs_adat = make_full_legacy_ngs_adat(
             shared_seqids=['99999-01'],  # no overlap with array source
             ngs_only_seqids=['88888-01'],
-            mednorm_ext_values=['REF-X'],  # 1 value for 1 shared SeqId
+            mednorm_ext_values=[800.0],  # 1 value for 1 shared SeqId
         )
         # Should not raise — no shared SeqIds means no vector comparison
+        validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_numeric_mednorm_values_with_rounding_tolerance(self):
+        """Numeric MedNormExt values should use tolerance-based comparison.
+        
+        Real-world RFU reference values may differ slightly due to floating-point
+        precision from different computation paths (e.g., reading from different
+        file formats, intermediate rounding in pipelines). These should be
+        considered equal within a reasonable tolerance.
+        """
+        # Create ADATs with numeric MedNormExt values that differ by tiny amounts
+        # due to floating-point precision (not actual biological differences)
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=['30000-01'],
+            mednorm_ext_values=[1234.56789, 9876.54321],
+        )
+        
+        # Simulate slightly different values from NGS source due to rounding
+        # (difference of ~1e-12, within floating-point tolerance)
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=['20000-01'],
+            mednorm_ext_values=[1234.567890000001, 9876.543210000001],
+        )
+        
+        # Should not raise — values are identical within tolerance
+        validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_numeric_mednorm_values_outside_tolerance_raises(self):
+        """Numeric MedNormExt values that differ significantly should raise."""
+        array_adat = make_bridged_array_with_mednorm(
+            mednorm_ext_values=[1234.5, 9876.5],
+        )
+        
+        # Significant difference (0.1 units) should raise
+        ngs_adat = make_full_legacy_ngs_adat(
+            mednorm_ext_values=[1234.5, 9876.6],  # Different by 0.1
+        )
+        
+        with pytest.raises(MedNormMismatchError, match='Ref.MedNormExt'):
+            validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_missing_ngs_mednorm_values_skipped(self):
+        """SeqIds with missing/NA MedNormExt values in NGS should be skipped.
+        
+        Internal-use-only (IUO) SOMAmers or array-exclusive calibrators may
+        appear in both datasets but have no MedNormExt reference value in the
+        NGS source (e.g., NaN, blank, or 'NA'). These should not cause
+        validation failures.
+        """
+        # Create array ADAT with MedNormExt values for all SeqIds (including IUO)
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=['10002-9'],  # IUO analyte
+            mednorm_ext_values=[1234.5, 5678.9],  # Only for shared SeqIds
+        )
+        
+        # Create NGS ADAT with one extra SeqId that has a missing MedNormExt value
+        # The third SeqId (10002-9) appears in both, but NGS has blank/missing value
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=['10002-9'],  # Same IUO analyte
+            mednorm_ext_values=[1234.5, 5678.9],  # Only for first two
+        )
+        
+        # Manually add the third SeqId to NGS with blank MedNormExt
+        # (simulating an IUO analyte that exists in both but has no NGS MedNormExt ref)
+        # For now, this scenario is handled by SeqId filtering — the IUO analyte
+        # won't be in shared_seqids if it's in different lists. Let me revise...
+        
+        # Actually, create a simpler test: both have the same SeqIds, but NGS
+        # has a blank value for one
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=[],
+            mednorm_ext_values=[1234.5, 5678.9],
+        )
+        
+        # Manually modify NGS ADAT to have a blank MedNormExt for second SeqId
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=[],
+            mednorm_ext_values=[1234.5, ''],  # Second is blank (IUO)
+        )
+        
+        # Should not raise — missing NGS values are skipped
+        validate_mednorm_compatibility(array_adat, ngs_adat)
+
+    def test_na_string_mednorm_values_skipped(self):
+        """SeqIds with 'NA' string MedNormExt values should be skipped."""
+        array_adat = make_bridged_array_with_mednorm(
+            shared_seqids=['10000-28', '10001-7'],
+            array_only_seqids=[],
+            mednorm_ext_values=[1234.5, 'NA'],  # Second value is 'NA'
+        )
+
+        ngs_adat = make_full_legacy_ngs_adat(
+            shared_seqids=['10000-28', '10001-7'],
+            ngs_only_seqids=[],
+            mednorm_ext_values=[1234.5, 'NA'],  # Also 'NA'
+        )
+
+        # Should not raise — 'NA' values are treated as missing
         validate_mednorm_compatibility(array_adat, ngs_adat)
 
 
@@ -468,11 +517,12 @@ class TestMergeMixedHeaders:
         assert h['AdatId'] not in ('GUID-ARRAY', 'GUID-NGS')
 
     def test_assay_version_from_array(self):
+        # AssayVersion is no longer in the header (spec §3.2.1 moves it to ROW_DATA).
         h = merge_mixed_headers(
             _base_array_header(), _base_ngs_header(),
             _make_minimal_array_ctx(), _make_minimal_ngs_ctx(),
         )
-        assert h['AssayVersion'] == 'v4'
+        assert h.get('AssayVersion', '') == ''
 
     def test_source_file_has_both_entries(self):
         h = merge_mixed_headers(
@@ -619,13 +669,13 @@ class TestMergePlateJson:
 
 
 class TestEndToEndMerge:
-    def _run_merge(self, med_norm_ref=None):
+    def _run_merge(self):
         from somadata.conversion.converter import to_v2_adat
 
         array_adat = make_bridged_array_with_mednorm()
         ngs_adat = make_full_legacy_ngs_adat()
         inputs = [array_adat, ngs_adat]
-        return to_v2_adat(inputs, med_norm_ref=med_norm_ref)
+        return to_v2_adat(inputs)
 
     def test_returns_adat(self):
         result = self._run_merge()

@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from somadata.conversion.errors import ConversionError
+from somadata.io.adat.v2_fields import FieldType as _FieldType
+from somadata.io.adat.v2_fields import v2_col_field_type as _v2_col_type
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -110,12 +112,18 @@ def _rename_col_field(
     if _MED_NORM_RFU_RE.match(name):
         return 'Ref.MedNorm.Id'
 
-    # Other Ref.* fields from the array source are bridging/NGS references:
-    # apply Ref.NGS.* prefix unless already correctly prefixed.
+    # Other Ref.* fields from the array source that need Ref.NGS.* prefix:
+    # per spec §3.2.2, ONLY Ref.QCCheck.* and Ref.MedNormExt.* are renamed
+    # to Ref.NGS.*.  All other Ref.* fields (Ref.MedBg.*, Ref.StdDevBg.*,
+    # Ref.Bridging.*, etc.) pass through unchanged (§3.4 undefined fields
+    # pass through; §3.2.2 Ref.Bridging.* is explicitly kept as-is).
     if name.startswith('Ref.'):
         if name.startswith('Ref.NGS.') or name.startswith('Ref.MedNorm.'):
             return name
-        return name.replace('Ref.', 'Ref.NGS.', 1)
+        if name.startswith('Ref.QCCheck.') or name.startswith('Ref.MedNormExt.'):
+            return name.replace('Ref.', 'Ref.NGS.', 1)
+        # All other Ref.* fields (Ref.Bridging.*, Ref.MedBg.*, etc.) pass through.
+        return name
 
     return name  # pass through unchanged
 
@@ -241,8 +249,39 @@ def convert_array_col_data(
             )
             continue
         seen_output_names.add(new_name)
+
+        # Per spec §3.2.2: array Dilution values are percentages (e.g. 20, 0.5,
+        # 0.005) and must be divided by 100 to produce the NGS-convention
+        # fractions used in v2.0 (e.g. 0.2, 0.005, 0.00005).
+        if new_name == 'Dilution':
+            converted: list = []
+            for v in values:
+                try:
+                    frac = float(v) / 100
+                    # Use Decimal-style formatting to avoid scientific notation
+                    # (e.g. 0.005 / 100 = 5e-5 → '0.00005').
+                    converted.append(f'{frac:.10g}')
+                except (TypeError, ValueError):
+                    converted.append(v)
+            values = converted
+
         new_names.append(new_name)
         new_arrays.append(values)
+
+    # ------------------------------------------------------------------
+    # 3b. Normalise missing-value sentinels for String-typed fields.
+    #     Array COL_DATA may contain "nan" (pandas NaN→str), "N/A", or
+    #     "NA" in string fields.  v2.0 spec mandates empty strings for
+    #     missing String values.
+    # ------------------------------------------------------------------
+    _NA_SENTINELS = frozenset({'n/a', 'na', 'nan'})
+    for i, (name, values) in enumerate(zip(new_names, new_arrays)):
+        if _v2_col_type(name) is _FieldType.STRING:
+            new_arrays[i] = [
+                '' if (isinstance(v, str) and v.strip().lower() in _NA_SENTINELS)
+                else v
+                for v in values
+            ]
 
     # ------------------------------------------------------------------
     # 4. Derive HybControl level

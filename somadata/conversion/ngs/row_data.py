@@ -18,6 +18,7 @@ import pandas as pd
 from somadata.conversion._helpers import (
     derive_hyb_norm_status_vectorized,
     generate_guid,
+    lookup_header,
     try_float,
 )
 
@@ -277,6 +278,19 @@ def convert_ngs_row_data(
     # 2. New generated fields (one value per row)
     # ------------------------------------------------------------------
     out_levels['SampleReadout'] = ['NGS'] * n_rows
+
+    # AssayVersion: spec §3.3.1 — remove from header, add to sample table.
+    # Map using the NGS assay version map (e.g. "9k TMS" → "SomaSeq v2").
+    from somadata.conversion.ngs.header import _NGS_ASSAY_VERSION_MAP
+    raw_assay_version = lookup_header(getattr(adat, 'header_metadata', {}), 'AssayVersion')
+    if raw_assay_version:
+        assay_version_val = _NGS_ASSAY_VERSION_MAP.get(raw_assay_version, raw_assay_version)
+    else:
+        assay_version_val = ''
+    out_levels['AssayVersion'] = [assay_version_val] * n_rows
+
+    # MasterMixVersion: NGS has no master mix lot — blank placeholder.
+    out_levels['MasterMixVersion'] = [''] * n_rows
 
     # GUID generation optimization: only generate for missing/blank keys
     if 'UniqueSampleKey' in out_levels:
