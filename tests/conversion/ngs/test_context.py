@@ -78,13 +78,13 @@ class TestNGSConversionContext:
         adat = minimal_ngs_adat
         adat.header_metadata['!YieldDemux'] = ''
         ctx = NGSConversionContext.from_adat(adat)
-        assert ctx.yield_demux == 0
+        assert ctx.yield_demux is None
 
     def test_safe_float_conversion_handles_blank(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         adat.header_metadata['!Q30WeightedMean'] = ''
         ctx = NGSConversionContext.from_adat(adat)
-        assert ctx.q30_weighted_mean == 0.0
+        assert ctx.q30_weighted_mean is None
 
     def test_defaults_to_empty_when_header_missing(self):
         adat = make_ngs_adat()

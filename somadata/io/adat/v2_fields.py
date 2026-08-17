@@ -141,9 +141,9 @@ V2_ROW_FIELD_TYPES: dict[str, FieldType] = {
     'CrossPlateMedNormIntScaleFactor': FieldType.DECIMAL,
     'InstrumentType': FieldType.STRING,
     'Flowcell': FieldType.STRING,
-    'YieldDemux': FieldType.INTEGER,
-    'YieldQ30Demux': FieldType.INTEGER,
-    'Q30WeightedMean': FieldType.DECIMAL,
+    'RunYieldDemux': FieldType.INTEGER,
+    'RunYieldQ30Demux': FieldType.INTEGER,
+    'RunQ30WeightedMean': FieldType.DECIMAL,
 }
 
 # (prefix, type) — matched in order; first match wins.

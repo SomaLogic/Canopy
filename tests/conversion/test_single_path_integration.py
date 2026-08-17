@@ -367,7 +367,7 @@ class TestNativeNGSToV2:
         assert all(k.startswith('GID-') for k in keys)
 
     def test_sequencing_run_fields_replicated_to_rows(self, native_ngs_v2):
-        for field in ('InstrumentType', 'Flowcell', 'YieldDemux', 'YieldQ30Demux', 'Q30WeightedMean'):
+        for field in ('InstrumentType', 'Flowcell', 'RunYieldDemux', 'RunYieldQ30Demux', 'RunQ30WeightedMean'):
             assert field in native_ngs_v2.index.names, f'{field} missing from row metadata'
             vals = list(native_ngs_v2.index.get_level_values(field))
             assert all(v != '' for v in vals), f'{field} has blank values in rows'

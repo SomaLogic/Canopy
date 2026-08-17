@@ -100,9 +100,9 @@ class TestNGSConversionIntegration:
         result = to_v2_adat([minimal_ngs_adat])
         assert 'InstrumentType' in result.index.names
         assert 'Flowcell' in result.index.names
-        assert 'YieldDemux' in result.index.names
-        assert 'YieldQ30Demux' in result.index.names
-        assert 'Q30WeightedMean' in result.index.names
+        assert 'RunYieldDemux' in result.index.names
+        assert 'RunYieldQ30Demux' in result.index.names
+        assert 'RunQ30WeightedMean' in result.index.names
         
         vals = list(result.index.get_level_values('InstrumentType'))
         assert all(v == 'NovaSeq6000' for v in vals)

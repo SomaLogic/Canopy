@@ -152,7 +152,7 @@ class TestV2RowFieldType:
             assert _v2_row_field_type(name) is FieldType.STRING
 
     def test_integer_fields(self):
-        for name in ('Subarray', 'SOMAmerReads', 'YieldDemux', 'YieldQ30Demux'):
+        for name in ('Subarray', 'SOMAmerReads', 'RunYieldDemux', 'RunYieldQ30Demux'):
             assert _v2_row_field_type(name) is FieldType.INTEGER
 
     def test_decimal_fields(self):
@@ -160,7 +160,7 @@ class TestV2RowFieldType:
             'HybNormScaleFactor',
             'SOMAmerNormReads',
             'RefCorr',
-            'Q30WeightedMean',
+            'RunQ30WeightedMean',
         ):
             assert _v2_row_field_type(name) is FieldType.DECIMAL
 

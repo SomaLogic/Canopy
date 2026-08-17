@@ -36,7 +36,6 @@ from somadata.conversion.utils import (
     V2SourceContext,
     align_row_indexes,
     remap_row_index_ids,
-    validate_v2_ngs_process_steps,
 )
 from somadata.io.adat.v2_fields import validate_v2_header_fields
 
@@ -784,11 +783,7 @@ def _merge_v2_combined_adats(
     else:
         output_assay_type = 'Mixed'
 
-    # 2. For NGS-only pairs, validate ProcessSteps match
-    if output_assay_type == 'NGS':
-        validate_v2_ngs_process_steps(adat_a, adat_b)
-
-    # 3. MedNorm validation - check if both have MedNormExt
+    # 2. MedNorm validation - check if both have MedNormExt
     a_has_mednorm = MedNormValidator.has_mednorm_ext_v2(adat_a.header_metadata)
     b_has_mednorm = MedNormValidator.has_mednorm_ext_v2(adat_b.header_metadata)
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import math
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
@@ -211,12 +212,29 @@ class MedNormValidator:
         mismatches: list[str] = []
         for field in sorted(shared_fields):
             for seq_id in sorted(shared_seqids):
-                raw_val = raw_vecs[field].get(seq_id, '')
-                v2_val = v2_vecs[field].get(seq_id, '')
-                if raw_val != v2_val:
-                    mismatches.append(
-                        f'{field}[{seq_id}]: raw={raw_val!r} vs v2={v2_val!r}'
-                    )
+                raw_val_str = raw_vecs[field].get(seq_id, '')
+                v2_val_str = v2_vecs[field].get(seq_id, '')
+
+                # Skip if either value is missing/NA sentinel
+                def _is_missing(v: str) -> bool:
+                    return not v or v.upper() in ('NA', 'NAN', 'NONE', '')
+
+                if _is_missing(raw_val_str) or _is_missing(v2_val_str):
+                    continue
+
+                try:
+                    raw_float = float(raw_val_str)
+                    v2_float = float(v2_val_str)
+                    if abs(raw_float - v2_float) > 0.1:
+                        mismatches.append(
+                            f'{field}[{seq_id}]: raw={raw_val_str!r} vs v2={v2_val_str!r} '
+                            f'(diff={abs(raw_float - v2_float):.2e})'
+                        )
+                except (ValueError, TypeError):
+                    if raw_val_str != v2_val_str:
+                        mismatches.append(
+                            f'{field}[{seq_id}]: raw={raw_val_str!r} vs v2={v2_val_str!r}'
+                        )
 
         if not mismatches:
             return None
@@ -262,7 +280,8 @@ class MedNormValidator:
         if len(mismatches) > 10:
             detail += f'\n  ... and {len(mismatches) - 10} more'
         raise MedNormMismatchError(
-            f'Ref.MedNormExt reference vectors are not identical for shared SeqIds. '
+            f'Ref.MedNormExt reference vectors are not equivalent for shared SeqIds '
+            f'(spec §3.4 requires |a − b| ≤ 0.1 RFU for common non-missing SeqIds). '
             f'Mismatches ({len(mismatches)} total):\n  {detail}\n'
             f'Provide med_norm_ref to override.'
         )
@@ -321,12 +340,32 @@ class MedNormValidator:
         mismatches: list[str] = []
         for field in sorted(shared_fields):
             for seq_id in sorted(shared_seqids):
-                val_a = vecs_a[field].get(seq_id, '')
-                val_b = vecs_b[field].get(seq_id, '')
-                if val_a != val_b:
-                    mismatches.append(
-                        f'{field}[{seq_id}]: source_a={val_a!r} vs source_b={val_b!r}'
-                    )
+                val_a_str = vecs_a[field].get(seq_id, '')
+                val_b_str = vecs_b[field].get(seq_id, '')
+
+                # Skip if either value is missing/NA sentinel
+                def _is_missing_v(v: str) -> bool:
+                    return not v or v.upper() in ('NA', 'NAN', 'NONE', '')
+
+                if _is_missing_v(val_a_str) or _is_missing_v(val_b_str):
+                    continue
+
+                # NGS-only pairs require exact match — use tight float tolerance
+                # to absorb float-representation noise while treating any
+                # meaningful difference as a true mismatch.
+                try:
+                    float_a = float(val_a_str)
+                    float_b = float(val_b_str)
+                    if not math.isclose(float_a, float_b, rel_tol=1e-9, abs_tol=1e-12):
+                        mismatches.append(
+                            f'{field}[{seq_id}]: source_a={val_a_str!r} vs source_b={val_b_str!r} '
+                            f'(diff={abs(float_a - float_b):.2e})'
+                        )
+                except (ValueError, TypeError):
+                    if val_a_str != val_b_str:
+                        mismatches.append(
+                            f'{field}[{seq_id}]: source_a={val_a_str!r} vs source_b={val_b_str!r}'
+                        )
 
         if not mismatches:
             return None
@@ -358,7 +397,8 @@ class MedNormValidator:
         if len(mismatches) > 10:
             detail += f'\n  ... and {len(mismatches) - 10} more'
         raise MedNormMismatchError(
-            f'Ref.MedNormExt reference vectors are not identical for shared SeqIds. '
+            f'Ref.MedNormExt reference vectors are not identical for shared SeqIds '
+            f'(NGS-only merges require exact Ref.MedNormExt match across sources). '
             f'Mismatches ({len(mismatches)} total):\n  {detail}\n'
             f'Provide med_norm_ref to override.'
         )

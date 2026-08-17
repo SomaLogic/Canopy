@@ -40,12 +40,18 @@ def validate_source_ngs_adat(adat: Adat) -> None:
         'ProcessSteps': 'Comma-separated processing steps string',
         'SOMAmerReferenceSource': 'SOMAmer reagent annotation reference identifier',
         'Version': 'DPQ software version',
-        'RunId': 'Sequencing run identifier',
         'InstrumentType': 'Sequencing instrument type',
         'Flowcell': 'Flowcell identifier',
-        'YieldDemux': 'Demultiplexed yield',
-        'YieldQ30Demux': 'Q30 demultiplexed yield',
-        'Q30WeightedMean': 'Weighted mean Q30 score',
+    }
+
+    # These fields are optional — present in single-run ADATs but absent when DPQ
+    # combines multiple runs (e.g. ICM merged outputs). If missing, the corresponding
+    # ROW_DATA columns are created with empty values rather than raising an error.
+    _OPTIONAL_FIELDS = {
+        'RunId',
+        'YieldDemux',
+        'YieldQ30Demux',
+        'Q30WeightedMean',
     }
 
     missing = []
