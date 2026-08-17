@@ -265,9 +265,9 @@ def make_full_legacy_ngs_adat(
     n_cols = len(all_seqids)
 
     if mednorm_ext_values is None:
-        mednorm_ext_values = ['REF-1', 'REF-2']
+        mednorm_ext_values = [1200.0, 950.0]
     # Pad to full length (NGS-only SeqIds get a generic value)
-    mednorm_ext_all = list(mednorm_ext_values) + ['REF-NGS'] * len(ngs_only_seqids)
+    mednorm_ext_all = list(mednorm_ext_values) + [800.0] * len(ngs_only_seqids)
 
     header = {
         '!AdatId': 'SL-NGS-99999',
@@ -371,8 +371,8 @@ def make_bridged_array_with_mednorm(
     n_cols = len(all_seqids)
 
     if mednorm_ext_values is None:
-        mednorm_ext_values = ['REF-1', 'REF-2']
-    mednorm_ext_all = list(mednorm_ext_values) + ['REF-ARRAY'] * len(array_only_seqids)
+        mednorm_ext_values = [1200.0, 950.0]
+    mednorm_ext_all = list(mednorm_ext_values) + [700.0] * len(array_only_seqids)
 
     header = {
         '!AdatId': 'SL-99888',

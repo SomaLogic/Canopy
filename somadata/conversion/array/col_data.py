@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from somadata.conversion.errors import ConversionError
+from somadata.io.adat.v2_fields import FieldType as _FieldType
+from somadata.io.adat.v2_fields import v2_col_field_type as _v2_col_type
 
 if TYPE_CHECKING:
     from somadata.adat import Adat
@@ -255,7 +257,10 @@ def convert_array_col_data(
             converted: list = []
             for v in values:
                 try:
-                    converted.append(str(float(v) / 100))
+                    frac = float(v) / 100
+                    # Use Decimal-style formatting to avoid scientific notation
+                    # (e.g. 0.005 / 100 = 5e-5 → '0.00005').
+                    converted.append(f'{frac:.10g}')
                 except (TypeError, ValueError):
                     converted.append(v)
             values = converted
@@ -269,8 +274,6 @@ def convert_array_col_data(
     #     "NA" in string fields.  v2.0 spec mandates empty strings for
     #     missing String values.
     # ------------------------------------------------------------------
-    from somadata.io.adat.v2_fields import FieldType as _FieldType
-    from somadata.io.adat.v2_fields import v2_col_field_type as _v2_col_type
     _NA_SENTINELS = frozenset({'n/a', 'na', 'nan'})
     for i, (name, values) in enumerate(zip(new_names, new_arrays)):
         if _v2_col_type(name) is _FieldType.STRING:

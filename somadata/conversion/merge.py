@@ -7,7 +7,8 @@ compute_seqid_union(array_adat, ngs_adat) -> tuple[pd.DataFrame, pd.MultiIndex]
 
 validate_mednorm_compatibility(array_adat, ngs_adat) -> None
     Validate that the two raw (pre-conversion) ADATs are compatible for merging.
-    Raises MedNormMismatchError if Ref.MedNormExt values differ.
+    Raises MedNormMismatchError if Ref.MedNormExt values differ,
+    or ProcessStepsMismatchError if ProcessSteps are not bridged-compatible.
 
 validate_dilution_alignment(array_adat, ngs_adat) -> None
     Validate that all shared SeqIds have identical Dilution values.
@@ -53,8 +54,6 @@ _ARRAY_TERMINAL_TRIPLE = [
     'CrossPlatformCalibrate',
     'MedNormExt',
 ]
-
-_ACCEPTED_ARRAY_TERMINAL_TRIPLES = (_ARRAY_TERMINAL_TRIPLE,)
 
 
 # NGS exact ProcessSteps sequence
@@ -111,7 +110,7 @@ def _validate_array_process_steps(adat: Adat) -> None:
     hdr = getattr(adat, 'header_metadata', {})
     raw = lookup_header(hdr, 'ProcessSteps')
     steps = parse_process_steps(raw)
-    if steps[-3:] not in _ACCEPTED_ARRAY_TERMINAL_TRIPLES:
+    if steps[-3:] != _ARRAY_TERMINAL_TRIPLE:
         raise ProcessStepsMismatchError(
             f'Array ADAT ProcessSteps do not end with the required bridged '
             f'terminal triple {_ARRAY_TERMINAL_TRIPLE!r}. '
@@ -132,21 +131,21 @@ def _validate_ngs_process_steps(adat: Adat) -> None:
         )
 
 
-def _get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, str | float]]:
+def _get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, float | None]]:
     """Extract Ref.MedNormExt.* column values keyed by (field, SeqId).
 
     Returns
     -------
     dict
         ``{field_name: {seq_id: value}}`` for all ``Ref.MedNormExt.*`` levels.
-        Values are returned as floats if numeric, otherwise as strings.
-        Missing/invalid values are stored as None.
+        Values are floats; ``None`` indicates a missing/NA value or a
+        non-numeric legacy identifier (logged as a warning).
     """
     columns = getattr(adat, 'columns', None)
     if columns is None or not hasattr(columns, 'names'):
         return {}
 
-    result: dict[str, dict[str, str | float | None]] = {}
+    result: dict[str, dict[str, float | None]] = {}
     seq_id_level = None
     if 'SeqId' in columns.names:
         seq_id_level = columns.get_level_values('SeqId')
@@ -157,22 +156,20 @@ def _get_mednorm_ext_vectors(adat: Adat) -> dict[str, dict[str, str | float]]:
             if seq_id_level is not None:
                 result[name] = {}
                 for sid, val in zip(seq_id_level, values):
-                    # Check for missing/NA values (pandas NaN, None, empty string, 'NA', 'nan')
+                    # Recognise missing/NA sentinels → None
                     if val is None or val == '' or str(val).upper() in ('NA', 'NAN'):
                         result[name][str(sid)] = None
                         continue
-                    
-                    # Try to convert to float for numeric comparison
+
                     try:
                         float_val = float(val)
-                        # Check if it's NaN
-                        if math.isnan(float_val):
-                            result[name][str(sid)] = None
-                        else:
-                            result[name][str(sid)] = float_val
+                        result[name][str(sid)] = None if math.isnan(float_val) else float_val
                     except (ValueError, TypeError):
-                        # Keep as string if not numeric
-                        result[name][str(sid)] = str(val)
+                        logger.warning(
+                            'Non-numeric value %r in %s for SeqId %r; skipping comparison.',
+                            val, name, sid,
+                        )
+                        result[name][str(sid)] = None
             else:
                 result[name] = {}
 
@@ -216,9 +213,8 @@ def _validate_mednorm_vectors(
         return
 
     # Check element-wise identity for shared fields and shared SeqIds.
-    # Use numeric comparison with tolerance for float values, exact comparison for strings.
-    # Per spec §3.4, Ref.MedNormExt.* are RFU reference values (Decimal type),
-    # but legacy data may use string identifiers.
+    # Use numeric comparison with tolerance for float values.
+    # Per spec §3.4, Ref.MedNormExt.* are RFU reference values (Decimal type).
     # Skip comparisons where either value is None/missing (e.g., internal-use-only
     # analytes that are array-only and not present in NGS data).
     mismatches: list[str] = []
@@ -226,32 +222,21 @@ def _validate_mednorm_vectors(
         for seq_id in sorted(shared_seqids):
             array_val = array_vecs[field].get(seq_id)
             ngs_val = ngs_vecs[field].get(seq_id)
-            
+
             # Skip comparison if either value is missing/None.
             # This handles internal-use-only SOMAmers that appear in the array source
             # but have no MedNormExt reference in the NGS source (e.g., array-exclusive
             # calibrators or controls).
             if array_val is None or ngs_val is None:
                 continue
-            
-            # Determine if we should use numeric comparison
-            is_numeric = isinstance(array_val, float) and isinstance(ngs_val, float)
-            
-            if is_numeric:
-                # For numeric values, use tolerance-based comparison
-                # Use rtol=1e-9 (relative tolerance) and atol=1e-12 (absolute tolerance)
-                # to handle both large and small RFU values appropriately.
-                if not math.isclose(array_val, ngs_val, rel_tol=1e-9, abs_tol=1e-12):
-                    mismatches.append(
-                        f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r} '
-                        f'(diff={abs(array_val - ngs_val):.2e})'
-                    )
-            else:
-                # For string values or mixed types, use exact comparison
-                if str(array_val) != str(ngs_val):
-                    mismatches.append(
-                        f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r}'
-                    )
+
+            # Both values are guaranteed floats at this point (_get_mednorm_ext_vectors
+            # raises MedNormMismatchError for non-numeric values).
+            if not math.isclose(array_val, ngs_val, rel_tol=1e-9, abs_tol=1e-12):
+                mismatches.append(
+                    f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r} '
+                    f'(diff={abs(array_val - ngs_val):.2e})'
+                )
 
     if not mismatches:
         return
@@ -344,7 +329,7 @@ def validate_dilution_alignment(array_adat: Adat, ngs_adat: Adat) -> None:
 
         # Compare as floats to avoid formatting differences (e.g. '0.2' vs '0.20')
         try:
-            if abs(float(a_val) - float(n_val)) > 1e-12:
+            if not math.isclose(float(a_val), float(n_val), rel_tol=1e-9, abs_tol=1e-12):
                 mismatches.append(
                     f'{seq_id}: array={a_val!r} vs ngs={n_val!r}'
                 )
@@ -369,7 +354,6 @@ def validate_dilution_alignment(array_adat: Adat, ngs_adat: Adat) -> None:
 def compute_seqid_union(
     array_adat: Adat,
     ngs_adat: Adat,
-    mednorm_ref_source: Literal['array', 'ngs'] | None = None,
 ) -> tuple[pd.DataFrame, pd.MultiIndex]:
     """Build the union SeqId RFU matrix and merged COL_DATA MultiIndex.
 
@@ -383,12 +367,6 @@ def compute_seqid_union(
         The converted v2.0 array intermediate (``AssayType='Mixed'``).
     ngs_adat : Adat
         The converted v2.0 NGS intermediate (``AssayType='Mixed'``).
-    mednorm_ref_source : Literal['array', 'ngs'] or None, optional
-        When ``'ngs'``, the NGS source's ``Ref.MedNormExt.*`` values are used
-        for shared SeqIds instead of the default array-prefers rule.  Pass the
-        return value of :func:`validate_mednorm_compatibility` directly.
-        ``None`` (default) applies the standard array-prefers logic for all
-        fields.
 
     Returns
     -------
@@ -436,7 +414,7 @@ def compute_seqid_union(
 
     # Build merged COL_DATA MultiIndex
     merged_columns = _merge_col_data(
-        array_columns, ngs_columns, union_seqids, mednorm_ref_source=mednorm_ref_source
+        array_columns, ngs_columns, union_seqids
     )
 
     return rfu_df, merged_columns
@@ -446,7 +424,6 @@ def _merge_col_data(
     array_columns: pd.MultiIndex,
     ngs_columns: pd.MultiIndex,
     union_seqids: list[str],
-    mednorm_ref_source: Literal['array', 'ngs'] | None = None,
 ) -> pd.MultiIndex:
     """Merge two v2.0 COL_DATA MultiIndexes over the union SeqId set.
 
@@ -456,10 +433,6 @@ def _merge_col_data(
     - Array-only SeqIds: NGS-specific annotation fields are blank.
     - NGS-only SeqIds: array-specific annotation fields are blank.
 
-    ``Ref.MedNormExt.*`` fields are an exception: when ``mednorm_ref_source``
-    is ``'ngs'``, NGS values are preferred for shared SeqIds in those fields,
-    overriding the default array-prefers rule.
-
     Parameters
     ----------
     array_columns : pd.MultiIndex
@@ -468,10 +441,6 @@ def _merge_col_data(
         Column MultiIndex of the converted NGS intermediate.
     union_seqids : list[str]
         The sorted union SeqId set.
-    mednorm_ref_source : Literal['array', 'ngs'] or None, optional
-        When ``'ngs'``, NGS ``Ref.MedNormExt.*`` values are used for shared
-        SeqIds instead of array values.  ``None`` or ``'array'`` uses the
-        default array-prefers rule.
 
     Returns
     -------
@@ -498,8 +467,6 @@ def _merge_col_data(
             all_level_names.append(name)
             seen.add(name)
 
-    ngs_wins_mednorm = mednorm_ref_source == 'ngs'
-
     # For each level, build per-SeqId values across the union
     level_arrays: dict[str, list[str]] = {name: [] for name in all_level_names}
 
@@ -514,14 +481,6 @@ def _merge_col_data(
             # carry no hybridisation control analytes), so array wins would
             # incorrectly erase any True values coming from the NGS source.
             if is_shared and name == 'HybControl' and name in ngs_row:
-                level_arrays[name].append(ngs_row[name])
-            # For Ref.MedNormExt.* on shared SeqIds, use the authoritative source
-            elif (
-                ngs_wins_mednorm
-                and is_shared
-                and name.startswith('Ref.MedNormExt.')
-                and name in ngs_row
-            ):
                 level_arrays[name].append(ngs_row[name])
             elif name in array_row:
                 # Prefer array value for fields present in array

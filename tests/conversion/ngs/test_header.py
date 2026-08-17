@@ -129,21 +129,21 @@ class TestConvertNGSHeader:
         adat.header_metadata['!AssayVersion'] = '6k'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        assert result.get('AssayVersion', '') == ''
+        assert 'AssayVersion' not in result
 
     def test_maps_assay_version_9k_tms(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         adat.header_metadata['!AssayVersion'] = '9k TMS'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        assert result.get('AssayVersion', '') == ''
+        assert 'AssayVersion' not in result
 
     def test_maps_assay_version_calypso(self, minimal_ngs_adat):
         adat = minimal_ngs_adat
         adat.header_metadata['!AssayVersion'] = 'Calypso'
         ctx = NGSConversionContext.from_adat(adat)
         result = convert_ngs_header(adat, ctx)
-        assert result.get('AssayVersion', '') == ''
+        assert 'AssayVersion' not in result
 
     def test_pass_through_title(self, minimal_ngs_adat):
         adat = minimal_ngs_adat

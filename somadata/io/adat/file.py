@@ -580,7 +580,6 @@ def _write_adat_v2(adat, f: io.TextIOWrapper, round_rfu: bool = True) -> None:
         for name in row_names
         if row_types[row_names.index(name)] == FieldType.DECIMAL
     )
-    _numeric_row_fields = _integer_row_fields | _decimal_row_fields
 
     # --- ^TABLE_BEGIN ---
     writer.writerow(['^TABLE_BEGIN'])

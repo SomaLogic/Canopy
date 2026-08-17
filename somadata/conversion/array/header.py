@@ -116,7 +116,8 @@ def convert_array_header(
             out[field] = val
 
     # UseRestriction is required (Value Required = True in spec §2.3).
-    # Fall back to the canonical default when the source ADAT lacks it.
+    # Fall back to the canonical default prescribed in spec §2.3 Table 2
+    # when the source ADAT lacks it.
     if not out.get('UseRestriction'):
         out['UseRestriction'] = 'Research Use Only'
 

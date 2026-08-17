@@ -239,7 +239,7 @@ def _merge_bridged_array_and_ngs(
 
     # 5. Compute SeqId union and merged COL_DATA
     rfu_df, merged_columns = compute_seqid_union(
-        array_intermediate, ngs_intermediate, mednorm_ref_source=None
+        array_intermediate, ngs_intermediate
     )
 
     # 6. Merge headers into final Mixed header
@@ -302,11 +302,9 @@ def _merge_bridged_array_and_v2(
     v2_has_mednorm = MedNormValidator.has_mednorm_ext_v2(v2_adat.header_metadata)
 
     if array_has_mednorm and v2_has_mednorm:
-        mednorm_ref_source = MedNormValidator.validate_with_v2(
+        MedNormValidator.validate_with_v2(
             raw_array, v2_adat, med_norm_ref=None
         )
-    else:
-        mednorm_ref_source = None
 
     # 4. Convert array source to v2.0
     array_ctx = ArrayConversionContext.from_adat(
@@ -370,7 +368,7 @@ def _merge_bridged_array_and_v2(
         # Simple case: array_intermediate is array, v2_adat is NGS (or both array)
         # Order is correct: array first, NGS second
         rfu_df, merged_columns = compute_seqid_union(
-            array_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            array_intermediate, v2_adat
         )
     else:
         # v2_adat is Mixed: contains both Array and NGS rows
@@ -412,7 +410,6 @@ def _merge_bridged_array_and_v2(
             array_intermediate.columns,
             v2_array_part.columns,
             union_array_seqids,
-            mednorm_ref_source=None,
         )
 
         # Build combined array Adat
@@ -425,7 +422,7 @@ def _merge_bridged_array_and_v2(
 
         # Now merge combined array with NGS part using compute_seqid_union
         rfu_df, merged_columns = compute_seqid_union(
-            combined_array, v2_ngs_part, mednorm_ref_source=mednorm_ref_source
+            combined_array, v2_ngs_part
         )
 
         # Update row indexes to reflect the split
@@ -499,11 +496,9 @@ def _merge_ngs_and_v2(
     v2_has_mednorm = MedNormValidator.has_mednorm_ext_v2(v2_adat.header_metadata)
 
     if ngs_has_mednorm and v2_has_mednorm:
-        mednorm_ref_source = MedNormValidator.validate_with_v2(
+        MedNormValidator.validate_with_v2(
             raw_ngs, v2_adat, med_norm_ref=None
         )
-    else:
-        mednorm_ref_source = None
 
     # 4. Convert NGS source to v2.0
     ngs_ctx = NGSConversionContext.from_adat(raw_ngs, source_file_md5sum=md5_ngs)
@@ -559,13 +554,13 @@ def _merge_ngs_and_v2(
         # Both inputs are NGS-only: use compute_seqid_union normally
         # (parameter names are misleading but function works for same-type merges)
         rfu_df, merged_columns = compute_seqid_union(
-            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            ngs_intermediate, v2_adat
         )
     elif v2_readouts == {'NGS'}:
         # v2 is NGS-only, output is Mixed: ngs_intermediate + v2_adat (both NGS)
         # We have no array data, so use compute_seqid_union with ngs first
         rfu_df, merged_columns = compute_seqid_union(
-            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            ngs_intermediate, v2_adat
         )
     elif 'Array' in v2_readouts:
         # v2 contains Array rows (could be Array-only or Mixed)
@@ -607,7 +602,6 @@ def _merge_ngs_and_v2(
                 ngs_intermediate.columns,
                 v2_ngs_part.columns,
                 union_ngs_seqids,
-                mednorm_ref_source=None,
             )
 
             combined_ngs = AdatClass(
@@ -620,7 +614,7 @@ def _merge_ngs_and_v2(
             # Now merge v2_array_part with combined_ngs using compute_seqid_union
             # (array first, NGS second)
             rfu_df, merged_columns = compute_seqid_union(
-                v2_array_part, combined_ngs, mednorm_ref_source=mednorm_ref_source
+                v2_array_part, combined_ngs
             )
 
             # Update row indexes: array first (v2_array_index), then NGS (combined_ngs.index)
@@ -631,7 +625,7 @@ def _merge_ngs_and_v2(
         else:
             # v2 is Array-only: call compute_seqid_union(v2_array_part, ngs_intermediate)
             rfu_df, merged_columns = compute_seqid_union(
-                v2_array_part, ngs_intermediate, mednorm_ref_source=mednorm_ref_source
+                v2_array_part, ngs_intermediate
             )
             # Update row indexes: array first, NGS second
             v2_index_remapped = v2_array_index
@@ -640,7 +634,7 @@ def _merge_ngs_and_v2(
     else:
         # Shouldn't reach here, but handle gracefully
         rfu_df, merged_columns = compute_seqid_union(
-            ngs_intermediate, v2_adat, mednorm_ref_source=mednorm_ref_source
+            ngs_intermediate, v2_adat
         )
 
     # 7. Merge headers
@@ -736,7 +730,7 @@ def _merge_native_arrays(
 
     # 4. Compute SeqId union
     rfu_df, merged_columns = compute_seqid_union(
-        intermediate_a, intermediate_b, mednorm_ref_source=None
+        intermediate_a, intermediate_b
     )
 
     # 5. Merge headers (Array + Array → Array output)
@@ -799,15 +793,13 @@ def _merge_v2_combined_adats(
     b_has_mednorm = MedNormValidator.has_mednorm_ext_v2(adat_b.header_metadata)
 
     if a_has_mednorm and b_has_mednorm:
-        mednorm_ref_source = MedNormValidator.validate_v2_pair(
+        MedNormValidator.validate_v2_pair(
             adat_a, adat_b, med_norm_ref=None
         )
-    else:
-        mednorm_ref_source = None
 
     # 4. Compute SeqId union and merged COL_DATA
     rfu_df, merged_columns = compute_seqid_union(
-        adat_a, adat_b, mednorm_ref_source=mednorm_ref_source
+        adat_a, adat_b
     )
 
     # 4. Merge headers - this renumbers SourceFile/ProcessSteps/ReportConfig keys
