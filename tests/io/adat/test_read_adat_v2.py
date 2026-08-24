@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import logging
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -197,8 +198,6 @@ class TestV2ReaderDispatch:
 
     def test_missing_rfu_values_handled(self):
         """'NA' RFU values in v2.0 ADATs are parsed as NaN (not as ValueError)."""
-        import numpy as np
-
         adat = _make_minimal_v2_adat()
         buf = io.StringIO()
         write_adat(adat, buf)

@@ -77,8 +77,10 @@ def parse_file(
     header_metadata : Dict[str, str]
         A dictionary of each row of the header_metadata corresponds to a key-value pair.
     """
-    if type(f) == str:
+    _opened_here = False
+    if isinstance(f, str):
         f = open(f, 'r')
+        _opened_here = True
     elif not hasattr(f, 'read'):
         raise AdatReadError('File must be a string or file-like object.')
 
@@ -91,127 +93,130 @@ def parse_file(
 
     matrix_depth = 0
 
-    reader = csv.reader(f, delimiter='\t')
-    for line in reader:
-        # Check for trailing Nones
-        for index, cell in enumerate(reversed(line)):
-            if cell:
-                break
-            del line[-1]
+    try:
+        reader = csv.reader(f, delimiter='\t')
+        for line in reader:
+            # Check for trailing Nones
+            for index, cell in enumerate(reversed(line)):
+                if cell:
+                    break
+                del line[-1]
 
-        # If we see a new section set which portion of the adat we are in & continue to next line
-        if '^HEADER' in line[0]:
-            current_section = 'HEADER'
-            continue
-        elif '^TABLE_BEGIN' in line[0]:
-            current_section = 'TABLE'
-            continue
-        elif '^COL_DATA' in line[0]:
-            current_section = 'COL_DATA'
-            continue
-        elif '^ROW_DATA' in line[0]:
-            current_section = 'ROW_DATA'
-            continue
+            # If we see a new section set which portion of the adat we are in & continue to next line
+            if '^HEADER' in line[0]:
+                current_section = 'HEADER'
+                continue
+            elif '^TABLE_BEGIN' in line[0]:
+                current_section = 'TABLE'
+                continue
+            elif '^COL_DATA' in line[0]:
+                current_section = 'COL_DATA'
+                continue
+            elif '^ROW_DATA' in line[0]:
+                current_section = 'ROW_DATA'
+                continue
 
-        # Parse the data according to which section of the adat we're reading
+            # Parse the data according to which section of the adat we're reading
 
-        if current_section == 'HEADER':
-            # Not every key in the header has a value
-            if len(line) == 1:
-                header_metadata[line[0]] = ''
-            # Should be the typical case
-            elif len(line) == 2 and compatibility_mode:
-                header_metadata[line[0]] = line[1]
-            elif len(line) == 2 and not compatibility_mode:
-                try:
-                    header_metadata[line[0]] = json.loads(line[1])
-                    if type(header_metadata[line[0]]) != dict:
-                        header_metadata[line[0]] = line[1]
-                except json.JSONDecodeError:
+            if current_section == 'HEADER':
+                # Not every key in the header has a value
+                if len(line) == 1:
+                    header_metadata[line[0]] = ''
+                # Should be the typical case
+                elif len(line) == 2 and compatibility_mode:
                     header_metadata[line[0]] = line[1]
-                # If we have the report config section, check to see if it was loaded as a dict
-                if line[0] == "ReportConfig" and type(header_metadata[line[0]]) != dict:
-                    warnings.warn(
-                        'Malformed ReportConfig section in header.  Setting to an empty dictionary.'
-                    )
-                    header_metadata[line[0]] = {}
-            # More than 2 values to a key should never ever happen
-            else:
-                raise AdatReadError('Unexpected size of header: ' + '|'.join(line))
-
-        elif current_section == 'COL_DATA':
-            # Get the height of the column metadata section & skip the rest of the section
-            col_metadata_length = len(line)
-            current_section = None
-
-        elif current_section == 'ROW_DATA':
-            # Get the index of the end of the row metadata section & skip the rest of the section
-            row_metadata_offset = len(line) - 1
-            current_section = None
-
-        elif current_section == 'TABLE':
-            # matrix_depth is used to identify if we are in the column
-            # metadata section or the row metadata/rfu section
-            matrix_depth += 1
-
-            # Column Metadata Section
-            if matrix_depth < col_metadata_length:
-                column_metadata_name = line[row_metadata_offset]
-                column_metadata_data = line[row_metadata_offset + 1 :]
-
-                if column_metadata_name == 'SeqId' and re.match(
-                    r'\d{3,}-\d{1,3}_\d+', column_metadata_data[0]
-                ):
-                    warnings.warn(
-                        'V3 style seqIds (i.e., 12345-6_7). Converting to V4 Style. The adat file writer has an option to write using the V3 style'
-                    )
-                    seq_id_data = [x.split('_')[0] for x in column_metadata_data]
-                    version_data = [x.split('_')[1] for x in column_metadata_data]
-                    column_metadata[column_metadata_name] = seq_id_data
-                    column_metadata['SeqIdVersion'] = version_data
+                elif len(line) == 2 and not compatibility_mode:
+                    try:
+                        header_metadata[line[0]] = json.loads(line[1])
+                        if type(header_metadata[line[0]]) != dict:
+                            header_metadata[line[0]] = line[1]
+                    except json.JSONDecodeError:
+                        header_metadata[line[0]] = line[1]
+                    # If we have the report config section, check to see if it was loaded as a dict
+                    if line[0] == "ReportConfig" and type(header_metadata[line[0]]) != dict:
+                        warnings.warn(
+                            'Malformed ReportConfig section in header.  Setting to an empty dictionary.'
+                        )
+                        header_metadata[line[0]] = {}
+                # More than 2 values to a key should never ever happen
                 else:
-                    column_metadata[column_metadata_name] = column_metadata_data
+                    raise AdatReadError('Unexpected size of header: ' + '|'.join(line))
 
-            # Perform a check to ensure all column metadata is the same length and if not, extend it to the maximum length
-            col_meta_lengths = [len(values) for values in column_metadata.values()]
-            if len(set(col_meta_lengths)) > 1:
-                max_length = max(col_meta_lengths)
-                for name, values in column_metadata.items():
-                    if len(values) == max_length:
-                        continue
-                    warnings.warn(f'Adding empty values to column metadata: "{name}"')
-                    n_missing_elements = max_length - len(values)
-                    append_array = [''] * n_missing_elements
-                    new_values = values + append_array
-                    column_metadata[name] = new_values
+            elif current_section == 'COL_DATA':
+                # Get the height of the column metadata section & skip the rest of the section
+                col_metadata_length = len(line)
+                current_section = None
 
-            # Row Metadata Titles
-            elif matrix_depth == col_metadata_length:
-                row_metadata_names = line[:row_metadata_offset]
-                row_metadata = {name: [] for name in row_metadata_names}
+            elif current_section == 'ROW_DATA':
+                # Get the index of the end of the row metadata section & skip the rest of the section
+                row_metadata_offset = len(line) - 1
+                current_section = None
 
-            # Row Metadata & RFU Section
-            elif matrix_depth > col_metadata_length:
-                # Store in row metadata into dictionary
-                row_metadata_data = line[:row_metadata_offset]
-                # Check for missing metadata and handle it
-                if len(row_metadata_data) < len(row_metadata_names):
-                    missing_count = len(row_metadata_names) - len(row_metadata_data)
-                    logging.warning(
-                        f"Row metadata has {missing_count} missing values. "
-                        f"Filling missing entries with empty strings."
-                    )
-                    row_metadata_data = list(row_metadata_data) + [""] * missing_count
-                for name, data in zip(row_metadata_names, row_metadata_data):
-                    row_metadata[name].append(data)
-                # Store the RFU data
-                rfu_row_data = line[row_metadata_offset + 1 :]
-                converted_rfu_row_data = [
-                    float('nan') if v == 'NA' else float(v) for v in rfu_row_data
-                ]
-                rfu_matrix.append(converted_rfu_row_data)
+            elif current_section == 'TABLE':
+                # matrix_depth is used to identify if we are in the column
+                # metadata section or the row metadata/rfu section
+                matrix_depth += 1
 
-    f.close()
+                # Column Metadata Section
+                if matrix_depth < col_metadata_length:
+                    column_metadata_name = line[row_metadata_offset]
+                    column_metadata_data = line[row_metadata_offset + 1 :]
+
+                    if column_metadata_name == 'SeqId' and re.match(
+                        r'\d{3,}-\d{1,3}_\d+', column_metadata_data[0]
+                    ):
+                        warnings.warn(
+                            'V3 style seqIds (i.e., 12345-6_7). Converting to V4 Style. The adat file writer has an option to write using the V3 style'
+                        )
+                        seq_id_data = [x.split('_')[0] for x in column_metadata_data]
+                        version_data = [x.split('_')[1] for x in column_metadata_data]
+                        column_metadata[column_metadata_name] = seq_id_data
+                        column_metadata['SeqIdVersion'] = version_data
+                    else:
+                        column_metadata[column_metadata_name] = column_metadata_data
+
+                # Perform a check to ensure all column metadata is the same length and if not, extend it to the maximum length
+                col_meta_lengths = [len(values) for values in column_metadata.values()]
+                if len(set(col_meta_lengths)) > 1:
+                    max_length = max(col_meta_lengths)
+                    for name, values in column_metadata.items():
+                        if len(values) == max_length:
+                            continue
+                        warnings.warn(f'Adding empty values to column metadata: "{name}"')
+                        n_missing_elements = max_length - len(values)
+                        append_array = [''] * n_missing_elements
+                        new_values = values + append_array
+                        column_metadata[name] = new_values
+
+                # Row Metadata Titles
+                elif matrix_depth == col_metadata_length:
+                    row_metadata_names = line[:row_metadata_offset]
+                    row_metadata = {name: [] for name in row_metadata_names}
+
+                # Row Metadata & RFU Section
+                elif matrix_depth > col_metadata_length:
+                    # Store in row metadata into dictionary
+                    row_metadata_data = line[:row_metadata_offset]
+                    # Check for missing metadata and handle it
+                    if len(row_metadata_data) < len(row_metadata_names):
+                        missing_count = len(row_metadata_names) - len(row_metadata_data)
+                        logging.warning(
+                            f"Row metadata has {missing_count} missing values. "
+                            f"Filling missing entries with empty strings."
+                        )
+                        row_metadata_data = list(row_metadata_data) + [""] * missing_count
+                    for name, data in zip(row_metadata_names, row_metadata_data):
+                        row_metadata[name].append(data)
+                    # Store the RFU data
+                    rfu_row_data = line[row_metadata_offset + 1 :]
+                    converted_rfu_row_data = [
+                        float('nan') if v == 'NA' else float(v) for v in rfu_row_data
+                    ]
+                    rfu_matrix.append(converted_rfu_row_data)
+    finally:
+        if _opened_here:
+            f.close()
+
     return rfu_matrix, row_metadata, column_metadata, header_metadata
 
 
@@ -362,7 +367,7 @@ def read_adat(path_or_buf: Union[str, io.TextIOWrapper], *args, **kwargs) -> Ada
 
 def write_adat(
     adat,
-    f: io.TextIOWrapper,
+    f: Union[str, io.TextIOWrapper],
     round_rfu: bool = True,
     convert_to_v3_seq_ids: bool = False,
 ) -> None:
@@ -373,7 +378,7 @@ def write_adat(
     adat : Adat
         Adat Pandas dataframe to be written.
 
-    f : io.TextIOWrapper
+    f : Union[str, io.TextIOWrapper]
         The file path or open file object to write to.
 
     round_rfu : bool
@@ -395,12 +400,21 @@ def write_adat(
     -------
     None
     """
-    if adat.header_metadata.get('FileVersion') == '2.0':
-        _write_adat_v2(adat, f, round_rfu=round_rfu)
-    else:
-        _write_adat(
-            adat, f, round_rfu=round_rfu, convert_to_v3_seq_ids=convert_to_v3_seq_ids
-        )
+    _opened_here = False
+    if isinstance(f, str):
+        f = open(f, 'w', newline='')
+        _opened_here = True
+
+    try:
+        if adat.header_metadata.get('FileVersion') == '2.0':
+            _write_adat_v2(adat, f, round_rfu=round_rfu)
+        else:
+            _write_adat(
+                adat, f, round_rfu=round_rfu, convert_to_v3_seq_ids=convert_to_v3_seq_ids
+            )
+    finally:
+        if _opened_here:
+            f.close()
 
 
 def _write_adat(

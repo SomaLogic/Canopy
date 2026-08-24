@@ -34,7 +34,7 @@ class FieldType(str, Enum):
 
 
 # ---------------------------------------------------------------------------
-# ^HEADER field types  (Section 2.3)
+# ^HEADER field types
 # ---------------------------------------------------------------------------
 # The v2.0 header is a closed, static set.  All fields listed here must be
 # present in every v2.0 ADAT; no additional fields are permitted.
@@ -64,7 +64,7 @@ V2_HEADER_FIELD_TYPES: dict[str, FieldType] = {
 }
 
 # ---------------------------------------------------------------------------
-# ^COL_DATA field types  (Section 2.6.1)
+# ^COL_DATA field types
 # ---------------------------------------------------------------------------
 # Static fields are looked up by exact name; plate/calibrator-keyed dynamic
 # fields are matched by the prefix tuples below.

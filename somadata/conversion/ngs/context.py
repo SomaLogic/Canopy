@@ -11,6 +11,22 @@ if TYPE_CHECKING:
     from somadata.adat import Adat
 
 
+def _safe_int(val: str) -> int:
+    """Safely parse an integer from a string, returning 0 on failure."""
+    try:
+        return int(val) if val else 0
+    except (ValueError, TypeError):
+        return 0
+
+
+def _safe_float(val: str) -> float:
+    """Safely parse a float from a string, returning 0.0 on failure."""
+    try:
+        return float(val) if val else 0.0
+    except (ValueError, TypeError):
+        return 0.0
+
+
 @dataclasses.dataclass
 class NGSConversionContext:
     """Shared state across header / col / row NGS conversion steps.
@@ -117,19 +133,6 @@ class NGSConversionContext:
                 except (AttributeError, KeyError):
                     pass
 
-        # Parse integer/float fields with safe conversion
-        def safe_int(val: str) -> int:
-            try:
-                return int(val) if val else 0
-            except (ValueError, TypeError):
-                return 0
-
-        def safe_float(val: str) -> float:
-            try:
-                return float(val) if val else 0.0
-            except (ValueError, TypeError):
-                return 0.0
-
         adat_id = lookup_header(hdr, 'AdatId')
 
         raw_yield_demux = lookup_header(hdr, 'YieldDemux')
@@ -142,9 +145,9 @@ class NGSConversionContext:
             sequencing_run_id=lookup_header(hdr, 'RunId'),
             instrument_type=lookup_header(hdr, 'InstrumentType'),
             flowcell=lookup_header(hdr, 'Flowcell'),
-            yield_demux=safe_int(raw_yield_demux) if raw_yield_demux else None,
-            yield_q30_demux=safe_int(raw_yield_q30_demux) if raw_yield_q30_demux else None,
-            q30_weighted_mean=safe_float(raw_q30_weighted_mean) if raw_q30_weighted_mean else None,
+            yield_demux=_safe_int(raw_yield_demux) if raw_yield_demux else None,
+            yield_q30_demux=_safe_int(raw_yield_q30_demux) if raw_yield_q30_demux else None,
+            q30_weighted_mean=_safe_float(raw_q30_weighted_mean) if raw_q30_weighted_mean else None,
             plate_ids=plate_ids,
             process_steps=lookup_header(hdr, 'ProcessSteps'),
             source_file_md5sum=source_file_md5sum,

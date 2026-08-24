@@ -8,6 +8,7 @@ convert_ngs_header(adat, ctx, assay_type='NGS') -> dict
 
 from __future__ import annotations
 
+import ast
 import datetime
 import json
 import logging
@@ -228,9 +229,6 @@ def _parse_python_dict_value(raw: str) -> dict:
     dict
         The parsed dict, or an empty dict on parse failure.
     """
-    import ast
-    import json
-
     if not raw or not raw.strip().startswith('{'):
         return {}
     try:

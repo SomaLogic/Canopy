@@ -5,6 +5,7 @@ Tests convert_ngs_row_data() field mapping logic.
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 from somadata.conversion.ngs import NGSConversionContext
@@ -17,7 +18,6 @@ class TestConvertNGSRowData:
 
     def test_renames_sample_id(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add SampleID (legacy casing)
         adat.index = adat.index.droplevel('SampleId')
@@ -136,7 +136,6 @@ class TestStatusFieldDerivation:
 
     def test_derives_hyb_norm_status_pass(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Set HybNorm scale factor to 1.024 (in range [0.4, 2.5])
         idx_names = list(adat.index.names)
@@ -156,7 +155,6 @@ class TestStatusFieldDerivation:
 
     def test_derives_hyb_norm_status_flag(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Set HybNorm scale factor to 3.0 (outside range [0.4, 2.5])
         idx_names = list(adat.index.names)
@@ -185,7 +183,6 @@ class TestStatusFieldDerivation:
 
     def test_derives_row_check_status_from_norm_failures(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Set HybNorm to FLAG
         idx_names = list(adat.index.names)
@@ -209,7 +206,6 @@ class TestEmpiricalHybTempRename:
 
     def test_renames_empirical_hyb_temp_to_hyb_qc(self):
         """EmpiricalHybTemp is renamed to HybQC in the output."""
-        import pandas as pd
 
         adat = make_ngs_adat()
         # Add EmpiricalHybTemp to row index
@@ -230,7 +226,6 @@ class TestEmpiricalHybTempRename:
 
     def test_renames_empirical_hyb_temp_pass_flag_to_hyb_qc_status(self):
         """EmpiricalHybTemp_PassFlag is renamed to HybQCStatus."""
-        import pandas as pd
 
         adat = make_ngs_adat()
         idx_names = list(adat.index.names) + ['EmpiricalHybTemp_PassFlag']
@@ -256,7 +251,6 @@ class TestEmpiricalHybTempRename:
 
     def test_renames_hyb_qc_pass_flag_to_hyb_qc_status(self):
         """HybQC_PassFlag (newer DPQ) is renamed to HybQCStatus."""
-        import pandas as pd
 
         adat = make_ngs_adat()
         idx_names = list(adat.index.names) + ['HybQC_PassFlag']

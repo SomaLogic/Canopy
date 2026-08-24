@@ -70,7 +70,7 @@ _NGS_REQUIRED_STEPS = [
 
 
 # ---------------------------------------------------------------------------
-# Task 1.8: MedNorm Reference Validation
+# MedNorm Reference Validation
 # ---------------------------------------------------------------------------
 
 
@@ -303,22 +303,18 @@ def validate_dilution_alignment(array_adat: Adat, ngs_adat: Adat) -> None:
         )
     }
 
+    def _is_missing_dil(v: str) -> bool:
+        if not v or v.strip() == '':
+            return True
+        try:
+            return float(v) == 0.0
+        except (ValueError, TypeError):
+            return False
+
     mismatches: list[str] = []
     for seq_id in sorted(shared_seqids):
         a_val = array_dil.get(seq_id, '')
         n_val = ngs_dil.get(seq_id, '')
-
-        # Treat blank/zero as missing-dilution sentinels (control probes, randomers,
-        # monospikes, etc. don't carry meaningful Dilution groups).  If either source
-        # has a missing value, skip the comparison — the analyte is acting as a control
-        # in at least one assay and cross-source Dilution agreement is not required.
-        def _is_missing_dil(v: str) -> bool:
-            if not v or v.strip() == '':
-                return True
-            try:
-                return float(v) == 0.0
-            except (ValueError, TypeError):
-                return False
 
         if _is_missing_dil(a_val) or _is_missing_dil(n_val):
             continue
@@ -409,14 +405,14 @@ def compute_seqid_union(
     rfu_df = pd.concat([array_df, ngs_df], axis=0)
 
     # Build merged COL_DATA MultiIndex
-    merged_columns = _merge_col_data(
+    merged_columns = merge_col_data(
         array_columns, ngs_columns, union_seqids
     )
 
     return rfu_df, merged_columns
 
 
-def _merge_col_data(
+def merge_col_data(
     array_columns: pd.MultiIndex,
     ngs_columns: pd.MultiIndex,
     union_seqids: list[str],
@@ -511,7 +507,7 @@ def _build_seqid_lookup(columns: pd.MultiIndex) -> dict[str, dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Task 1.9: Mixed Header & Metadata Combination
+# Mixed Header & Metadata Combination
 # ---------------------------------------------------------------------------
 
 

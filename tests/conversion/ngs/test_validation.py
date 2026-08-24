@@ -5,6 +5,7 @@ Tests validate_source_ngs_adat() pre-conversion checks.
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 from somadata.conversion.errors import ConversionError
@@ -62,8 +63,6 @@ class TestValidateSourceNGSAdat:
         adat = minimal_ngs_adat
         # Remove SOMAmerReads from row metadata and add it as a COL_DATA level name.
         adat.index = adat.index.droplevel('SOMAmerReads')
-
-        import pandas as pd
 
         col_names = list(adat.columns.names) + ['SOMAmerReads']
         col_values = [

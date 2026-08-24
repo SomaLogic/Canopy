@@ -9,6 +9,7 @@ convert_array_header(adat, ctx) -> dict
 from __future__ import annotations
 
 import datetime
+import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -157,19 +158,14 @@ def convert_array_header(
     # ------------------------------------------------------------------
     raw_rc = lookup_header(hdr, 'ReportConfig')
     if raw_rc:
-        import ast
-        import json as _json
-
         rc_value: str | dict = raw_rc
         if raw_rc.strip().startswith('{') or raw_rc.strip().startswith('['):
-            # Try valid JSON first, then Python repr fallback
             try:
-                rc_value = _json.loads(raw_rc)
-            except (ValueError, TypeError):
-                try:
-                    rc_value = ast.literal_eval(raw_rc)
-                except (ValueError, SyntaxError):
-                    pass
+                rc_value = json.loads(raw_rc)
+            except (json.JSONDecodeError, ValueError, TypeError):
+                logger.warning(
+                    'ReportConfig value could not be parsed as JSON; storing as string.'
+                )
         out['ReportConfig'] = {ctx.report_config_id: rc_value}
 
     # ------------------------------------------------------------------

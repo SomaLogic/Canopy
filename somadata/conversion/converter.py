@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from somadata.adat import Adat as AdatClass
-from somadata.conversion._helpers import _compute_adat_md5sum, _compute_file_md5sum
+from somadata.conversion.utils import compute_file_md5sum
 from somadata.conversion.array import ArrayConversionContext
 from somadata.conversion.array.col_data import convert_array_col_data
 from somadata.conversion.array.header import convert_array_header
@@ -19,7 +19,7 @@ from somadata.conversion.errors import (
     UnsupportedCombinationError,
 )
 from somadata.conversion.merge import (
-    _merge_col_data,
+    merge_col_data,
     compute_seqid_union,
     merge_mixed_headers,
     validate_dilution_alignment,
@@ -156,7 +156,7 @@ def _load(adat: str | Adat) -> tuple[Adat, str | None]:
     from somadata.io.adat.file import read_adat
 
     if isinstance(adat, str):
-        md5sum = _compute_file_md5sum(adat)
+        md5sum = compute_file_md5sum(adat)
         loaded_adat = read_adat(adat)
         return loaded_adat, md5sum
     if isinstance(adat, AdatClass):
@@ -405,7 +405,7 @@ def _merge_bridged_array_and_v2(
 
         # For COL_DATA, prefer array_intermediate values for shared SeqIds
         # (similar to compute_seqid_union's array-prefers logic)
-        combined_array_columns = _merge_col_data(
+        combined_array_columns = merge_col_data(
             array_intermediate.columns,
             v2_array_part.columns,
             union_array_seqids,
@@ -597,7 +597,7 @@ def _merge_ngs_and_v2(
             combined_ngs_df = pd.concat([ngs_df, v2_ngs_df], axis=0)
 
             # For COL_DATA, prefer ngs_intermediate values for shared SeqIds
-            combined_ngs_columns = _merge_col_data(
+            combined_ngs_columns = merge_col_data(
                 ngs_intermediate.columns,
                 v2_ngs_part.columns,
                 union_ngs_seqids,

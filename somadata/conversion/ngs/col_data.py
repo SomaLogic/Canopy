@@ -228,7 +228,7 @@ def convert_ngs_col_data(adat: Adat, matrix: str = '') -> pd.MultiIndex:
     for old_name, values in zip(level_names, level_arrays):
         new_name = rename_map[old_name]
         if new_name is None:
-            logger.debug(f'Removing NGS COL_DATA field: {old_name}')
+            logger.debug('Removing NGS COL_DATA field: %s', old_name)
             continue  # field removed
         if new_name in seen_output_names:
             logger.warning(

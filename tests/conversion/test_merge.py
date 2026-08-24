@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 import pandas as pd
 
@@ -81,8 +82,6 @@ class TestComputeSeqidUnion:
 
     def test_nan_fill_for_missing_seqids(self):
         """Array-only SeqIds should be NaN in NGS rows and vice versa."""
-        import numpy as np
-
         array_adat = _make_converted_adat(['A', 'B'], n_rows=1)
         ngs_adat = _make_converted_adat(['B', 'C'], n_rows=1)
         rfu_df, _ = compute_seqid_union(array_adat, ngs_adat)
@@ -239,7 +238,6 @@ class TestValidateMednormCompatibility:
 
     def test_med_norm_ref_returns_array_when_override_matches_array(self):
         """Mismatch always raises; override behavior is no longer supported."""
-        import pandas as pd
         from somadata.adat import Adat
         from tests.conversion.conftest import BRIDGED_STEPS, NGS_BRIDGED_STEPS
 
@@ -270,7 +268,6 @@ class TestValidateMednormCompatibility:
 
     def test_med_norm_ref_returns_ngs_when_override_matches_ngs(self):
         """Mismatch always raises; override behavior is no longer supported."""
-        import pandas as pd
         from somadata.adat import Adat
         from tests.conversion.conftest import BRIDGED_STEPS, NGS_BRIDGED_STEPS
 

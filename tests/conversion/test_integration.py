@@ -17,6 +17,7 @@ import os
 import tempfile
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from somadata.adat import Adat
@@ -478,7 +479,6 @@ class TestBridgedArrayPlusV2Combined:
         v2_adat.header_metadata['AssayType'] = 'Array'
         
         # Add SampleReadout to v2.0 (required for v2.0 format)
-        import pandas as pd
         v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
         v2_index_arrays.append(['Array'] * len(v2_adat))
         v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
@@ -501,7 +501,6 @@ class TestBridgedArrayPlusV2Combined:
         }
         
         # Add required v2.0 fields
-        import pandas as pd
         v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
         v2_index_arrays.append(['NGS'] * len(v2_adat))
         v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
@@ -521,7 +520,6 @@ class TestBridgedArrayPlusV2Combined:
         v2_adat.header_metadata['AssayType'] = 'Array'
         
         # Add required v2.0 fields
-        import pandas as pd
         v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
         v2_index_arrays.append(['Array'] * len(v2_adat))
         v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
@@ -538,7 +536,6 @@ class TestBridgedArrayPlusV2Combined:
         """MedNorm validation raises error when Ref.MedNormExt vectors differ."""
         from tests.conversion.conftest import make_bridged_array_with_mednorm, make_v2_combined_adat
         from somadata.conversion.errors import MedNormMismatchError
-        import pandas as pd
         
         # Create array with MedNormExt
         array_adat = make_bridged_array_with_mednorm(
@@ -584,7 +581,6 @@ class TestNativeNGSPlusV2Combined:
         v2_adat.header_metadata['AssayType'] = 'NGS'
         
         # Add required v2.0 fields
-        import pandas as pd
         v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
         v2_index_arrays.append(['NGS'] * len(v2_adat))
         v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
@@ -604,7 +600,6 @@ class TestNativeNGSPlusV2Combined:
         v2_adat.header_metadata['AssayType'] = 'Mixed'
         
         # Add required v2.0 fields
-        import pandas as pd
         v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
         v2_index_arrays.append(['Array'] * len(v2_adat))
         v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
@@ -624,7 +619,6 @@ class TestNativeNGSPlusV2Combined:
         v2_adat.header_metadata['AssayType'] = 'NGS'
         
         # Add required v2.0 fields
-        import pandas as pd
         v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
         v2_index_arrays.append(['NGS'] * len(v2_adat))
         v2_index_names = list(v2_adat.index.names) + ['SampleReadout']
@@ -644,7 +638,6 @@ class TestNativeArrayPair:
     def test_array_pair_produces_array_output(self):
         """Merging two native arrays produces Array v2.0 output."""
         from tests.conversion.conftest import make_full_legacy_array_adat
-        import pandas as pd
         
         array_a = make_full_legacy_array_adat()
         array_b = make_full_legacy_array_adat()
@@ -684,7 +677,6 @@ class TestNativeArrayPair:
     def test_seqid_union_computed(self):
         """SeqId union is computed correctly."""
         from tests.conversion.conftest import make_full_legacy_array_adat
-        import pandas as pd
         
         # Use full arrays but with different SeqIds
         array_a = make_full_legacy_array_adat()
@@ -734,7 +726,6 @@ class TestV2CombinedPair:
         v2_b.header_metadata['AssayType'] = 'Array'
         
         # Add required v2.0 fields
-        import pandas as pd
         for v2_adat in [v2_a, v2_b]:
             v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
             v2_index_arrays.append(['Array'] * len(v2_adat))
@@ -758,7 +749,6 @@ class TestV2CombinedPair:
         v2_b.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
         
         # Add required v2.0 fields
-        import pandas as pd
         for v2_adat in [v2_a, v2_b]:
             v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
             v2_index_arrays.append(['NGS'] * len(v2_adat))
@@ -781,7 +771,6 @@ class TestV2CombinedPair:
         v2_b.header_metadata['ProcessSteps'] = {'1': 'Raw, HybNorm, MedNormExt'}
         
         # Add required v2.0 fields
-        import pandas as pd
         v2_a_index_arrays = [list(v2_a.index.get_level_values(name)) for name in v2_a.index.names]
         v2_a_index_arrays.append(['Array'] * len(v2_a))
         v2_a_index_names = list(v2_a.index.names) + ['SampleReadout']
@@ -809,7 +798,6 @@ class TestV2CombinedPair:
         v2_b.header_metadata['AssayType'] = 'Array'
         
         # Add required v2.0 fields
-        import pandas as pd
         for v2_adat in [v2_a, v2_b]:
             v2_index_arrays = [list(v2_adat.index.get_level_values(name)) for name in v2_adat.index.names]
             v2_index_arrays.append(['Array'] * len(v2_adat))
@@ -834,7 +822,6 @@ class TestV2CombinedPair:
         """MedNorm validation raises error when Ref.MedNormExt vectors differ."""
         from tests.conversion.conftest import make_v2_combined_adat
         from somadata.conversion.errors import MedNormMismatchError
-        import pandas as pd
         
         # Create two v2.0 ADATs with MedNormExt in ProcessSteps
         v2_a = make_v2_combined_adat()

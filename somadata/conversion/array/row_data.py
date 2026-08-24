@@ -42,10 +42,6 @@ _ROW_RENAMES: dict[str, str] = {
     'MedNormExt_PassFlag': 'MedNormExtStatus',
     'StudyId': 'Project',
     'SubjectID': 'SubjectId',
-    # Barcode2d → MatrixTubeBarcode: Per spec §3.2.3, array Barcode2d values
-    # are moved to MatrixTubeBarcode even though the field is classified as
-    # "NGS-only" in the field table (§2.6.2). This preserves the barcode data
-    # for array samples in the v2.0 format.
     'Barcode2d': 'MatrixTubeBarcode',
 }
 
@@ -110,42 +106,6 @@ _NORM_SCALE_RE = re.compile(r'^NormScale_')
 
 
 def _derive_med_norm_int_status(
-    sample_type: str,
-    norm_scale_values: dict[str, str],
-) -> str:
-    """Derive MedNormIntStatus for a single sample row.
-
-    Only applies to ``Calibrator`` and ``Buffer`` SampleTypes; blank for all
-    others.
-
-    Parameters
-    ----------
-    sample_type : str
-        The sample's ``SampleType`` value.
-    norm_scale_values : dict[str, str]
-        Mapping of ``NormScale_<DilutionGroup>`` level name → raw value for
-        this sample.
-
-    Returns
-    -------
-    str
-        ``'PASS'``, ``'FLAG'``, or ``''``.
-    """
-    if sample_type not in _MED_NORM_INT_ELIGIBLE:
-        return ''
-    if not norm_scale_values:
-        return ''
-    floats = [try_float(v) for v in norm_scale_values.values()]
-    if any(f is None for f in floats):
-        return ''
-    return (
-        'PASS'
-        if all(0.4 <= f <= 2.5 for f in floats)  # type: ignore[operator]
-        else 'FLAG'
-    )
-
-
-def _derive_med_norm_int_status_vectorized(
     sample_types: list[str],
     norm_scale_level_names: list[str],
     out_levels: dict[str, list],
@@ -334,7 +294,7 @@ def convert_array_row_data(
     # ------------------------------------------------------------------
     # 7. MedNormIntStatus — derived per-row from NormScale_* levels (VECTORIZED)
     # ------------------------------------------------------------------
-    out_levels['MedNormIntStatus'] = _derive_med_norm_int_status_vectorized(
+    out_levels['MedNormIntStatus'] = _derive_med_norm_int_status(
         sample_type_vals, norm_scale_level_names, out_levels
     )
 

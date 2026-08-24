@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 from somadata.conversion.array.col_data import convert_array_col_data
@@ -26,8 +27,6 @@ def result(legacy_adat):
 
 
 def test_returns_multiindex(result):
-    import pandas as pd
-
     assert isinstance(result, pd.MultiIndex)
 
 
@@ -132,7 +131,6 @@ def test_col_check_removed(result):
 
 def test_cal_qc_ratio_multi_qc_raises():
     """Multiple QC IDs on the same plate must raise ConversionError."""
-    import pandas as pd
     from somadata.adat import Adat
 
     col_values = [

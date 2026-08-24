@@ -5,6 +5,7 @@ Tests convert_ngs_col_data() field mapping logic.
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 from somadata.conversion.ngs.col_data import convert_ngs_col_data
@@ -46,7 +47,6 @@ class TestConvertNGSColData:
 
     def test_drc_level_preserves_matrix_suffix(self):
         """DRC_Level.Serum is renamed to DRCLevel_Serum_NGS."""
-        import pandas as pd
 
         adat = make_ngs_adat()
         # Replace bare DRC_Level with DRC_Level.Serum in column MultiIndex
@@ -66,7 +66,6 @@ class TestConvertNGSColData:
 
     def test_drc_level_plasma_suffix(self):
         """DRC_Level.Plasma is renamed to DRCLevel_Plasma_NGS."""
-        import pandas as pd
 
         adat = make_ngs_adat()
         col_names = list(adat.columns.names)
@@ -90,7 +89,6 @@ class TestConvertNGSColData:
 
     def test_block_list_absent_when_not_in_source(self):
         """BlockList is optional — absent in source means absent in output."""
-        import pandas as pd
 
         adat = make_ngs_adat()
         # Remove BlockList from column MultiIndex
@@ -127,7 +125,6 @@ class TestConvertNGSColData:
     def test_removes_somaid(self):
         adat = make_ngs_adat()
         # Add SomaId to columns
-        import pandas as pd
 
         col_names = list(adat.columns.names) + ['SomaId']
         col_values = [
@@ -148,7 +145,6 @@ class TestConvertNGSColData:
 
     def test_hyb_control_true_for_hyb_control_type(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Modify Type level to include a Hybridization Control
         type_idx = adat.columns.names.index('Type')
@@ -170,7 +166,6 @@ class TestQCCheckRename:
 
     def test_renames_qc_check_to_qc_ratio(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add QCCheck_PLT100_ScaleFactor
         col_names = list(adat.columns.names) + ['QCCheck_PLT100_ScaleFactor']
@@ -187,7 +182,6 @@ class TestQCCheckRename:
 
     def test_removes_qc_check_pass_flag(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add QCCheck_PLT100_PassFlag
         col_names = list(adat.columns.names) + ['QCCheck_PLT100_PassFlag']
@@ -208,7 +202,6 @@ class TestReferencePrefixing:
     def test_adds_ngs_prefix_to_ref_fields(self):
         """Non-Bridging, non-MedNorm Ref.* fields get the Ref.NGS.* prefix."""
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add a generic Ref.* field that should receive the NGS prefix
         col_names = list(adat.columns.names) + ['Ref.Calibrator.SomeField']
@@ -226,7 +219,6 @@ class TestReferencePrefixing:
     def test_ref_bridging_passes_through(self):
         """Ref.Bridging.* fields must NOT receive the Ref.NGS.* prefix (spec §3.3.2)."""
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add Ref.Bridging.params field
         col_names = list(adat.columns.names) + ['Ref.Bridging.params']
@@ -245,7 +237,6 @@ class TestReferencePrefixing:
     def test_ref_bridging_with_calibrator_id_passes_through(self):
         """Ref.Bridging.<CalibratorId>.<Platform> passes through unchanged."""
         adat = make_ngs_adat()
-        import pandas as pd
 
         col_names = list(adat.columns.names) + ['Ref.Bridging.CAL001.Plasma']
         col_values = [
@@ -261,7 +252,6 @@ class TestReferencePrefixing:
 
     def test_preserves_ref_ngs_prefix(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add Ref.NGS.MedNormExt.Matrix field
         col_names = list(adat.columns.names) + ['Ref.NGS.MedNormExt.Matrix']
@@ -277,7 +267,6 @@ class TestReferencePrefixing:
 
     def test_preserves_ref_mednorm_id(self):
         adat = make_ngs_adat()
-        import pandas as pd
 
         # Add Ref.MedNorm.Id field (shared between Array and NGS)
         col_names = list(adat.columns.names) + ['Ref.MedNorm.Id']
@@ -296,7 +285,6 @@ class TestReferencePrefixing:
     def test_adds_ngs_prefix_to_ref_mednormext(self):
         """Ref.MedNormExt.* (not Ref.MedNorm.*) should receive the Ref.NGS.* prefix."""
         adat = make_ngs_adat()
-        import pandas as pd
 
         col_names = list(adat.columns.names) + ['Ref.MedNormExt.Matrix']
         col_values = [

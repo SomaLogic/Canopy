@@ -128,7 +128,10 @@ def _normalize_dilution_group(dilution: str) -> str:
             formatted = f'{fval:.15f}'.rstrip('0').rstrip('.')
             dilution = formatted
         except ValueError:
-            pass
+            logger.warning(
+                'Could not parse dilution value %r as float; preserving original.',
+                dilution,
+            )
     # Replace hyphens with underscores; periods are valid in field names and preserved
     return dilution.replace('-', '_')
 
@@ -170,23 +173,10 @@ def _normalize_dilution_suffix(name: str) -> str:
     return name
 
 
-def _derive_med_norm_status(scale_factors: list[str]) -> str:
-    """Return ``'PASS'`` if all scale factors are in [0.4, 2.5], else ``'FLAG'``.
-
-    Returns ``''`` if all values are blank or non-numeric.
-    """
-    floats = [try_float(v) for v in scale_factors if v]
-    if not floats:
-        return ''
-    if any(f is None for f in floats):
-        return ''
-    return 'PASS' if all(0.4 <= f <= 2.5 for f in floats) else 'FLAG'  # type: ignore[operator]
-
-
-def _derive_med_norm_status_vectorized(
+def _derive_med_norm_status(
     field_names: list[str], out_levels: dict[str, list], n_rows: int
 ) -> list[str]:
-    """Vectorized MedNorm status derivation for all rows.
+    """Derive MedNorm status for all rows.
 
     All scale factors for a row must be numeric and in [0.4, 2.5] for PASS.
     """
@@ -346,7 +336,7 @@ def convert_ngs_row_data(
             if name.startswith('MedNormInt_') and name.endswith('_ScaleFactor')
         ]
         if med_norm_int_fields:
-            out_levels['MedNormIntStatus'] = _derive_med_norm_status_vectorized(
+            out_levels['MedNormIntStatus'] = _derive_med_norm_status(
                 med_norm_int_fields, out_levels, n_rows
             )
         else:
@@ -360,7 +350,7 @@ def convert_ngs_row_data(
             if name.startswith('MedNormExt_') and name.endswith('_ScaleFactor')
         ]
         if med_norm_ext_fields:
-            out_levels['MedNormExtStatus'] = _derive_med_norm_status_vectorized(
+            out_levels['MedNormExtStatus'] = _derive_med_norm_status(
                 med_norm_ext_fields, out_levels, n_rows
             )
         else:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 from somadata.conversion.array import ArrayConversionContext
@@ -31,8 +32,6 @@ def result(legacy_adat, ctx):
 
 
 def test_returns_multiindex(result):
-    import pandas as pd
-
     assert isinstance(result, pd.MultiIndex)
 
 
