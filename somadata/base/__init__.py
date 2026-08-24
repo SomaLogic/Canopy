@@ -1,2 +1,2 @@
-from somadata.base.adat_meta_helpers import AdatMetaHelpers
 from somadata.base.adat_math_helpers import AdatMathHelpers
+from somadata.base.adat_meta_helpers import AdatMetaHelpers

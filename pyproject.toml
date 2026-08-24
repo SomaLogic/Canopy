@@ -48,3 +48,9 @@ include = [
 pytest = "^8.0.1"
 codespell = "^2.2.6"
 pytest-cov = "^6.0.0"
+
+[tool.pytest.ini_options]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: end-to-end tests requiring real ADAT sample files (deselected by default)",
+]
