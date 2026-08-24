@@ -84,6 +84,9 @@ def parse_file(
                     break
                 del line[-1]
 
+            if not line:
+                continue
+
             # If we see a new section set which portion of the adat we are in & continue to next line
             if '^HEADER' in line[0]:
                 current_section = 'HEADER'
