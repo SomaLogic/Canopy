@@ -212,11 +212,10 @@ def _validate_mednorm_vectors(
     if not shared_seqids:
         return
 
-    # Check element-wise identity for shared fields and shared SeqIds.
-    # Use numeric comparison with tolerance for float values.
-    # Per spec §3.4, Ref.MedNormExt.* are RFU reference values (Decimal type).
-    # Skip comparisons where either value is None/missing (e.g., internal-use-only
-    # analytes that are array-only and not present in NGS data).
+    # Check element-wise equivalence for shared fields and shared SeqIds.
+    # Per updated spec §3.4: |a − b| ≤ 0.1 RFU (absolute tolerance).
+    # Skip comparisons where either value is None/missing — SeqIds missing on
+    # either side are excluded from the check entirely.
     mismatches: list[str] = []
     for field in sorted(shared_fields):
         for seq_id in sorted(shared_seqids):
@@ -224,15 +223,12 @@ def _validate_mednorm_vectors(
             ngs_val = ngs_vecs[field].get(seq_id)
 
             # Skip comparison if either value is missing/None.
-            # This handles internal-use-only SOMAmers that appear in the array source
-            # but have no MedNormExt reference in the NGS source (e.g., array-exclusive
-            # calibrators or controls).
             if array_val is None or ngs_val is None:
                 continue
 
-            # Both values are guaranteed floats at this point (_get_mednorm_ext_vectors
-            # raises MedNormMismatchError for non-numeric values).
-            if not math.isclose(array_val, ngs_val, rel_tol=1e-9, abs_tol=1e-12):
+            # Both values are guaranteed floats at this point.
+            # Spec §3.4 (updated): equivalent = |a − b| ≤ 0.1 RFU.
+            if abs(array_val - ngs_val) > 0.1:
                 mismatches.append(
                     f'{field}[{seq_id}]: array={array_val!r} vs ngs={ngs_val!r} '
                     f'(diff={abs(array_val - ngs_val):.2e})'
@@ -245,8 +241,8 @@ def _validate_mednorm_vectors(
     if len(mismatches) > 10:
         detail += f'\n  ... and {len(mismatches) - 10} more'
     raise MedNormMismatchError(
-        f'Ref.MedNormExt reference vectors are not identical for shared SeqIds '
-        f'(spec §3.4 requires identical values before merging). '
+        f'Ref.MedNormExt reference vectors are not equivalent for shared SeqIds '
+        f'(spec §3.4 requires |a − b| ≤ 0.1 RFU for common non-missing SeqIds). '
         f'Mismatches ({len(mismatches)} total):\n  {detail}\n'
         f'Ensure both source ADATs were normalized to the same reference.'
     )

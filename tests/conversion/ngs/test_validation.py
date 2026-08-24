@@ -24,11 +24,18 @@ class TestValidateSourceNGSAdat:
         with pytest.raises(ConversionError, match='Missing required.*Version'):
             validate_source_ngs_adat(adat)
 
-    def test_raises_when_run_id_missing(self, minimal_ngs_adat):
+    def test_run_id_is_optional(self, minimal_ngs_adat):
+        """RunId is optional — absent in multi-run DPQ outputs; should not raise."""
         adat = minimal_ngs_adat
         del adat.header_metadata['!RunId']
-        with pytest.raises(ConversionError, match='Missing required.*RunId'):
-            validate_source_ngs_adat(adat)
+        validate_source_ngs_adat(adat)  # Should not raise
+
+    def test_yield_fields_are_optional(self, minimal_ngs_adat):
+        """YieldDemux / YieldQ30Demux / Q30WeightedMean are optional per-run metrics."""
+        adat = minimal_ngs_adat
+        for key in ('!YieldDemux', '!YieldQ30Demux', '!Q30WeightedMean'):
+            adat.header_metadata.pop(key, None)
+        validate_source_ngs_adat(adat)  # Should not raise
 
     def test_raises_when_instrument_type_missing(self, minimal_ngs_adat):
         adat = minimal_ngs_adat

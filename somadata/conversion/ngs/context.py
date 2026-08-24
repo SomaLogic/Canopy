@@ -31,12 +31,15 @@ class NGSConversionContext:
         Moved from header to ROW_DATA in v2.0.
     flowcell : str
         The flowcell identifier. Moved from header to ROW_DATA in v2.0.
-    yield_demux : int
+    yield_demux : int or None
         Demultiplexed yield value. Moved from header to ROW_DATA in v2.0.
-    yield_q30_demux : int
+        ``None`` when the source ADAT lacks this field (e.g. multi-run DPQ outputs).
+    yield_q30_demux : int or None
         Q30 demultiplexed yield value. Moved from header to ROW_DATA in v2.0.
-    q30_weighted_mean : float
+        ``None`` when absent.
+    q30_weighted_mean : float or None
         Weighted mean Q30 score. Moved from header to ROW_DATA in v2.0.
+        ``None`` when absent.
     plate_ids : list[str]
         List of unique PlateId values present in the source ADAT.
         Used for plate-keyed JSON field consolidation.
@@ -64,9 +67,9 @@ class NGSConversionContext:
     sequencing_run_id: str = ''
     instrument_type: str = ''
     flowcell: str = ''
-    yield_demux: int = 0
-    yield_q30_demux: int = 0
-    q30_weighted_mean: float = 0.0
+    yield_demux: int | None = None
+    yield_q30_demux: int | None = None
+    q30_weighted_mean: float | None = None
     plate_ids: list[str] = dataclasses.field(default_factory=list)
     process_steps: str = ''
     process_steps_id: str = '1'
@@ -129,15 +132,19 @@ class NGSConversionContext:
 
         adat_id = lookup_header(hdr, 'AdatId')
 
+        raw_yield_demux = lookup_header(hdr, 'YieldDemux')
+        raw_yield_q30_demux = lookup_header(hdr, 'YieldQ30Demux')
+        raw_q30_weighted_mean = lookup_header(hdr, 'Q30WeightedMean')
+
         return cls(
             source_adat_id=adat_id if adat_id else None,
             dpq_version=lookup_header(hdr, 'Version'),
             sequencing_run_id=lookup_header(hdr, 'RunId'),
             instrument_type=lookup_header(hdr, 'InstrumentType'),
             flowcell=lookup_header(hdr, 'Flowcell'),
-            yield_demux=safe_int(lookup_header(hdr, 'YieldDemux')),
-            yield_q30_demux=safe_int(lookup_header(hdr, 'YieldQ30Demux')),
-            q30_weighted_mean=safe_float(lookup_header(hdr, 'Q30WeightedMean')),
+            yield_demux=safe_int(raw_yield_demux) if raw_yield_demux else None,
+            yield_q30_demux=safe_int(raw_yield_q30_demux) if raw_yield_q30_demux else None,
+            q30_weighted_mean=safe_float(raw_q30_weighted_mean) if raw_q30_weighted_mean else None,
             plate_ids=plate_ids,
             process_steps=lookup_header(hdr, 'ProcessSteps'),
             source_file_md5sum=source_file_md5sum,

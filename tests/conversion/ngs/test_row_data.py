@@ -112,8 +112,8 @@ class TestConvertNGSRowData:
     def test_replicates_yield_demux(self, minimal_ngs_adat):
         ctx = NGSConversionContext.from_adat(minimal_ngs_adat)
         result = convert_ngs_row_data(minimal_ngs_adat, ctx)
-        assert 'YieldDemux' in result.names
-        vals = list(result.get_level_values('YieldDemux'))
+        assert 'RunYieldDemux' in result.names
+        vals = list(result.get_level_values('RunYieldDemux'))
         assert all(v == '12500000' for v in vals)
 
     def test_adds_blank_plate_run_date(self, minimal_ngs_adat):

@@ -276,7 +276,7 @@ class TestNGSFieldMappings:
     def test_sequencing_run_fields_present_in_ngs_rows(self, mixed_v2_adat, source_array_adat):
         """Header fields InstrumentType, Flowcell etc. are replicated to NGS rows."""
         n_array = len(source_array_adat)
-        for field in ('InstrumentType', 'Flowcell', 'YieldDemux', 'YieldQ30Demux', 'Q30WeightedMean'):
+        for field in ('InstrumentType', 'Flowcell', 'RunYieldDemux', 'RunYieldQ30Demux', 'RunQ30WeightedMean'):
             assert field in mixed_v2_adat.index.names, f'{field} not in row metadata'
             ngs_vals = list(mixed_v2_adat.index.get_level_values(field))[n_array:]
             assert all(v != '' for v in ngs_vals), f'Some NGS rows have blank {field}'

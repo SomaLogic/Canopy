@@ -10,6 +10,17 @@ from somadata.conversion.errors import ConversionError
 if TYPE_CHECKING:
     from somadata.adat import Adat
 
+# These header fields are optional — present in single-run ADATs but absent when DPQ
+# combines multiple runs (e.g. ICM merged outputs). If missing, the corresponding
+# ROW_DATA columns are created with empty values rather than raising an error.
+# Exported so that row_data and context modules can reference the same set.
+OPTIONAL_HEADER_FIELDS: frozenset[str] = frozenset({
+    'RunId',
+    'YieldDemux',
+    'YieldQ30Demux',
+    'Q30WeightedMean',
+})
+
 
 def validate_source_ngs_adat(adat: Adat) -> None:
     """Validate that *adat* meets NGS v1.x → v2.0 conversion requirements.
@@ -40,13 +51,12 @@ def validate_source_ngs_adat(adat: Adat) -> None:
         'ProcessSteps': 'Comma-separated processing steps string',
         'SOMAmerReferenceSource': 'SOMAmer reagent annotation reference identifier',
         'Version': 'DPQ software version',
-        'RunId': 'Sequencing run identifier',
         'InstrumentType': 'Sequencing instrument type',
         'Flowcell': 'Flowcell identifier',
-        'YieldDemux': 'Demultiplexed yield',
-        'YieldQ30Demux': 'Q30 demultiplexed yield',
-        'Q30WeightedMean': 'Weighted mean Q30 score',
     }
+
+    # Fields in OPTIONAL_HEADER_FIELDS are skipped here; their absence is handled
+    # gracefully by the row_data/context modules (empty strings instead of errors).
 
     missing = []
     for field, description in required_fields.items():

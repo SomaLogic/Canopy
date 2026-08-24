@@ -319,12 +319,15 @@ def convert_ngs_row_data(
             v if v else ctx.sequencing_run_id for v in out_levels['SequencingRunId']
         ]
 
-    # InstrumentType, Flowcell, Yield*, Q30*: replicate from header
+    # InstrumentType, Flowcell, RunYield*, RunQ30*: replicate from header
     out_levels['InstrumentType'] = [ctx.instrument_type] * n_rows
     out_levels['Flowcell'] = [ctx.flowcell] * n_rows
-    out_levels['YieldDemux'] = [str(ctx.yield_demux)] * n_rows
-    out_levels['YieldQ30Demux'] = [str(ctx.yield_q30_demux)] * n_rows
-    out_levels['Q30WeightedMean'] = [str(ctx.q30_weighted_mean)] * n_rows
+    run_yield_demux = str(ctx.yield_demux) if ctx.yield_demux is not None else ''
+    run_yield_q30_demux = str(ctx.yield_q30_demux) if ctx.yield_q30_demux is not None else ''
+    run_q30_weighted_mean = str(ctx.q30_weighted_mean) if ctx.q30_weighted_mean is not None else ''
+    out_levels['RunYieldDemux'] = [run_yield_demux] * n_rows
+    out_levels['RunYieldQ30Demux'] = [run_yield_q30_demux] * n_rows
+    out_levels['RunQ30WeightedMean'] = [run_q30_weighted_mean] * n_rows
 
     # ------------------------------------------------------------------
     # 4. Derive Status fields from PassFlag if not already present (VECTORIZED)
