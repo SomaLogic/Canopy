@@ -1,4 +1,4 @@
-"""Integration tests for NGS conversion (Task 1.9).
+"""Integration tests for NGS conversion.
 
 Tests end-to-end conversion of NGS ADATs via to_v2_adat().
 """

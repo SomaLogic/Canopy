@@ -1,4 +1,4 @@
-"""Unit tests for somadata.conversion.ngs.header (Task 1.4).
+"""Unit tests for somadata.conversion.ngs.header.
 
 Tests convert_ngs_header() field mapping logic.
 """

@@ -1,11 +1,9 @@
 """Tests for the v2.0 ADAT reader (Tasks 4.1 and 4.2).
 
-Task 4.1 — v2.0-aware reader dispatch:
   - read_adat correctly parses v2.0 files (no ``!`` prefix on Name/Type rows)
   - JSON header values parsed as dicts/lists, not raw strings
   - Round-trip: write_adat(v2.0) → read_adat → structure preserved
 
-Task 4.2 — v2.0 field type validation on read:
   - Integer fields: non-integer values log a warning
   - Decimal fields: non-numeric values log a warning
   - Date fields: non-ISO-8601 values log a warning
@@ -97,7 +95,7 @@ def _roundtrip(adat: Adat) -> Adat:
 
 
 # ---------------------------------------------------------------------------
-# Task 4.1: v2.0-aware reader dispatch
+# v2.0-aware reader dispatch
 # ---------------------------------------------------------------------------
 
 
@@ -228,7 +226,7 @@ class TestV2ReaderDispatch:
 
 
 # ---------------------------------------------------------------------------
-# Task 4.2: v2.0 field type validation on read
+# v2.0 field type validation on read
 # ---------------------------------------------------------------------------
 
 

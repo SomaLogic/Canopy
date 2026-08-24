@@ -1,4 +1,4 @@
-"""Unit tests for somadata.conversion.converter (Task 3: Conversion Path Router).
+"""Unit tests for somadata.conversion.converter.
 
 Covers:
 - to_v2_adat() input validation (empty list, >2 inputs, bad types)

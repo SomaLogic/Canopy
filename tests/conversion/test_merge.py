@@ -1,4 +1,4 @@
-"""Tests for somadata.conversion.merge — Tasks 1.7, 1.8, 1.9."""
+"""Tests for somadata.conversion.merge."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def _make_converted_adat(
 
 
 # ===========================================================================
-# Task 1.7: SeqId Union & Missing Value Fill
+# SeqId Union & Missing Value Fill
 # ===========================================================================
 
 
@@ -175,7 +175,7 @@ class TestComputeSeqidUnion:
 
 
 # ===========================================================================
-# Task 1.8: MedNorm Reference Validation
+# MedNorm Reference Validation
 # ===========================================================================
 
 
@@ -426,7 +426,7 @@ class TestValidateMednormCompatibility:
 
 
 # ===========================================================================
-# Task 1.9: Mixed Header & Metadata Combination
+# Mixed Header & Metadata Combination
 # ===========================================================================
 
 

@@ -1,4 +1,4 @@
-"""Unit tests for somadata.conversion.ngs.context (Task 1.7).
+"""Unit tests for somadata.conversion.ngs.context.
 
 Tests NGSConversionContext extraction from source NGS ADATs.
 """

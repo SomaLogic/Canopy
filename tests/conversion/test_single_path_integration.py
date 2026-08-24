@@ -1,4 +1,4 @@
-"""Integration tests for single-input ADAT v2.0 conversions (CAN-43, CAN-44, CAN-45).
+"""Integration tests for single-input ADAT v2.0 conversions.
 
 Each test class covers one source type converting to a v2.0 Adat without any
 merge logic, MedNorm validation, or SeqId union:
@@ -29,7 +29,7 @@ NATIVE_NGS_PATH = os.path.join(_DATA_DIR, 'sample-native-ngs.adat')
 
 
 # ===========================================================================
-# Bridged array → Array v2.0 (CAN-43)
+# Bridged array → Array v2.0
 # ===========================================================================
 
 
@@ -58,7 +58,7 @@ def bridged_array_v2_round_trip(bridged_array_v2_written):
 
 
 class TestBridgedArrayToV2:
-    """Bridged array → Array v2.0 single-input conversion (CAN-43)."""
+    """Bridged array → Array v2.0 single-input conversion."""
 
     def test_returns_adat(self, bridged_array_v2):
         assert isinstance(bridged_array_v2, Adat)
@@ -147,7 +147,7 @@ class TestBridgedArrayToV2:
 
 
 # ===========================================================================
-# Native array → Array v2.0 (CAN-44)
+# Native array → Array v2.0
 # ===========================================================================
 
 
@@ -175,7 +175,7 @@ def native_array_v2_round_trip(native_array_v2_written):
 
 
 class TestNativeArrayToV2:
-    """Native array → Array v2.0 single-input conversion (CAN-44).
+    """Native array → Array v2.0 single-input conversion.
 
     Uses the same array conversion pipeline as bridged array, but with no
     requirement on the terminal ProcessSteps sequence.
@@ -268,7 +268,7 @@ class TestNativeArrayToV2:
 
 
 # ===========================================================================
-# Native NGS → NGS v2.0 (CAN-45)
+# Native NGS → NGS v2.0
 # ===========================================================================
 
 
@@ -297,7 +297,7 @@ def native_ngs_v2_round_trip(native_ngs_v2_written):
 
 
 class TestNativeNGSToV2:
-    """Native NGS → NGS v2.0 single-input conversion (CAN-45)."""
+    """Native NGS → NGS v2.0 single-input conversion."""
 
     def test_returns_adat(self, native_ngs_v2):
         assert isinstance(native_ngs_v2, Adat)

@@ -1,4 +1,4 @@
-"""End-to-end integration tests for the ADAT v2.0 converter (CAN-42 / Ticket 1.10).
+"""End-to-end integration tests for the ADAT v2.0 converter.
 
 Covers the complete Path 1 flow: bridged_array + native_ngs → Mixed v2.0.
 
@@ -463,7 +463,7 @@ class TestRoundTrip:
 
 
 # ===========================================================================
-# Phase 3: Two-Input Merge Paths (CAN-46 through CAN-49)
+# Phase 3: Two-Input Merge Paths
 # ===========================================================================
 
 

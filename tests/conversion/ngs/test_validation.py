@@ -1,4 +1,4 @@
-"""Unit tests for somadata.conversion.ngs.validation (Task 1.8).
+"""Unit tests for somadata.conversion.ngs.validation.
 
 Tests validate_source_ngs_adat() pre-conversion checks.
 """

@@ -1,4 +1,4 @@
-"""Unit tests for somadata.conversion.ngs.col_data (Task 1.5).
+"""Unit tests for somadata.conversion.ngs.col_data.
 
 Tests convert_ngs_col_data() field mapping logic.
 """
